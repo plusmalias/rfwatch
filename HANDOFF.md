@@ -119,6 +119,8 @@ the database inventory section below live detections. Do not edit `DevicesScreen
 - Retried `adb install -r` for mapsOnline at `192.168.0.172:5555`; the phone remained reachable
   but ADB stalled without returning install success. Interrupted the transfer rather than continue
   against a 6% battery with no reported power source. No uninstall or data wipe was done.
+- User subsequently confirmed Radar scrolling works. After charging, reinstall mapsOnline to verify
+  the updated APK on-device; no successful install response was observed during this session.
 - The previously observed foreground `MonitorService` ran BLE and Wi-Fi collectors. Leave it
   undisturbed; once the phone is charged, install the existing mapsOnline APK and verify scrolling
   into the saved inventory section.
