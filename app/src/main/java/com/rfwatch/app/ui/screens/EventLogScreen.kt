@@ -47,7 +47,10 @@ fun EventLogScreen(vm: RfWatchViewModel, modifier: Modifier = Modifier) {
                 Text("ACTIVITY / ALERTS", fontSize = 10.sp, color = WarnAmber, letterSpacing = 1.2.sp)
                 Text("Event log", fontSize = 20.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold)
             }
-            Button(onClick = { exportJson(context, events, alerts) }) { Text("Export JSON") }
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                Button(onClick = { vm.exportEvidence(context, null) { context.startActivity(it) } }) { Text("Report") }
+                androidx.compose.material3.OutlinedButton(onClick = { exportJson(context, events, alerts) }) { Text("JSON") }
+            }
         }
         LazyColumn(verticalArrangement = Arrangement.spacedBy(4.dp)) {
             items(alerts, key = { "a${it.rowId}" }) { a ->

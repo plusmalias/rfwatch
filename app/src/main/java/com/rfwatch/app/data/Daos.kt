@@ -56,6 +56,7 @@ interface AlertDao {
     @Insert suspend fun insert(alert: AlertEntity): Long
     @Query("SELECT * FROM alerts ORDER BY timestampMs DESC LIMIT :limit") fun recent(limit: Int = 200): Flow<List<AlertEntity>>
     @Query("UPDATE alerts SET acknowledged = 1 WHERE rowId = :id") suspend fun acknowledge(id: Long)
+    @Query("SELECT * FROM alerts ORDER BY timestampMs DESC LIMIT :limit") suspend fun list(limit: Int): List<AlertEntity>
     @Query("DELETE FROM alerts WHERE timestampMs < :cutoff") suspend fun purgeOlderThan(cutoff: Long): Int
 }
 

@@ -482,6 +482,12 @@ class RfWatchRepository(
         _positions.value = next
     }
 
+    /** Evidence report share intent (all alerts, or one device's full history). */
+    suspend fun evidenceIntent(context: android.content.Context, deviceId: String?): android.content.Intent {
+        withContext(ingestDispatcher) { flushPending() }
+        return com.rfwatch.app.export.EvidenceExporter.export(context, database, deviceId)
+    }
+
     /** Sightings + both position estimates for one device's locate chart. */
     suspend fun locateData(deviceId: String): LocateData {
         val rows = database.observationDao().recentGeoForDevice(deviceId, LOCATE_SAMPLE_LIMIT)

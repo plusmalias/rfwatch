@@ -196,6 +196,10 @@ private fun DeviceCard(d: com.rfwatch.app.data.DeviceEntity, selected: Boolean, 
                                     Text(if (d.isAllowlisted) "Untrust" else "Trust")
                                 }
                             }
+                            val exportContext = androidx.compose.ui.platform.LocalContext.current
+                            Button(onClick = { vm.exportEvidence(exportContext, d.id) { exportContext.startActivity(it) } }) {
+                                Text("Export evidence report")
+                            }
                             Text("Your devices and trusted devices are excluded from tracker co-movement scoring.", fontSize = 9.sp, color = ConsoleMuted)
                             if (rssiHistory.isNotEmpty()) {
                                 val minRssi = rssiHistory.minOrNull() ?: d.lastRssi

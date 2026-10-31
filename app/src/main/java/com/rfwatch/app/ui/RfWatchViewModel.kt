@@ -31,6 +31,11 @@ class RfWatchViewModel(private val repo: RfWatchRepository) : ViewModel() {
     val drones = repo.drones
     val followers = repo.followers
     val homeStatus = repo.homeStatus
+
+    /** Build an evidence report and hand back the share-sheet intent. */
+    fun exportEvidence(context: android.content.Context, deviceId: String?, onReady: (android.content.Intent) -> Unit) {
+        viewModelScope.launch { onReady(repo.evidenceIntent(context.applicationContext, deviceId)) }
+    }
     suspend fun refreshPositions(ids: Collection<String>) = repo.refreshPositions(ids)
     suspend fun locateData(deviceId: String) = repo.locateData(deviceId)
     val scanSession = repo.scanSession

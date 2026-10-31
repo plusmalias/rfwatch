@@ -285,3 +285,36 @@ with a few metres of walking; `directional=false` when stationary) + tests.
 Working on (user requests): **Radar → north-up location plot** with real positions (drive-by fix or
 RSSI centroid + uncertainty circle), All/one-category filter, per-device locate chart; then drone
 Remote ID detection, background follower alerts (+ "police vehicle following"), home watch, evidence export.
+
+### 2026-10-31 (late night) — Claude — surveillance-victim features + thorough police detection (pushed)
+
+All compile + tests green (core 77/77, app 3/3); offline APK still has no INTERNET. **Not yet
+installed on the phone** (phone was charging) — next step: `adb install -r` mapsOnline and verify.
+
+- **Police detection v3** (`rules/law_enforcement.json`, 14 rules): adds speed radar/lidar
+  (Decatur OUI + vendor names), Toughbook MDTs (Panasonic Connect OUIs), emergency lighting/siren
+  names, Skydio police drones, Peplink/Pepwave vehicle routers, Harris Gov / Zetron. Background
+  follower check escalates law-enforcement kinds to `LAW_VEHICLE_FOLLOWING`.
+- **Vehicle GPS trackers** (`rules/fleet.json` v2): Teltonika, Geotab, Samsara, Ruptela, Queclink,
+  Jimi/Concox, CalAmp, LoJack, Suntech, Pointer, Zonar, Verizon Connect, Navman, Invoxia, Katch.
+- **Radar = real locations** (`ui/screens/LocationScope.kt`): north-up metre plot centred on the
+  user; devices at a drive-by fit or `df/RssiCentroidLocator` position (RSSI-weighted GPS sightings,
+  `directional` only with ≥8 m spread) with uncertainty circles; others listed by RSSI distance.
+  Category filter chips (pref `radar_filter`). Tap → per-device locate chart (heat dots, you,
+  estimate ± radius, "~N m to the NE"). Replaces the category-lane scope.
+- **Drones** (`core/id/RemoteIdParser`): ASTM F3411 Remote ID over BLE 0xFFFA and Wi-Fi beacon
+  vendor IE FA:0B:BC (API 30+ `informationElements`), DJI DroneID IE presence; alert with serial,
+  distance, height, pilot distance/direction; drone ◆ + pilot P on the scope.
+- **Follower alerts** (`repo.checkFollowers`, every 2 min): only after ≥1 km of user travel in 3 h;
+  `ObservationDao.followerCandidates` → Codex's `analyzeFollower` → `POSSIBLE_FOLLOWER` alert
+  (once / 30 min / device) + FOLLOWER event; Radar "Travelling with you" card.
+- **Home watch** (Settings): Set/Move/Clear Home (150 m); visits ≥20 min become baseline sessions
+  (geofence + baselines tables, `__visits__` counter row); after 3 visits, concerning newcomers
+  (tracker / GPS tracker / camera / law / drone / hotspot / non-random Wi-Fi) heard 6+ times over
+  10+ min → `NEW_AT_HOME` (once / day / device).
+- **Evidence export** (`app/export/EvidenceExporter`): HTML report + sightings CSV + alerts CSV via
+  FileProvider (`exports/` cache only) and the share sheet; Devices card "Export evidence report",
+  Event Log "Report".
+
+Codex: free to take a turn. Ideas: retention purge (still never called), BLE-spam detection,
+on-device verification of the above, follower-alert action buttons (Mark mine from notification).
