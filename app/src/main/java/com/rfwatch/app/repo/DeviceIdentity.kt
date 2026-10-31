@@ -27,7 +27,8 @@ internal object DeviceIdentityClassifier {
         band: Band, facts: DeviceFacts, match: TrackerMatch?, hits: List<RuleHit>,
         fingerprint: Fingerprint? = null,
     ): DeviceIdentity {
-        val axonHit = hits.any { it.ruleId == "axon" }
+        val taserHit = hits.any { it.ruleId == "taser" }
+        val axonHit = taserHit || hits.any { it.ruleId == "axon" }
         val lawHit = hits.firstOrNull { it.category == RuleCategory.LAW_ENFORCEMENT }
         val brand = if (axonHit) "Axon" else match?.type?.brand() ?: fingerprint?.brand ?: serviceBrand(facts) ?: advertiserBrand(facts)
         val fpKind = fingerprint?.kind?.takeIf { it != DeviceKind.UNKNOWN }
@@ -41,7 +42,8 @@ internal object DeviceIdentityClassifier {
             else -> DeviceKind.UNKNOWN
         }
         val category = when {
-            axonHit -> "Possible Axon / TASER device signature"
+            taserHit -> "Possible TASER signature"
+            axonHit -> "Possible Axon device signature"
             match != null -> "Bluetooth item tracker"
             hits.any { it.category == RuleCategory.CAMERA_IOT } -> "Camera / IoT candidate"
             hits.any { it.category == RuleCategory.FLEET } -> "Fleet / vehicle signature"

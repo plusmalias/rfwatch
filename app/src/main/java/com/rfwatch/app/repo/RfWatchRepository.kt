@@ -832,7 +832,7 @@ class RfWatchRepository(
                 val strongest = encounter.strongest
                 database.alertDao().insert(
                     com.rfwatch.app.data.AlertEntity(
-                        type = (if (ruleId == "axon") AlertType.AXON_SIGNATURE else AlertType.LAW_ENFORCEMENT_SIGNATURE).name,
+                        type = (if (ruleId == "axon" || ruleId == "taser") AlertType.AXON_SIGNATURE else AlertType.LAW_ENFORCEMENT_SIGNATURE).name,
                         timestampMs = now, deviceId = strongest?.deviceId,
                         message = "Possible law-enforcement equipment: " + encounter.signatures.joinToString { it.label },
                         confidence = 0.0,

@@ -3,35 +3,59 @@
   "name": "Law-enforcement equipment",
   "category": "LAW_ENFORCEMENT",
   "source": "Identifiers checked 2026-10-31 against the IEEE MA-L (OUI) registry and the Bluetooth SIG assigned numbers (company identifiers, 16-bit member UUIDs) bundled with RFWatch. Name/SSID patterns are community-reported. These are vendor/device signatures, not proof of police presence: the same vendors also sell to security firms, fleets, utilities and emergency services.",
-  "version": 3,
+  "version": 4,
   "rules": [
     {
+      "id": "taser",
+      "label": "TASER (conducted energy weapon)",
+      "threat": "PRIORITY",
+      "companyIds": [
+        845
+      ],
+      "serviceUuids": [
+        65131,
+        65132
+      ],
+      "nameSubstrings": [
+        "taser",
+        "x26p",
+        "x2 ",
+        "taser 7",
+        "taser 10",
+        "t7 ",
+        "t10 "
+      ],
+      "ssidPatterns": [
+        "taser"
+      ],
+      "note": "Bluetooth SIG company 0x034D and member UUIDs 0xFE6B / 0xFE6C are registered to TASER International (now Axon). TASER 7 / TASER 10 use Bluetooth LE to sync with Axon Evidence and with Signal Sidearm; they are most likely to advertise when docked/syncing or when drawn — a holstered idle TASER may be silent."
+    },
+    {
       "id": "axon",
-      "label": "Axon / TASER (body camera, Signal, TASER)",
+      "label": "Axon body camera / Signal / Fleet",
       "threat": "PRIORITY",
       "ouiPrefixes": [
         "0025df"
       ],
       "companyIds": [
-        845,
         64641
       ],
       "serviceUuids": [
-        64641,
-        65131,
-        65132
+        64641
       ],
       "ssidPatterns": [
-        "axon",
-        "taser"
+        "axon"
       ],
       "nameSubstrings": [
         "axon",
-        "taser",
         "signal sidearm",
-        "signal vehicle"
+        "signal vehicle",
+        "body 3",
+        "body 4",
+        "axon flex",
+        "fleet 3"
       ],
-      "note": "OUI 00:25:DF (Axon Enterprise), Bluetooth SIG company 0x034D (TASER International; 0xFC81 also accepted in the company-ID field as seen live) and member UUIDs 0xFC81 (Axon Enterprise) / 0xFE6B, 0xFE6C (TASER International). Axon body cameras, Signal Sidearm/Vehicle triggers and TASER devices; vendor-level evidence only."
+      "note": "OUI 00:25:DF (Axon Enterprise) and Axon member UUID 0xFC81 (also accepted in the company-ID field as seen live). Body 3/4, Flex, Fleet in-car video and Signal Sidearm/Vehicle triggers. TASER weapons are a separate rule."
     },
     {
       "id": "watchguard_video",
@@ -149,13 +173,23 @@
       "label": "ALPR / plate-reader camera",
       "threat": "PRIORITY",
       "ouiPrefixes": [
-        "b41e52",
+        "0000a5",
         "000ab1",
+        "00173d",
+        "002031",
+        "0020b3",
+        "004075",
+        "00408e",
+        "0040de",
+        "00604f",
+        "008046",
+        "0080e7",
+        "009043",
+        "00908b",
+        "00a080",
         "00bf15",
         "0cbf15",
-        "0040de",
-        "0080e7",
-        "00173d"
+        "b41e52"
       ],
       "ssidPatterns": [
         "^flock",
@@ -170,7 +204,7 @@
         "anpr",
         "alpr"
       ],
-      "note": "Flock Safety (B4:1E:52), Genetec AutoVu (00:0A:B1, 00:BF:15, 0C:BF:15), Elsag/Leonardo (00:40:DE, 00:80:E7) and Neology (00:17:3D) OUIs; Flock SSID/BLE names as reported by the Flock You project. Usually fixed roadside or vehicle-mounted cameras."
+      "note": "Flock Safety (B4:1E:52), Genetec AutoVu (00:0A:B1, 00:BF:15, 0C:BF:15), Elsag/Leonardo (00:40:DE, 00:80:E7) and Neology (00:17:3D) OUIs; Flock SSID/BLE names as reported by the Flock You project. Usually fixed roadside or vehicle-mounted cameras. v4 adds Tattile SRL OUIs (ALPR / traffic cameras)."
     },
     {
       "id": "vehicle_modem",
@@ -297,6 +331,39 @@
         "skydio"
       ],
       "note": "Skydio Inc. OUI 38:1D:14. Skydio X2/X10 are widely used in police drone-as-first-responder programs; also sold to enterprises."
+    },
+    {
+      "id": "traffic_enforcement",
+      "label": "Traffic-enforcement camera",
+      "threat": "NOTABLE",
+      "ouiPrefixes": [
+        "00044c",
+        "000d7b",
+        "001829",
+        "00229f",
+        "0024ae",
+        "00307e",
+        "00e06a",
+        "48e3c3",
+        "6ca401"
+      ],
+      "companyIds": [
+        904
+      ],
+      "nameSubstrings": [
+        "redflex",
+        "jenoptik",
+        "vector sr",
+        "sensys",
+        "gatso",
+        "acusensus",
+        "heads up",
+        "kapsch",
+        "idemia",
+        "mesta",
+        "traffipax"
+      ],
+      "note": "IEEE OUIs of Redflex, Jenoptik, Sensys Gatso, Kapsch TrafficCom (+ SIG company 0x0388) and IDEMIA — speed, red-light, average-speed and mobile-phone/seatbelt detection cameras used across Australia. Mostly fixed or trailer-mounted; Acusensus by name only."
     }
   ]
 }

@@ -45,13 +45,27 @@ class LawEncounterTrackerTest {
     @Test fun lawPackMatchesRegistryIdentifiers() {
         val engine = RuleEngine(RulePacks.loadBuiltin())
         fun ruleFor(f: DeviceFacts) = engine.evaluate(f).firstOrNull { it.packId == "law_enforcement" }?.ruleId
-        assertEquals("axon", ruleFor(DeviceFacts(null, null, null, companyIds = setOf(0x034D))))
-        assertEquals("axon", ruleFor(DeviceFacts(null, null, null, serviceUuids = setOf(0xFE6C))))
+        assertEquals("taser", ruleFor(DeviceFacts(null, null, null, companyIds = setOf(0x034D))))
+        assertEquals("taser", ruleFor(DeviceFacts(null, null, null, serviceUuids = setOf(0xFE6C))))
+        assertEquals("taser", ruleFor(DeviceFacts(null, null, "TASER 10")))
+        assertEquals("axon", ruleFor(DeviceFacts("00:25:DF:11:22:33", null, null)))
+        assertEquals("traffic_enforcement", ruleFor(DeviceFacts("00:30:7E:11:22:33", null, null)))
         assertEquals("motorola_solutions", ruleFor(DeviceFacts(null, null, null, companyIds = setOf(0x04EC))))
         assertEquals("alpr", ruleFor(DeviceFacts("B4:1E:52:00:11:22", null, null)))
         assertEquals("watchguard_video", ruleFor(DeviceFacts("00:1D:96:00:11:22", null, null)))
         assertEquals("vehicle_modem", ruleFor(DeviceFacts("00:A0:D5:00:11:22", null, null)))
         // WatchGuard *Technologies* firewalls are a different company and must not match.
         assertEquals(null, ruleFor(DeviceFacts("00:90:7F:00:11:22", null, null)))
+    }
+
+    @Test fun cameraPackV2CoversBrandsChipsAndSpyCamHotspots() {
+        val engine = RuleEngine(RulePacks.loadBuiltin())
+        fun cam(f: DeviceFacts) = engine.evaluate(f).firstOrNull { it.packId == "cameras_iot" }?.ruleId
+        assertEquals("ezviz", cam(DeviceFacts("0C:A6:4C:11:22:33", null, null)))
+        assertEquals("security_camera_brands", cam(DeviceFacts("EC:71:DB:11:22:33", null, null))) // Reolink
+        assertEquals("camera_soc", cam(DeviceFacts("D0:31:10:11:22:33", null, null))) // Ingenic Semiconductor
+        assertEquals(null, cam(DeviceFacts("00:03:81:11:22:33", null, null))) // Ingenico payment terminal
+        assertTrue(cam(DeviceFacts("02:11:22:33:44:55", "MV12345678", null)).orEmpty().startsWith("spycam"))
+        assertEquals("spycam_app_ssid", cam(DeviceFacts("02:11:22:33:44:55", "YCC365-ab12", null)))
     }
 }
