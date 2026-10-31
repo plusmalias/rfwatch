@@ -72,4 +72,11 @@ class IdentificationTest {
         assertEquals("Apple", BleFingerprinter.fingerprint(adv("02011A 1BFF4C00 0719 010E20 000000000000000000000000000000000000000000"), null).brand)
         assertEquals("Apple", WifiFingerprinter.fingerprint("HomeNet", "3C:2E:F9:00:11:22").brand)
     }
+
+    @Test fun appleFindMyBroadcastIsLabelledAsTracker() {
+        // Seen live: manufacturer data 0x004C = 12 02 00 01 (Find My, owner nearby).
+        val fp = BleFingerprinter.fingerprint(adv("07FF4C0012020001"), null)
+        assertEquals(DeviceKind.TRACKER, fp.kind)
+        assertTrue(fp.model.orEmpty().contains("owner nearby"))
+    }
 }

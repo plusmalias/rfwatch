@@ -116,7 +116,12 @@ object BleFingerprinter {
         if (personal != null) {
             return Fingerprint(DeviceKind.PHONE, "iPhone / iPad / Mac", "Apple Continuity ${personal.second}")
         }
-        return null // e.g. only 0x12 (Find My) — the tracker parser owns that
+        messages[0x12]?.let { p ->
+            // Find My offline-finding broadcast (AirTag, or an Apple device / accessory on the Find My network).
+            val state = if (p.size >= 25) "separated from its owner" else "owner nearby"
+            return Fingerprint(DeviceKind.TRACKER, "Apple Find My broadcast ($state)", "Apple Continuity Find My message 0x12, ${p.size}-byte payload")
+        }
+        return null
     }
 
     private fun ibeacon(p: ByteArray): Fingerprint {

@@ -53,7 +53,9 @@ import com.rfwatch.app.ui.theme.DangerRed
 import com.rfwatch.app.ui.theme.WarnAmber
 
 /** A small saturated bright spot in the frame, in display-normalised coordinates (0..1). */
-private data class Spot(val x: Float, val y: Float, val sizePx: Int, val frames: Int)
+private data class Spot(val x: Float, val y: Float, val sizePx: Int, val frames: Int, val contrast: Int = 0)
+
+private const val STEADY_FRAMES = 8
 
 private enum class FinderMode(val label: String) { IR("IR finder (front camera)"), LENS("Lens finder (back camera + torch)") }
 
@@ -99,15 +101,16 @@ fun CameraFinderScreen(modifier: Modifier = Modifier) {
                 CameraPreview(mode) { found, mean -> spots = found; brightness = mean }
                 Canvas(Modifier.fillMaxSize()) {
                     spots.forEach { s ->
-                        val c = if (s.frames >= 6) DangerRed else WarnAmber
+                        val c = if (s.frames >= STEADY_FRAMES) DangerRed else WarnAmber
                         drawCircle(c, radius = 28f + s.sizePx, center = Offset(s.x * size.width, s.y * size.height), style = Stroke(4f))
                     }
                 }
             }
-            val steady = spots.count { it.frames >= 6 }
+            val steady = spots.count { it.frames >= STEADY_FRAMES }
             Text(
                 when {
                     mode == FinderMode.IR && brightness > 90 -> "Room is too bright (${brightness}/255) — turn the lights off for the IR finder."
+                    spots.size >= 4 && steady == 0 -> "Busy scene — screens, TVs and small lights create bright points. Dim or avoid them and sweep again."
                     steady > 0 -> "$steady steady bright spot(s) circled red — look closely at what's there. Amber = brief / flickering."
                     spots.isNotEmpty() -> "${spots.size} brief bright spot(s) — keep the phone still on them to see if they persist."
                     else -> "No candidate spots right now. Sweep slowly."
@@ -195,6 +198,15 @@ private fun CameraPreview(mode: FinderMode, onAnalysis: (List<Spot>, Int) -> Uni
  */
 private class SpotTracker(private val sensorOrientation: Int, private val mirrored: Boolean) {
     private var previous: List<Spot> = emptyList()
+    /** True when the frame has many bright pin-points (screens, fairy lights) — results are less reliable. */
+    @Volatile var busy = false
+
+    private companion object {
+        const val MAX_SPOT_CELLS = 3
+        const val RING = 4
+        const val MIN_CONTRAST = 90
+        const val BUSY_SCENE_SPOTS = 6
+    }
 
     fun analyse(buf: java.nio.ByteBuffer, w: Int, h: Int, rowStride: Int): Pair<List<Spot>, Int> {
         val step = 4
@@ -213,11 +225,11 @@ private class SpotTracker(private val sensorOrientation: Int, private val mirror
             if (seen[i] || lum[i] < threshold) continue
             // Flood-fill the bright blob.
             val stack = ArrayDeque<Int>().apply { add(i) }
-            var count = 0; var sx = 0; var sy = 0
+            var count = 0; var sx = 0; var sy = 0; var peak = 0
             seen[i] = true
             while (stack.isNotEmpty()) {
                 val p = stack.removeLast()
-                count++; sx += p % gw; sy += p / gw
+                count++; sx += p % gw; sy += p / gw; peak = maxOf(peak, lum[p])
                 val px = p % gw; val py = p / gw
                 for ((dx, dy) in arrayOf(1 to 0, -1 to 0, 0 to 1, 0 to -1)) {
                     val nx = px + dx; val ny = py + dy
@@ -226,14 +238,27 @@ private class SpotTracker(private val sensorOrientation: Int, private val mirror
                     if (!seen[q] && lum[q] >= threshold) { seen[q] = true; stack.add(q) }
                 }
             }
-            // Pin-points only: big bright areas are lamps / windows, not lenses or LEDs.
-            if (count in 1..((gw * gh) / 300)) {
-                val (dx, dy) = toDisplay((sx.toFloat() / count + 0.5f) / gw, (sy.toFloat() / count + 0.5f) / gh)
-                blobs += Spot(dx, dy, count, 1)
+            // Pin-points only (1–3 cells): text on a lit screen, lamps and windows are bigger.
+            if (count > MAX_SPOT_CELLS) continue
+            val cx = sx / count; val cy = sy / count
+            // Local contrast: a lens glint / IR LED is far brighter than a ring around it; bright
+            // text on a screen is not, because its surroundings are bright too.
+            var ringSum = 0; var ringN = 0
+            for (dy in -RING..RING) for (dx in -RING..RING) {
+                if (maxOf(kotlin.math.abs(dx), kotlin.math.abs(dy)) != RING) continue
+                val x = cx + dx; val y = cy + dy
+                if (x !in 0 until gw || y !in 0 until gh) continue
+                ringSum += lum[y * gw + x]; ringN++
             }
+            val contrast = peak - (if (ringN > 0) ringSum / ringN else mean)
+            if (contrast < MIN_CONTRAST) continue
+            val (dx, dy) = toDisplay((cx + 0.5f) / gw, (cy + 0.5f) / gh)
+            blobs += Spot(dx, dy, count, 1, contrast)
         }
+        busy = blobs.size > BUSY_SCENE_SPOTS
+        blobs.sortByDescending { it.contrast }
         // Persistence: a blob near one from the previous frame inherits its frame count + 1.
-        val tracked = blobs.take(12).map { b ->
+        val tracked = blobs.take(if (busy) 4 else 8).map { b ->
             val prev = previous.minByOrNull { (it.x - b.x) * (it.x - b.x) + (it.y - b.y) * (it.y - b.y) }
             if (prev != null && kotlin.math.hypot((prev.x - b.x).toDouble(), (prev.y - b.y).toDouble()) < 0.06) b.copy(frames = prev.frames + 1) else b
         }
