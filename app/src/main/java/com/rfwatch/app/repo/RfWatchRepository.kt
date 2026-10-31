@@ -784,7 +784,10 @@ class RfWatchRepository(
         maybeAlert(
             id, classification, match,
             trackerAlertConfirmed = trackerAlertConfirmed,
-            cameraSignature = hits.any { it.category == com.rfwatch.core.rules.RuleCategory.CAMERA_IOT },
+            cameraHit = hits.filter { it.category == com.rfwatch.core.rules.RuleCategory.CAMERA_IOT }.maxByOrNull { it.threat.ordinal },
+            lawHit = hits.any { it.category == com.rfwatch.core.rules.RuleCategory.LAW_ENFORCEMENT },
+            rssi = rssi,
+            ownOrTrusted = updated.isOwnDevice || updated.isAllowlisted,
         )
     }
 
@@ -795,17 +798,24 @@ class RfWatchRepository(
         classification: String,
         match: TrackerMatch?,
         trackerAlertConfirmed: Boolean,
-        cameraSignature: Boolean,
+        cameraHit: com.rfwatch.core.rules.RuleHit?,
+        lawHit: Boolean,
+        rssi: Int,
+        ownOrTrusted: Boolean,
     ) {
         val now = System.currentTimeMillis()
-        if ((now - (lastAlertMs[id] ?: 0)) < ALERT_DEBOUNCE_MS) return
+        if (ownOrTrusted) return
         val relBearing = relativeBearingFor(id)
+        // Law-enforcement hits alert only through the grouped encounter (LawEncounterTracker).
+        // Cameras alert when close or when it is a spy-cam setup hotspot — neighbours' CCTV is common.
         val type = when {
-            cameraSignature -> AlertType.CAMERA_IOT_SIGNATURE
+            cameraHit != null && (cameraHit.threat == Threat.PRIORITY || rssi >= CAMERA_ALERT_MIN_RSSI) -> AlertType.CAMERA_IOT_SIGNATURE
             match != null && trackerAlertConfirmed -> AlertType.TRACKER_FOLLOWING
-            classification == "PRIORITY" -> AlertType.PRIORITY_NEARBY
+            classification == "PRIORITY" && !lawHit && cameraHit == null -> AlertType.PRIORITY_NEARBY
             else -> return
         }
+        val cooldown = if (type == AlertType.CAMERA_IOT_SIGNATURE) CAMERA_ALERT_COOLDOWN_MS else ALERT_DEBOUNCE_MS
+        if ((now - (lastAlertMs[id] ?: 0)) < cooldown) return
         val contact = _contacts.value[id] ?: liveContacts[id]
         val confidence = contact?.estimate?.confidence ?: 0.0
         alertManager.raise(type, titleFor(type), contact?.label, relBearing, confidence, speak = type != AlertType.TRACKER_FOLLOWING)
@@ -1059,6 +1069,8 @@ class RfWatchRepository(
 
     companion object {
         private const val ALERT_DEBOUNCE_MS = 60_000L
+        private const val CAMERA_ALERT_MIN_RSSI = -75
+        private const val CAMERA_ALERT_COOLDOWN_MS = 6 * 60 * 60_000L
         const val MIN_SWEEP_SAMPLES = 6
         private const val FLUSH_INTERVAL_MS = 3_000L
         private const val OBSERVATION_MIN_INTERVAL_MS = 2_000L

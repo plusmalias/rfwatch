@@ -13,6 +13,7 @@ import com.rfwatch.core.alerts.AlertPhrasing
 import com.rfwatch.core.alerts.AlertType
 import com.rfwatch.core.alerts.LawEncounter
 import java.util.Locale
+import kotlinx.coroutines.launch
 
 /**
  * Raises alerts (step 11): each [AlertType] has its own notification channel, a distinct
@@ -66,6 +67,7 @@ class AlertManager(private val context: Context) : TextToSpeech.OnInitListener {
             .setAutoCancel(true)
             .build()
         nm.notify(type.ordinal + 1000, n)
+        if (type != AlertType.TRACKER_FOLLOWING) flash(type, title)
 
         if (type != AlertType.TRACKER_FOLLOWING) vibrate(type)
         if (speak && ttsReady) {
@@ -75,6 +77,53 @@ class AlertManager(private val context: Context) : TextToSpeech.OnInitListener {
     }
 
     private val prefs = context.getSharedPreferences("rfwatch_settings", Context.MODE_PRIVATE)
+
+    /** A request to flash the open app's screen in [colorArgb] while the alert dings. */
+    data class FlashRequest(val colorArgb: Long, val title: String)
+
+    private val _flashes = kotlinx.coroutines.flow.MutableSharedFlow<FlashRequest>(extraBufferCapacity = 8)
+    /** Collected by MainActivity to pulse a full-screen colour overlay. */
+    val flashes: kotlinx.coroutines.flow.SharedFlow<FlashRequest> = _flashes
+    private val strobeScope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.Default)
+    private val strobing = java.util.concurrent.atomic.AtomicBoolean(false)
+
+    private fun flashColor(type: AlertType): Long = when (type) {
+        AlertType.AXON_SIGNATURE, AlertType.LAW_ENFORCEMENT_SIGNATURE, AlertType.PRIORITY_NEARBY,
+        AlertType.PRIORITY_APPROACHING, AlertType.IMSI_CATCHER -> 0xFFFF3B4E
+        AlertType.LAW_VEHICLE_FOLLOWING, AlertType.POSSIBLE_FOLLOWER -> 0xFFFF7A1A
+        AlertType.DRONE_NEARBY -> 0xFFE040FB
+        AlertType.CAMERA_IOT_SIGNATURE, AlertType.NEW_AT_HOME, AlertType.SWEEP_HIT -> 0xFFFFB020
+        AlertType.TRACKER_FOLLOWING -> 0xFFF277A6
+    }
+
+    /** Screen flash (if the app is open) and optional camera-torch strobe for a loud alert. */
+    private fun flash(type: AlertType, title: String) {
+        if (prefs.getBoolean(PREF_FLASH_SCREEN, true)) _flashes.tryEmit(FlashRequest(flashColor(type), title))
+        if (prefs.getBoolean(PREF_FLASH_TORCH, false)) strobeTorch()
+    }
+
+    /** Pulses the back camera's flash LED; needs no permission and works with the screen off. */
+    private fun strobeTorch() {
+        if (!strobing.compareAndSet(false, true)) return
+        strobeScope.launch {
+            try {
+                val cm = context.getSystemService(Context.CAMERA_SERVICE) as android.hardware.camera2.CameraManager
+                val id = cm.cameraIdList.firstOrNull {
+                    val c = cm.getCameraCharacteristics(it)
+                    c.get(android.hardware.camera2.CameraCharacteristics.FLASH_INFO_AVAILABLE) == true &&
+                        c.get(android.hardware.camera2.CameraCharacteristics.LENS_FACING) == android.hardware.camera2.CameraCharacteristics.LENS_FACING_BACK
+                } ?: return@launch
+                repeat(6) {
+                    cm.setTorchMode(id, true); kotlinx.coroutines.delay(110)
+                    cm.setTorchMode(id, false); kotlinx.coroutines.delay(140)
+                }
+            } catch (_: Exception) {
+                // Camera in use by another app, or no flash: skip silently.
+            } finally {
+                strobing.set(false)
+            }
+        }
+    }
 
     /**
      * Live, updating notification for a possible law-enforcement encounter. [loud] alerts with
@@ -107,6 +156,7 @@ class AlertManager(private val context: Context) : TextToSpeech.OnInitListener {
             .build()
         nm.notify(LAW_NOTIFICATION_ID, n)
         if (loud) {
+            flash(AlertType.LAW_ENFORCEMENT_SIGNATURE, "POLICE EQUIPMENT · ${strongest.label.substringBefore(" (")}")
             vibrate(if (encounter.hasPriority) AlertType.AXON_SIGNATURE else AlertType.LAW_ENFORCEMENT_SIGNATURE)
             if (ttsReady && prefs.getBoolean(PREF_LAW_SPEAK, true)) {
                 tts.speak(
@@ -208,6 +258,8 @@ class AlertManager(private val context: Context) : TextToSpeech.OnInitListener {
         const val LAW_CHANNEL = "ch_law_live"
         const val PREF_LAW_ALERTS = "law_alerts"
         const val PREF_LAW_SPEAK = "law_speak"
+        const val PREF_FLASH_SCREEN = "flash_screen"
+        const val PREF_FLASH_TORCH = "flash_torch"
         private const val LAW_NOTIFICATION_ID = 4242
     }
 }

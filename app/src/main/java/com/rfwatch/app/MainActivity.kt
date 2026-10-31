@@ -107,6 +107,7 @@ class MainActivity : ComponentActivity() {
                     onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
                 }
 
+                Box(Modifier.fillMaxSize()) {
                 Scaffold(
                     containerColor = ConsoleBackground,
                     bottomBar = {
@@ -194,6 +195,8 @@ class MainActivity : ComponentActivity() {
                             }
                         }
                     }
+                }
+                    com.rfwatch.app.ui.AlertFlashOverlay((application as RfWatchApp).container.alertManager.flashes)
                 }
             }
         }

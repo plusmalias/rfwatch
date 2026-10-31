@@ -52,6 +52,8 @@ fun SettingsScreen(modifier: Modifier = Modifier) {
     var confirmWipe by remember { mutableStateOf(false) }
     var lawAlerts by remember { mutableStateOf(prefs.getBoolean(AlertManager.PREF_LAW_ALERTS, true)) }
     var lawSpeak by remember { mutableStateOf(prefs.getBoolean(AlertManager.PREF_LAW_SPEAK, true)) }
+    var flashScreen by remember { mutableStateOf(prefs.getBoolean(AlertManager.PREF_FLASH_SCREEN, true)) }
+    var flashTorch by remember { mutableStateOf(prefs.getBoolean(AlertManager.PREF_FLASH_TORCH, false)) }
     val scope = rememberCoroutineScope()
 
     Column(modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp)) {
@@ -114,6 +116,30 @@ fun SettingsScreen(modifier: Modifier = Modifier) {
             if (home.isSet) TextButton(onClick = { scope.launch { repo.clearHome(); homeMessage = "Home cleared." } }) { Text("Clear Home") }
         }
         homeMessage?.let { Text(it, fontSize = 12.sp, color = OkGreen) }
+
+        Row(Modifier.fillMaxWidth().padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text("Flash screen on alerts", fontSize = 14.sp)
+                Text("Pulse the whole screen in the alert colour while it dings (when RFWatch is open).", fontSize = 12.sp, color = Color(0xFF9CA3AF))
+            }
+            Switch(checked = flashScreen, onCheckedChange = { flashScreen = it; prefs.edit().putBoolean(AlertManager.PREF_FLASH_SCREEN, it).apply() })
+        }
+        Row(Modifier.fillMaxWidth().padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text("Flash torch on alerts", fontSize = 14.sp)
+                Text("Strobe the camera flash LED for police, drone, follower and camera alerts — works with the screen off.", fontSize = 12.sp, color = Color(0xFF9CA3AF))
+            }
+            Switch(checked = flashTorch, onCheckedChange = { flashTorch = it; prefs.edit().putBoolean(AlertManager.PREF_FLASH_TORCH, it).apply() })
+        }
+        androidx.compose.material3.OutlinedButton(
+            onClick = {
+                (context.applicationContext as RfWatchApp).container.alertManager.raise(
+                    com.rfwatch.core.alerts.AlertType.LAW_ENFORCEMENT_SIGNATURE, "Test alert",
+                    "This is a test — nothing was detected", null, 0.0,
+                )
+            },
+            modifier = Modifier.padding(top = 8.dp),
+        ) { Text("Test alert (sound, vibration, flash)") }
 
         Button(
             onClick = { confirmWipe = true },
