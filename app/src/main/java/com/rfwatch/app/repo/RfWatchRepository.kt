@@ -87,6 +87,15 @@ data class LiveContact(
     val kind: com.rfwatch.core.id.DeviceKind = com.rfwatch.core.id.DeviceKind.UNKNOWN,
 )
 
+/** A drone heard via Remote ID / DJI DroneID, with everything it has broadcast so far. */
+data class DroneTrack(
+    val id: String,
+    val info: com.rfwatch.core.id.RemoteIdInfo,
+    val rssi: Int,
+    val lastSeenMs: Long,
+    val source: String,
+)
+
 /** One GPS-tagged hearing of a device, for the per-device locate chart. */
 data class DeviceSighting(val lat: Double, val lon: Double, val rssi: Int, val timestampMs: Long, val accuracyM: Double)
 
@@ -275,6 +284,45 @@ class RfWatchRepository(
         FollowerScorer.score(deviceId, sightings, userTrack, exclusion)
     }
 
+    private val _drones = MutableStateFlow<Map<String, DroneTrack>>(emptyMap())
+    /** Drones heard recently (Remote ID position / pilot position when broadcast). */
+    val drones: StateFlow<Map<String, DroneTrack>> = _drones.asStateFlow()
+    private val lastDroneAlertMs = HashMap<String, Long>()
+
+    private suspend fun onDrone(id: String, info: com.rfwatch.core.id.RemoteIdInfo, rssi: Int, ts: Long, source: String) {
+        val key = info.serial ?: id
+        val merged = (_drones.value[key]?.info?.merge(info)) ?: info
+        _drones.value = (_drones.value + (key to DroneTrack(key, merged, rssi, ts, source)))
+            .filterValues { ts - it.lastSeenMs < DRONE_TTL_MS }
+        if (ts - (lastDroneAlertMs[key] ?: 0L) < DRONE_ALERT_COOLDOWN_MS) return
+        lastDroneAlertMs[key] = ts
+        val me = fixHolder.current
+        fun distTo(lat: Double?, lon: Double?) = if (me == null || lat == null || lon == null) null
+            else com.rfwatch.core.geo.haversineM(me.lat, me.lon, lat, lon)
+        val droneDist = distTo(merged.lat, merged.lon)
+        val pilotDist = distTo(merged.operatorLat, merged.operatorLon)
+        val opLat = merged.operatorLat
+        val opLon = merged.operatorLon
+        val pilotDir = if (me != null && opLat != null && opLon != null) {
+            val e = com.rfwatch.core.geo.LocalFrame(me.lat, me.lon).toEnu(opLat, opLon)
+            listOf("N", "NE", "E", "SE", "S", "SW", "W", "NW")[((com.rfwatch.core.geo.bearingDeg(e.east, e.north) / 45.0 + 0.5).toInt()) % 8]
+        } else null
+        val detail = listOfNotNull(
+            merged.serial?.let { "ID $it" } ?: "no Remote ID ($source)",
+            droneDist?.let { "drone ~${it.toInt()} m away" },
+            merged.heightAglM?.let { "${it.toInt()} m up" } ?: merged.altitudeM?.let { "alt ${it.toInt()} m" },
+            pilotDist?.let { "pilot ~${it.toInt()} m ${pilotDir ?: ""}".trim() },
+            "$rssi dBm",
+        ).joinToString(" · ")
+        alertManager.raise(AlertType.DRONE_NEARBY, "Drone nearby", detail, null, 0.0)
+        database.alertDao().insert(
+            com.rfwatch.app.data.AlertEntity(type = AlertType.DRONE_NEARBY.name, timestampMs = ts, deviceId = id, message = detail),
+        )
+        database.eventDao().insert(
+            com.rfwatch.app.data.EventEntity(kind = "DRONE", timestampMs = ts, deviceId = id, detail = detail, lat = merged.lat ?: me?.lat, lon = merged.lon ?: me?.lon),
+        )
+    }
+
     private val _positions = MutableStateFlow<Map<String, com.rfwatch.core.df.CentroidEstimate>>(emptyMap())
     /** RSSI-weighted position estimates for devices on the Radar (refreshed while it is visible). */
     val positions: StateFlow<Map<String, com.rfwatch.core.df.CentroidEstimate>> = _positions.asStateFlow()
@@ -386,6 +434,9 @@ class RfWatchRepository(
                     "0x${companyId.toString(16).uppercase().padStart(4, '0')}=${bytes.joinToString("") { "%02X".format(it.toInt() and 0xFF) }}"
                 }
                 val fingerprint = com.rfwatch.core.id.BleFingerprinter.fingerprint(adv, sighting.deviceName)
+                adv.serviceData16[com.rfwatch.core.id.RemoteIdParser.BLE_SERVICE_UUID]
+                    ?.let { com.rfwatch.core.id.RemoteIdParser.parseBleServiceData(it) }
+                    ?.let { onDrone(adv.address, it, adv.rssi, adv.timestampMs, "Bluetooth Remote ID") }
                 val radioDetails = buildList {
                     add("BLE address ${adv.address}")
                     add(addressType)
@@ -404,7 +455,13 @@ class RfWatchRepository(
         scope.launch {
             wifiScanner.scans().collect { list ->
                 list.forEach { s ->
-                    val fingerprint = com.rfwatch.core.id.WifiFingerprinter.fingerprint(s.facts.ssid, s.bssid)
+                    when {
+                        s.remoteId != null -> onDrone(s.bssid, s.remoteId, s.facts.rssi, s.timestampMs, "Wi-Fi Remote ID")
+                        s.djiDroneId -> onDrone(s.bssid, com.rfwatch.core.id.RemoteIdInfo(description = s.facts.ssid), s.facts.rssi, s.timestampMs, "DJI DroneID beacon")
+                    }
+                    val fingerprint = if (s.remoteId != null || s.djiDroneId)
+                        com.rfwatch.core.id.Fingerprint(com.rfwatch.core.id.DeviceKind.DRONE, "Drone" + (s.remoteId?.serial?.let { " · $it" } ?: ""), "drone beacon vendor element (Remote ID / DJI DroneID)")
+                    else com.rfwatch.core.id.WifiFingerprinter.fingerprint(s.facts.ssid, s.bssid)
                     onDevice(
                         s.bssid, Band.WIFI, s.facts.ssid, s.facts.rssi, s.timestampMs, s.facts, null,
                         radioDetails = "${s.radioDetails} · Identification evidence: ${fingerprint.evidence}",
@@ -832,6 +889,9 @@ class RfWatchRepository(
         AlertType.AXON_SIGNATURE -> "Possible Axon device signature nearby"
         AlertType.LAW_ENFORCEMENT_SIGNATURE -> "Possible law-enforcement radio signature nearby"
         AlertType.CAMERA_IOT_SIGNATURE -> "Possible camera / IoT radio signature nearby"
+        AlertType.DRONE_NEARBY -> "Drone detected nearby"
+        AlertType.POSSIBLE_FOLLOWER -> "Device travelling with you"
+        AlertType.LAW_VEHICLE_FOLLOWING -> "Possible police equipment travelling with you"
     }
 
     companion object {
@@ -842,6 +902,8 @@ class RfWatchRepository(
         private const val CONTACT_PUBLISH_INTERVAL_MS = 1_000L
         private const val LAW_TICK_MS = 5_000L
         private const val POSITION_DEVICE_LIMIT = 80
+        private const val DRONE_TTL_MS = 5 * 60_000L
+        private const val DRONE_ALERT_COOLDOWN_MS = 10 * 60_000L
         private const val POSITION_SAMPLE_LIMIT = 120
         private const val LOCATE_SAMPLE_LIMIT = 400
         private const val CELL_SCAN_INTERVAL_MS = 6_000L

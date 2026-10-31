@@ -8,6 +8,7 @@ package com.rfwatch.core.id
 internal object NameHints {
 
     private val BLE_TOKENS: List<Pair<DeviceKind, List<String>>> = listOf(
+        DeviceKind.DRONE to listOf("dji", "mavic", "skydio", "autel", "anafi", "drone"),
         DeviceKind.TRACKER to listOf("airtag", "smarttag", "chipolo", "tile "),
         DeviceKind.AUDIO to listOf(
             "airpods", "buds", "beats", "jbl", "bose", "wh-1000", "wf-1000", "wh-", "wf-", "headphone", "headset",
@@ -48,6 +49,7 @@ internal object NameHints {
     }
 
     private val WIFI_TOKENS: List<Pair<DeviceKind, List<String>>> = listOf(
+        DeviceKind.DRONE to listOf("dji-", "mavic", "phantom", "tello-", "spark-", "anafi", "autel", "skydio", "fimi", "holystone", "drone"),
         DeviceKind.HOTSPOT to listOf(
             "iphone", "ipad", "androidap", "android ap", "galaxy", "pixel", "oneplus", "redmi", "oppo", "vivo",
             "huawei", "'s phone", "hotspot", "mobile wifi", "mifi",

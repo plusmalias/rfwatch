@@ -109,10 +109,24 @@ internal fun LocationScopePanel(
     positions: Map<String, CentroidEstimate>,
     user: GpsFix?,
     selectedId: String?,
+    drones: Collection<com.rfwatch.app.repo.DroneTrack> = emptyList(),
     onSelect: (String) -> Unit,
 ) {
     val (placed, unplaced) = placeContacts(contacts, positions, user)
-    val rangeM = niceRange(placed.maxOfOrNull { hypot(it.east, it.north) + it.radiusM * 0.5 } ?: 20.0)
+    val droneMarks = if (user == null) emptyList() else drones.mapNotNull { d ->
+        val frame = LocalFrame(user.lat, user.lon)
+        val lat = d.info.lat; val lon = d.info.lon
+        if (lat == null || lon == null) null else {
+            val e = frame.toEnu(lat, lon)
+            val opLat = d.info.operatorLat; val opLon = d.info.operatorLon
+            val op = if (opLat != null && opLon != null) frame.toEnu(opLat, opLon) else null
+            DroneMark(e.east, e.north, op?.east, op?.north)
+        }
+    }
+    val rangeM = niceRange(
+        (placed.map { hypot(it.east, it.north) + it.radiusM * 0.5 } +
+            droneMarks.flatMap { listOfNotNull(hypot(it.east, it.north), it.opEast?.let { e -> hypot(e, it.opNorth ?: 0.0) }) }).maxOrNull() ?: 20.0,
+    )
     Card(
         Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = ConsolePanel),
@@ -136,7 +150,14 @@ internal fun LocationScopePanel(
                         }
                     }
                 },
-            ) { drawLocationScope(placed, rangeM, selectedId) }
+            ) { drawLocationScope(placed, rangeM, selectedId, droneMarks) }
+            if (drones.isNotEmpty()) {
+                Text(
+                    "DRONES: " + drones.joinToString { (it.info.serial ?: "unidentified") + " (${it.source})" } +
+                        " — ◆ drone position, P pilot position (as broadcast by the drone).",
+                    fontSize = 11.sp, color = com.rfwatch.app.ui.theme.DangerRed,
+                )
+            }
             Text(
                 "Dots are where each device most likely is, from where its signal was strongest as you moved " +
                     "(green ring = drive-by fit). Shaded circle = uncertainty. Walk around for better positions; " +
@@ -172,7 +193,9 @@ private fun DistanceBar(c: LiveContact, selected: Boolean, onClick: () -> Unit) 
     }
 }
 
-private fun DrawScope.drawLocationScope(placed: List<Placed>, rangeM: Double, selectedId: String?) {
+private data class DroneMark(val east: Double, val north: Double, val opEast: Double?, val opNorth: Double?)
+
+private fun DrawScope.drawLocationScope(placed: List<Placed>, rangeM: Double, selectedId: String?, drones: List<DroneMark> = emptyList()) {
     val cx = size.width / 2f; val cy = size.height / 2f
     val maxR = min(cx, cy) * 0.92f
     val scale = maxR / rangeM.toFloat()
@@ -187,6 +210,21 @@ private fun DrawScope.drawLocationScope(placed: List<Placed>, rangeM: Double, se
     // You.
     drawCircle(RadarCyan, 7f, Offset(cx, cy))
     drawCircle(RadarCyan, 13f, Offset(cx, cy), style = Stroke(2f))
+    val red = com.rfwatch.app.ui.theme.DangerRed
+    drones.forEach { d ->
+        val px = cx + (d.east * scale).toFloat(); val py = cy - (d.north * scale).toFloat()
+        val path = androidx.compose.ui.graphics.Path().apply {
+            moveTo(px, py - 12f); lineTo(px + 12f, py); lineTo(px, py + 12f); lineTo(px - 12f, py); close()
+        }
+        drawPath(path, red)
+        if (d.opEast != null && d.opNorth != null) {
+            val ox = cx + (d.opEast * scale).toFloat(); val oy = cy - (d.opNorth * scale).toFloat()
+            drawLine(red.copy(alpha = 0.5f), Offset(px, py), Offset(ox, oy), strokeWidth = 2f,
+                pathEffect = androidx.compose.ui.graphics.PathEffect.dashPathEffect(floatArrayOf(10f, 8f)))
+            drawCircle(com.rfwatch.app.ui.theme.WarnAmber, 9f, Offset(ox, oy))
+            drawContext.canvas.nativeCanvas.drawText("P", ox, oy + 8f, paint)
+        }
+    }
     placed.sortedBy { it.contact.id == selectedId }.forEach { p ->
         val px = cx + (p.east * scale).toFloat()
         val py = cy - (p.north * scale).toFloat()

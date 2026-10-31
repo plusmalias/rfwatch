@@ -81,6 +81,7 @@ fun RadarScreen(vm: RfWatchViewModel, modifier: Modifier = Modifier) {
     var radarFilter by remember { mutableStateOf(prefs.getString("radar_filter", RADAR_FILTER_ALL) ?: RADAR_FILTER_ALL) }
     val filtered = list.filter { it.matchesRadarFilter(radarFilter) }
     val positions by vm.positions.collectAsState()
+    val drones by vm.drones.collectAsState()
     val userLocation by vm.userLocation.collectAsState()
     val selectedContact = selectedContactId?.let { contacts[it] }
     val latestIds by androidx.compose.runtime.rememberUpdatedState(filtered.map { it.id })
@@ -130,7 +131,7 @@ fun RadarScreen(vm: RfWatchViewModel, modifier: Modifier = Modifier) {
         }
         item(key = "radar-filter") { RadarFilterChips(list, radarFilter) { radarFilter = it; prefs.edit().putString("radar_filter", it).apply() } }
         item(key = "radar-scope") {
-            LocationScopePanel(filtered, positions, userLocation, selectedContactId) { selectedContactId = it }
+            LocationScopePanel(filtered, positions, userLocation, selectedContactId, drones.values) { selectedContactId = it }
         }
         selectedContact?.let { c ->
             item(key = "locate-${c.id}") { DeviceLocateChart(vm, c, userLocation) { selectedContactId = null } }

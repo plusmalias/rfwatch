@@ -159,6 +159,9 @@ class AlertManager(private val context: Context) : TextToSpeech.OnInitListener {
             AlertType.AXON_SIGNATURE -> longArrayOf(0, 250, 150, 250)
             AlertType.LAW_ENFORCEMENT_SIGNATURE -> longArrayOf(0, 350, 180, 350)
             AlertType.CAMERA_IOT_SIGNATURE -> longArrayOf(0, 120, 100, 120)
+            AlertType.DRONE_NEARBY -> longArrayOf(0, 90, 70, 90, 70, 90, 70, 300)
+            AlertType.POSSIBLE_FOLLOWER -> longArrayOf(0, 600, 250, 600)
+            AlertType.LAW_VEHICLE_FOLLOWING -> longArrayOf(0, 600, 150, 300, 150, 600)
         }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             vibrator.vibrate(VibrationEffect.createWaveform(pattern, -1))
@@ -180,6 +183,9 @@ class AlertManager(private val context: Context) : TextToSpeech.OnInitListener {
             AlertType.AXON_SIGNATURE to "Possible Axon device signature",
             AlertType.LAW_ENFORCEMENT_SIGNATURE to "Possible law-enforcement radio signature",
             AlertType.CAMERA_IOT_SIGNATURE to "Possible camera / IoT radio signature",
+            AlertType.DRONE_NEARBY to "Drone nearby (Remote ID / DroneID)",
+            AlertType.POSSIBLE_FOLLOWER to "Device travelling with you",
+            AlertType.LAW_VEHICLE_FOLLOWING to "Police equipment travelling with you",
         ).map { (type, name) ->
             NotificationChannel(channelId(type), name, NotificationManager.IMPORTANCE_HIGH).apply {
                 enableVibration(true)

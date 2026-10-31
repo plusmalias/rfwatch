@@ -30,6 +30,13 @@ object BleFingerprinter {
     }
 
     private fun classify(adv: BleAdvertisement, name: String?): Fingerprint {
+        adv.serviceData16[RemoteIdParser.BLE_SERVICE_UUID]?.let { data ->
+            val info = RemoteIdParser.parseBleServiceData(data)
+            return Fingerprint(
+                DeviceKind.DRONE, "Drone (Remote ID)" + (info?.serial?.let { " · $it" } ?: ""),
+                "ASTM F3411 Remote ID broadcast (service 0xFFFA)",
+            )
+        }
         adv.manufacturerData[APPLE]?.let { apple(it) }?.let { return it.copy(brand = "Apple") }
         adv.manufacturerData[MICROSOFT]?.let { microsoft(it) }?.let { return it.copy(brand = "Microsoft") }
         adv.manufacturerData[SAMSUNG]?.let { samsung(it) }?.let { return it }

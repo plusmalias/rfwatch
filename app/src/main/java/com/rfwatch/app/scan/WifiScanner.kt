@@ -25,6 +25,10 @@ data class WifiSighting(
     val radioDetails: String,
     val capabilities: String = "",
     val frequencyMhz: Int = 0,
+    /** Decoded ASTM Remote ID from a beacon vendor element (Wi-Fi Beacon Remote ID drones). */
+    val remoteId: com.rfwatch.core.id.RemoteIdInfo? = null,
+    /** DJI DroneID vendor element present (proprietary; not decoded). */
+    val djiDroneId: Boolean = false,
 )
 
 /**
@@ -71,7 +75,28 @@ class WifiScanner(private val context: Context) {
         }
     }
 
+    /** Remote ID / DJI DroneID vendor-specific elements (API 30+ exposes beacon IEs). */
+    private fun ScanResult.droneVendorElements(): Pair<com.rfwatch.core.id.RemoteIdInfo?, Boolean> {
+        if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.R) return null to false
+        var remoteId: com.rfwatch.core.id.RemoteIdInfo? = null
+        var dji = false
+        runCatching {
+            informationElements.filter { it.id == 221 }.forEach { ie ->
+                val buf = ie.bytes.duplicate()
+                val body = ByteArray(buf.remaining()).also { buf.get(it) }
+                if (body.size >= 3) {
+                    val oui = body.copyOfRange(0, 3)
+                    if (oui.contentEquals(com.rfwatch.core.id.RemoteIdParser.WIFI_OUI)) {
+                        com.rfwatch.core.id.RemoteIdParser.parseWifiVendorElement(body)?.let { remoteId = remoteId?.merge(it) ?: it }
+                    } else if (oui.contentEquals(com.rfwatch.core.id.RemoteIdParser.DJI_OUI)) dji = true
+                }
+            }
+        }
+        return remoteId to dji
+    }
+
     private fun ScanResult.toSighting(now: Long): WifiSighting {
+        val droneElements = droneVendorElements()
         val ssidStr = wifiSsid()
         val hidden = ssidStr.isNullOrBlank()
         val rttResponder = android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P && is80211mcResponder
@@ -111,6 +136,8 @@ class WifiScanner(private val context: Context) {
             radioDetails = radioDetails,
             capabilities = capabilities.orEmpty(),
             frequencyMhz = frequency,
+            remoteId = droneElements.first,
+            djiDroneId = droneElements.second,
         )
     }
 

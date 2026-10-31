@@ -11,6 +11,9 @@ enum class AlertType {
     AXON_SIGNATURE,
     LAW_ENFORCEMENT_SIGNATURE,
     CAMERA_IOT_SIGNATURE,
+    DRONE_NEARBY,
+    POSSIBLE_FOLLOWER,
+    LAW_VEHICLE_FOLLOWING,
 }
 
 /**
@@ -47,6 +50,9 @@ object AlertPhrasing {
             AlertType.AXON_SIGNATURE -> "Possible Axon device signature nearby"
             AlertType.LAW_ENFORCEMENT_SIGNATURE -> "Possible law-enforcement radio signature nearby"
             AlertType.CAMERA_IOT_SIGNATURE -> "Possible camera / IoT radio signature nearby"
+            AlertType.DRONE_NEARBY -> "Drone detected nearby"
+            AlertType.POSSIBLE_FOLLOWER -> "A device has been travelling with you"
+            AlertType.LAW_VEHICLE_FOLLOWING -> "Possible police equipment travelling with you"
         }
         val speakDirection = relativeBearingDeg != null && confidence > MIN_SPOKEN_CONFIDENCE
         return if (speakDirection) "$base, ${relativeSector(relativeBearingDeg!!)}" else base
