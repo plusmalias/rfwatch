@@ -66,6 +66,7 @@ fun DevicesScreen(vm: RfWatchViewModel, modifier: Modifier = Modifier, onRoom: (
     val filter by vm.deviceFilter.collectAsState()
     var selectedId by remember { mutableStateOf<String?>(null) }
     var sortMenu by remember { mutableStateOf(false) }
+    var showTypeFilters by remember { mutableStateOf(false) }
     val listState = androidx.compose.foundation.lazy.rememberLazyListState()
     val nav by vm.deviceNav.collectAsState()
     LaunchedEffect(nav) {
@@ -125,8 +126,15 @@ fun DevicesScreen(vm: RfWatchViewModel, modifier: Modifier = Modifier, onRoom: (
                 )
             }
         }
-        // Row 2: device kinds (multi-select) + band. Empty kinds hide, except Axon / law and any selected kind.
-        Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+        val extraFilterCount = filter.kinds.size + if (filter.band != null) 1 else 0
+        TextButton(
+            onClick = { showTypeFilters = !showTypeFilters },
+            contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 0.dp, vertical = 0.dp),
+        ) {
+            Text("${if (showTypeFilters) "⌄" else "›"} Device type & band${if (extraFilterCount > 0) " · $extraFilterCount active" else ""}", fontSize = 11.sp, color = ConsoleMuted)
+        }
+        // Device kinds and radio band are available on demand, leaving more room for results.
+        if (showTypeFilters || extraFilterCount > 0) Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
             FilterChip(selected = filter.kinds.isEmpty(), onClick = { vm.updateDeviceFilter { it.copy(kinds = emptySet()) } },
                 label = { Text("All kinds") })
             DeviceKind.entries
@@ -145,7 +153,7 @@ fun DevicesScreen(vm: RfWatchViewModel, modifier: Modifier = Modifier, onRoom: (
                     label = { Text("${b.label} ${view.bandCounts[b] ?: 0}") })
             }
         }
-        LazyColumn(Modifier.fillMaxWidth().weight(1f).padding(top = 4.dp), state = listState, verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        LazyColumn(Modifier.fillMaxWidth().weight(1f).padding(top = 2.dp), state = listState, verticalArrangement = Arrangement.spacedBy(5.dp)) {
             if (selected != null) {
                 item(key = "selected-${selected.id}") {
                     DeviceCard(selected, selected = true, vm = vm) { selectedId = null }
@@ -191,7 +199,7 @@ private fun DeviceCard(d: com.rfwatch.app.data.DeviceEntity, selected: Boolean, 
         ),
         border = BorderStroke(1.dp, if (selected) com.rfwatch.app.ui.theme.RadarCyan.copy(alpha = 0.7f) else ConsoleOutline),
     ) {
-                    Column(Modifier.padding(10.dp)) {
+                    Column(Modifier.padding(8.dp)) {
                         Text((if (selected) "● SELECTED  /  " else "") + (d.displayName ?: d.id), fontSize = 14.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold)
                         Text(
                             listOfNotNull(

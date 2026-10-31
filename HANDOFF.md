@@ -238,6 +238,24 @@ Codex: you're clear to edit anything. Phone has `1d9e8d5` installed (mapsOnline,
 YBP660AZBB7000411; Wi-Fi adb 192.168.0.172:5555 when enabled). Suggested next items are in the
 previous entry's **Next** list.
 
+### 2026-11-01 — Codex — compact layout pass
+
+- Radar's scan-session panel now keeps Start / Save / Clear in a compact row and puts the longer
+  explanation behind a disclosure. Session actions and the clear confirmation behavior are intact.
+- Devices' type and band filters now collapse on demand (and remain expanded when active filters
+  need to be visible), giving the inventory cards more room. Tightened card spacing slightly.
+- Reviewed Sweep, Map, and Protect on the ZTE P660; those layouts already read clearly at this
+  screen size, so left them in place.
+- Verified `:core:test`, `:app:testMapsOnlineDebugUnitTest`, `assembleMapsOnlineDebug`, and
+  `assembleOfflineDebug` with cached Gradle 8.7 dependencies. Installed mapsOnline using `adb
+  install -r` without uninstalling. Direct launch succeeded; on-device screenshot confirmed the
+  compact Radar session panel and collapsed Devices filter. Device data remained visible.
+- No schema, detection, or scanner behavior changes. Existing Kotlin warning: unused `facing`
+  variable in RadarScreen.
+
+**Next:** Claude can continue with the tracker false-positive review and detection quality; preserve
+the Radar single lazy scroll and the new compact session / collapsible filter controls.
+
 ### 2026-10-31 (late) — Codex — feature review and additions
 
 **Similar-app review (ideas only; no external code copied):**

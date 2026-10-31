@@ -260,34 +260,41 @@ private fun ScanSessionCard(
     onSave: () -> Unit,
     onClear: () -> Unit,
 ) {
+    var showHelp by remember { mutableStateOf(false) }
     Card(
         Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = ConsolePanel),
         border = BorderStroke(1.dp, if (status.isActive) RadarCyan.copy(alpha = 0.55f) else ConsoleOutline),
     ) {
-        Column(Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
+        Column(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 9.dp), verticalArrangement = Arrangement.spacedBy(3.dp)) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                Text("SCAN SESSION", fontSize = 10.sp, color = RadarCyan, letterSpacing = 1.1.sp)
-                Text(if (status.isActive) "RECORDING" else "READY", fontSize = 9.sp, color = if (status.isActive) RadarCyan else ConsoleMuted)
-            }
-            Text(
-                if (status.isActive) "${status.observationCount} observations captured · since ${status.startedAtMs?.let { java.text.DateFormat.getTimeInstance(java.text.DateFormat.SHORT).format(java.util.Date(it)) } ?: "now"}"
-                else "Start a capture to group incoming detections into a saved session.",
-                fontSize = 11.sp,
-                color = ConsoleMuted,
-            )
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Column(Modifier.weight(1f)) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(7.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Text("SESSION", fontSize = 10.sp, color = RadarCyan, letterSpacing = 1.1.sp)
+                        Text(if (status.isActive) "● RECORDING" else "READY", fontSize = 9.sp, color = if (status.isActive) RadarCyan else ConsoleMuted)
+                    }
+                    Text(
+                        if (status.isActive) "${status.observationCount} observations · since ${status.startedAtMs?.let { java.text.DateFormat.getTimeInstance(java.text.DateFormat.SHORT).format(java.util.Date(it)) } ?: "now"}"
+                        else "Capture detections into a saved session",
+                        fontSize = 10.sp, color = ConsoleMuted, maxLines = 1,
+                    )
+                }
+                Row(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
                 if (!status.isActive) {
-                    Button(onClick = onStart) { Text("Start session") }
+                    Button(onClick = onStart, contentPadding = PaddingValues(horizontal = 12.dp, vertical = 7.dp)) { Text("Start") }
                 } else {
-                    Button(onClick = onSave) { Text("Save session") }
-                    OutlinedButton(onClick = onClear) { Text("Clear") }
+                    Button(onClick = onSave, contentPadding = PaddingValues(horizontal = 12.dp, vertical = 7.dp)) { Text("Save") }
+                    OutlinedButton(onClick = onClear, contentPadding = PaddingValues(horizontal = 10.dp, vertical = 7.dp)) { Text("Clear") }
                 }
             }
-            Text(
+            }
+            TextButton(onClick = { showHelp = !showHelp }, contentPadding = PaddingValues(horizontal = 0.dp, vertical = 0.dp)) {
+                Text(if (showHelp) "Hide session details" else "Session details", fontSize = 10.sp, color = ConsoleMuted)
+            }
+            if (showHelp) Text(
                 if (status.isActive) "Save ends capture and keeps its observations. Clear removes only this session's observations; the inventory stays."
-                else "Monitoring continues independently. Session capture is local and can be cleared before saving.",
-                fontSize = 9.sp, color = ConsoleMuted,
+                else "Monitoring continues independently. Capture groups detections locally until you save or clear it.",
+                fontSize = 10.sp, color = ConsoleMuted,
             )
         }
     }
