@@ -2,29 +2,56 @@ package com.rfwatch.app.repo
 
 import com.rfwatch.core.cs.TrackerMatch
 import com.rfwatch.core.cs.TrackerType
+import com.rfwatch.core.id.DeviceKind
+import com.rfwatch.core.id.Fingerprint
 import com.rfwatch.core.model.Band
 import com.rfwatch.core.rules.DeviceFacts
 import com.rfwatch.core.rules.RuleCategory
 import com.rfwatch.core.rules.RuleHit
 
 /** Conservative labels from identifiers visible in radio advertisements. */
-internal data class DeviceIdentity(val brand: String?, val category: String)
+internal data class DeviceIdentity(
+    val brand: String?,
+    val category: String,
+    val kind: DeviceKind = DeviceKind.UNKNOWN,
+    val model: String? = null,
+)
 
 internal object DeviceIdentityClassifier {
-    fun classify(band: Band, facts: DeviceFacts, match: TrackerMatch?, hits: List<RuleHit>): DeviceIdentity {
+    /**
+     * Rule hits (law enforcement, trackers, cameras, fleet) take precedence; otherwise the
+     * payload [fingerprint] from :core decides the kind. Brand prefers tracker/payload evidence
+     * over the registered company / OUI.
+     */
+    fun classify(
+        band: Band, facts: DeviceFacts, match: TrackerMatch?, hits: List<RuleHit>,
+        fingerprint: Fingerprint? = null,
+    ): DeviceIdentity {
         val axonHit = hits.any { it.ruleId == "axon" }
-        val brand = if (axonHit) "Axon" else match?.type?.brand() ?: serviceBrand(facts) ?: advertiserBrand(facts)
+        val lawHit = hits.firstOrNull { it.category == RuleCategory.LAW_ENFORCEMENT }
+        val brand = if (axonHit) "Axon" else match?.type?.brand() ?: fingerprint?.brand ?: serviceBrand(facts) ?: advertiserBrand(facts)
+        val fpKind = fingerprint?.kind?.takeIf { it != DeviceKind.UNKNOWN }
+        val kind = when {
+            axonHit || lawHit != null -> DeviceKind.LAW_ENFORCEMENT
+            match != null -> DeviceKind.TRACKER
+            hits.any { it.category == RuleCategory.CAMERA_IOT } -> DeviceKind.CAMERA_IOT
+            hits.any { it.category == RuleCategory.FLEET } -> DeviceKind.FLEET
+            fpKind != null -> fpKind
+            band == Band.WIFI -> DeviceKind.NETWORK
+            else -> DeviceKind.UNKNOWN
+        }
         val category = when {
             axonHit -> "Possible Axon / TASER device signature"
             match != null -> "Bluetooth item tracker"
             hits.any { it.category == RuleCategory.CAMERA_IOT } -> "Camera / IoT candidate"
             hits.any { it.category == RuleCategory.FLEET } -> "Fleet / vehicle signature"
-            hits.any { it.category == RuleCategory.LAW_ENFORCEMENT } -> "Law-enforcement signature"
+            lawHit != null -> "Law-enforcement signature · ${lawHit.label}"
+            fpKind != null && fpKind != DeviceKind.NETWORK -> fpKind.label
             band == Band.WIFI -> "Wi-Fi access point / device"
             band == Band.BLE -> "Bluetooth device"
             else -> "Radio device"
         }
-        return DeviceIdentity(brand, category)
+        return DeviceIdentity(brand, category, kind, fingerprint?.model)
     }
 
     private fun TrackerType.brand(): String? = when (this) {

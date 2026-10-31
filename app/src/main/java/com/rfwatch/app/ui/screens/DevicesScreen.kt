@@ -41,6 +41,7 @@ import com.rfwatch.app.ui.theme.ConsoleOutline
 import com.rfwatch.app.ui.theme.ConsolePanel
 import com.rfwatch.app.ui.theme.ConsolePanelRaised
 import com.rfwatch.app.ui.theme.ConsoleMuted
+import com.rfwatch.core.id.DeviceKind
 import java.util.Date
 import java.util.Locale
 
@@ -50,21 +51,18 @@ fun DevicesScreen(vm: RfWatchViewModel, modifier: Modifier = Modifier, onRoom: (
     val devices by vm.devices.collectAsState()
     var selectedId by remember { mutableStateOf<String?>(null) }
     var query by remember { mutableStateOf("") }
-    var categoryFilter by remember { mutableStateOf("All") }
+    var categoryFilter by remember { mutableStateOf(FILTER_ALL) }
     var sortMode by remember { mutableStateOf("Discovery") }
     val selected = devices.firstOrNull { it.id == selectedId }
     val visibleDevices = devices.filter { device ->
-        val text = listOf(device.displayName, device.id, device.lastMac, device.brand, device.category, device.band, device.trackerType)
+        val text = listOf(device.displayName, device.id, device.lastMac, device.brand, device.category, device.band, device.trackerType, device.model, device.effectiveKind().label)
             .filterNotNull().joinToString(" ").lowercase()
         val matchesQuery = query.isBlank() || text.contains(query.trim().lowercase())
-        val category = device.category.orEmpty().lowercase()
         val matchesCategory = when (categoryFilter) {
-            "Wi-Fi" -> device.band == "WIFI"
-            "BLE" -> device.band == "BLE"
-            "Tracker" -> "tracker" in category || device.trackerType != null
-            "Camera" -> "camera" in category || "iot" in category
-            "Axon / law" -> "axon" in category || "law" in category
-            else -> true
+            FILTER_ALL -> true
+            FILTER_WIFI -> device.band == "WIFI"
+            FILTER_BLE -> device.band == "BLE"
+            else -> device.effectiveKind().name == categoryFilter
         }
         matchesQuery && matchesCategory
     }.let { filtered ->
@@ -86,9 +84,19 @@ fun DevicesScreen(vm: RfWatchViewModel, modifier: Modifier = Modifier, onRoom: (
             modifier = Modifier.fillMaxWidth().padding(bottom = 4.dp),
             placeholder = { Text("Search name, brand, ID, category") },
         )
+        // Category chips with live counts; empty categories are hidden except Axon / law.
+        val kindCounts = devices.groupingBy { it.effectiveKind() }.eachCount()
+        val chips = buildList {
+            add(FILTER_ALL to "All ${devices.size}")
+            add(DeviceKind.LAW_ENFORCEMENT.name to "${DeviceKind.LAW_ENFORCEMENT.label} ${kindCounts[DeviceKind.LAW_ENFORCEMENT] ?: 0}")
+            DeviceKind.entries.filter { it != DeviceKind.LAW_ENFORCEMENT && (kindCounts[it] ?: 0) > 0 }
+                .forEach { add(it.name to "${it.label} ${kindCounts[it]}") }
+            add(FILTER_WIFI to "Wi-Fi ${devices.count { it.band == "WIFI" }}")
+            add(FILTER_BLE to "BLE ${devices.count { it.band == "BLE" }}")
+        }
         Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            listOf("All", "Wi-Fi", "BLE", "Tracker", "Camera", "Axon / law").forEach { option ->
-                FilterChip(selected = categoryFilter == option, onClick = { categoryFilter = option }, label = { Text(option) })
+            chips.forEach { (key, label) ->
+                FilterChip(selected = categoryFilter == key, onClick = { categoryFilter = key }, label = { Text(label) })
             }
         }
         Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -132,7 +140,11 @@ private fun DeviceCard(d: com.rfwatch.app.data.DeviceEntity, selected: Boolean, 
                     Column(Modifier.padding(10.dp)) {
                         Text((if (selected) "● SELECTED  /  " else "") + (d.displayName ?: d.id), fontSize = 14.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold)
                         Text(
-                            "${d.brand ?: "Brand unknown"} · ${d.category ?: if (d.band == "WIFI") "Wi-Fi device" else "Bluetooth device"}",
+                            listOfNotNull(
+                                d.brand ?: if (d.band == "BLE") "Brand not advertised" else "Brand unknown",
+                                d.model,
+                                d.category ?: d.effectiveKind().label,
+                            ).distinct().joinToString(" · "),
                             fontSize = 12.sp, color = deviceCategoryColor(d.category, d.classification),
                         )
                         Text(
@@ -144,7 +156,10 @@ private fun DeviceCard(d: com.rfwatch.app.data.DeviceEntity, selected: Boolean, 
                             fontSize = 12.sp, color = Color(0xFF9CA3AF),
                         )
                         Text(
-                            "RSSI-only distance: ~${formatRssiDistance(rssiDistanceEstimateMeters(d.lastRssi))} m · very rough; not a measured range",
+                            "~${formatRssiDistance(rssiDistanceEstimateMeters(d.lastRssi))} m (RSSI guess)" +
+                                (if (d.seenCount > 0) " · heard ${d.seenCount}×" else "") +
+                                (if (d.rssiMin != null && d.rssiMax != null) " · ${d.rssiMin}…${d.rssiMax} dBm" else "") +
+                                listOfNotNull(d.wifiBand, d.wifiSecurity).joinToString("") { " · $it" },
                             fontSize = 10.sp, color = Color(0xFF9CA3AF),
                         )
                         if (selected) {
@@ -192,5 +207,23 @@ private fun RssiSparkline(samples: List<Int>, color: Color) {
         }
         drawPath(path, color.copy(alpha = 0.25f), style = Stroke(width = 5f))
         drawPath(path, color, style = Stroke(width = 2f))
+    }
+}
+
+private const val FILTER_ALL = "ALL"
+private const val FILTER_WIFI = "WIFI"
+private const val FILTER_BLE = "BLE"
+
+/** Stored kind, or one inferred from the legacy category text for rows saved before v4. */
+internal fun com.rfwatch.app.data.DeviceEntity.effectiveKind(): DeviceKind {
+    kind?.let { k -> runCatching { DeviceKind.valueOf(k) }.getOrNull()?.let { return it } }
+    val c = category.orEmpty().lowercase()
+    return when {
+        trackerType != null || "tracker" in c -> DeviceKind.TRACKER
+        "axon" in c || "law" in c -> DeviceKind.LAW_ENFORCEMENT
+        "camera" in c || "iot" in c -> DeviceKind.CAMERA_IOT
+        "fleet" in c || "vehicle" in c -> DeviceKind.FLEET
+        band == "WIFI" -> DeviceKind.NETWORK
+        else -> DeviceKind.UNKNOWN
     }
 }

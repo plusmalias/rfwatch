@@ -15,6 +15,7 @@ class IdentificationTest {
         assertEquals("Apple", VendorDb.ouiVendor("3C:2E:F9:00:11:22"))
         assertNull("locally administered addresses carry no vendor", VendorDb.ouiVendor("02:2E:F9:00:11:22"))
         assertEquals("Samsung", VendorDb.shortName("Samsung Electronics Co. Ltd."))
+        assertEquals("Gree Electric Appliances", VendorDb.shortName("Gree Electric Appliances, Inc. Of Zhuhai"))
     }
 
     @Test fun airPodsProFromProximityPairing() {
@@ -32,7 +33,7 @@ class IdentificationTest {
 
     @Test fun appearanceWatchAndFastPair() {
         assertEquals(DeviceKind.WEARABLE, BleFingerprinter.fingerprint(adv("0319C100"), null).kind)
-        assertEquals(DeviceKind.AUDIO, BleFingerprinter.fingerprint(adv("06162CFE0001F0"), null).kind)
+        assertEquals(DeviceKind.AUDIO, BleFingerprinter.fingerprint(adv("06162CFE123456"), null).kind)
     }
 
     @Test fun nameAndCompanyFallbacks() {
@@ -48,5 +49,27 @@ class IdentificationTest {
         assertEquals(WifiSecurity.WPA2_WPA3, WifiFingerprinter.security("[RSN-PSK+SAE-CCMP][ESS]"))
         assertEquals(WifiSecurity.OPEN, WifiFingerprinter.security("[ESS]"))
         assertEquals("5 GHz", WifiFingerprinter.band(5180))
+    }
+
+    @Test fun deviceDbTablesLoadAndDecode() {
+        assertTrue(DeviceDb.fastPairModel(0x000006)?.name.orEmpty().contains("Pixel", ignoreCase = true))
+        assertEquals("Watch", DeviceDb.appearance(0x00C1)?.category)
+        assertEquals("Sports Watch", DeviceDb.appearance(0x00C1)?.subcategory)
+        assertTrue(DeviceDb.uuid16(0xFD5A)?.name.orEmpty().startsWith("Samsung"))
+        // Fast Pair model in service data resolves to a named product.
+        val fp = BleFingerprinter.fingerprint(adv("06162CFE000006"), null)
+        assertTrue(fp.model.orEmpty().contains("Pixel", ignoreCase = true))
+        // Appearance subcategory is carried into the model label.
+        assertEquals("Watch · Sports Watch", BleFingerprinter.fingerprint(adv("0319C100"), null).model)
+    }
+
+    @Test fun samsungBudsEasySetupAndBrands() {
+        // 0x0075 + buds prefix + model bytes (EE 7A .. 0C) → "Fallback Buds" table entry.
+        val fp = BleFingerprinter.fingerprint(adv("12FF7500 42098102141503210109 EE7A010C 063C"), null)
+        assertEquals(DeviceKind.AUDIO, fp.kind)
+        assertEquals("Samsung", fp.brand)
+        assertTrue(fp.model.orEmpty().startsWith("Galaxy"))
+        assertEquals("Apple", BleFingerprinter.fingerprint(adv("02011A 1BFF4C00 0719 010E20 000000000000000000000000000000000000000000"), null).brand)
+        assertEquals("Apple", WifiFingerprinter.fingerprint("HomeNet", "3C:2E:F9:00:11:22").brand)
     }
 }

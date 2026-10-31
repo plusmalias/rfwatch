@@ -1,5 +1,6 @@
 package com.rfwatch.app.data
 
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.Index
 import androidx.room.PrimaryKey
@@ -36,6 +37,16 @@ data class DeviceEntity(
     val observedAtMs: Long? = null,
     /** Raw, locally available radio identifiers/advertising metadata; not a decoded model. */
     val radioDetails: String? = null,
+    /** [com.rfwatch.core.id.DeviceKind] name from payload/rule fingerprinting (v4). */
+    val kind: String? = null,
+    /** Best-effort specific model ("AirPods Pro", "Windows laptop") when the payload names one. */
+    val model: String? = null,
+    /** Stored observations of this device (≤1 per 2 s), i.e. how often it has been heard. */
+    @ColumnInfo(defaultValue = "0") val seenCount: Int = 0,
+    val rssiMin: Int? = null,
+    val rssiMax: Int? = null,
+    val wifiSecurity: String? = null,
+    val wifiBand: String? = null,
 )
 
 /** One RSSI observation, GPS- and heading-tagged where available. */

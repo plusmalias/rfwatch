@@ -45,9 +45,12 @@ object VendorDb {
         "electronics", "technologies", "technology", "international", "communications", "co.", "co",
     )
 
+    private val CORPORATE_TAIL = Regex(",?\\s+(inc\\.?|ltd\\.?|co\\.,?\\s*ltd\\.?|corporation|corp\\.?|gmbh|llc)(\\s|,).+$", RegexOption.IGNORE_CASE)
+
     /** "Samsung Electronics Co. Ltd." → "Samsung", "Apple, Inc." → "Apple". */
     fun shortName(raw: String): String {
-        var s = raw.trim()
+        // "Gree Electric Appliances, Inc. of Zhuhai" → cut at the corporate suffix first.
+        var s = CORPORATE_TAIL.find(raw)?.let { raw.substring(0, it.range.first) } ?: raw.trim()
         var changed = true
         while (changed) {
             changed = false

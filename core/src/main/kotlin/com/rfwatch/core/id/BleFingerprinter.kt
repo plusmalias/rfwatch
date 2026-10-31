@@ -22,19 +22,56 @@ object BleFingerprinter {
 
     private const val APPLE = 0x004C
     private const val MICROSOFT = 0x0006
+    private const val SAMSUNG = 0x0075
 
     fun fingerprint(adv: BleAdvertisement, name: String?): Fingerprint {
-        adv.manufacturerData[APPLE]?.let { apple(it) }?.let { return it }
-        adv.manufacturerData[MICROSOFT]?.let { microsoft(it) }?.let { return it }
+        val fp = classify(adv, name)
+        return if (fp.brand != null) fp else fp.copy(brand = brandOf(adv))
+    }
+
+    private fun classify(adv: BleAdvertisement, name: String?): Fingerprint {
+        adv.manufacturerData[APPLE]?.let { apple(it) }?.let { return it.copy(brand = "Apple") }
+        adv.manufacturerData[MICROSOFT]?.let { microsoft(it) }?.let { return it.copy(brand = "Microsoft") }
+        adv.manufacturerData[SAMSUNG]?.let { samsung(it) }?.let { return it }
         beacon(adv)?.let { return it }
-        adv.appearance?.let { appearance(it) }?.let { return it }
         fastPair(adv)?.let { return it }
+        adv.appearance?.let { appearance(it) }?.let { return it }
         services(adv.serviceUuids16)?.let { return it }
         name?.let { NameHints.ble(it) }?.let { return it }
         adv.manufacturerData.keys.firstNotNullOfOrNull { id ->
             VendorDb.company(id)?.let { NameHints.company(it) }
         }?.let { return it }
+        memberServiceCompany(adv.serviceUuids16)?.let { company ->
+            NameHints.company(company)?.let { return it.copy(brand = VendorDb.shortName(company)) }
+        }
         return Fingerprint(DeviceKind.UNKNOWN, evidence = "no identifying payload")
+    }
+
+    /** Brand from the registered company ID, else the owner of an advertised member service UUID. */
+    private fun brandOf(adv: BleAdvertisement): String? =
+        adv.manufacturerData.keys.firstNotNullOfOrNull { VendorDb.company(it) }
+            ?: memberServiceCompany(adv.serviceUuids16)?.let(VendorDb::shortName)
+
+    private fun memberServiceCompany(uuids: Set<Int>): String? =
+        uuids.firstNotNullOfOrNull { u -> DeviceDb.uuid16(u)?.takeIf { !it.isSigService }?.name }
+
+    // ---- Samsung EasySetup (Galaxy Buds / Watch pairing adverts; community-documented) ----
+
+    private val BUDS_PREFIX = byteArrayOf(0x42, 0x09, 0x81.toByte(), 0x02, 0x14, 0x15, 0x03, 0x21, 0x01, 0x09)
+    private val WATCH_PREFIX = byteArrayOf(0x00, 0x01, 0x00, 0x02, 0x00, 0x01, 0x01, 0xFF.toByte(), 0x00, 0x00, 0x43)
+
+    private fun samsung(d: ByteArray): Fingerprint? {
+        if (d.size >= 14 && d.copyOfRange(0, BUDS_PREFIX.size).contentEquals(BUDS_PREFIX)) {
+            val model = ((d[10].toInt() and 0xFF) shl 16) or ((d[11].toInt() and 0xFF) shl 8) or (d[13].toInt() and 0xFF)
+            val m = DeviceDb.samsungBudsModel(model)
+            return Fingerprint(DeviceKind.AUDIO, m?.name ?: "Galaxy Buds", "Samsung EasySetup buds model %06X".format(model), "Samsung")
+        }
+        if (d.size >= 12 && d.copyOfRange(0, WATCH_PREFIX.size).contentEquals(WATCH_PREFIX)) {
+            val model = d[11].toInt() and 0xFF
+            val m = DeviceDb.samsungWatchModel(model)
+            return Fingerprint(DeviceKind.WEARABLE, m?.name ?: "Galaxy Watch", "Samsung EasySetup watch model %02X".format(model), "Samsung")
+        }
+        return null
     }
 
     // ---- Apple Continuity: a sequence of [type][length][payload] messages ----
@@ -51,7 +88,7 @@ object BleFingerprinter {
         }
         messages[0x07]?.let { p ->
             val model = if (p.size >= 3) ((p[1].toInt() and 0xFF) shl 8) or (p[2].toInt() and 0xFF) else null
-            val name = model?.let { APPLE_AUDIO_MODELS[it] }
+            val name = model?.let { DeviceDb.appleAudioModel(it)?.name ?: APPLE_AUDIO_MODELS[it] }
             return Fingerprint(
                 DeviceKind.AUDIO, name ?: "Apple/Beats audio",
                 "Apple Continuity proximity pairing" + (model?.let { " model 0x%04X".format(it) } ?: ""),
@@ -61,6 +98,12 @@ object BleFingerprinter {
         if (0x09 in messages) return Fingerprint(DeviceKind.TV_MEDIA, "AirPlay receiver", "Apple Continuity AirPlay target")
         if (0x02 in messages) return ibeacon(messages.getValue(0x02))
         if (0x0E in messages) return Fingerprint(DeviceKind.PHONE, "iPhone / iPad (hotspot)", "Apple Continuity tethering source")
+        messages[0x0F]?.takeIf { it.size >= 2 }?.let { p ->
+            val action = p[1].toInt() and 0xFF
+            DeviceDb.appleNearbyAction(action)?.let { m ->
+                return Fingerprint(m.kind, "Apple device — ${m.name}", "Apple Continuity nearby action 0x%02X".format(action))
+            }
+        }
         val personal = listOf(0x10 to "nearby info", 0x0C to "handoff", 0x0F to "nearby action", 0x05 to "AirDrop", 0x0A to "AirPlay source", 0x0D to "tethering target")
             .firstOrNull { it.first in messages }
         if (personal != null) {
@@ -136,13 +179,16 @@ object BleFingerprinter {
     private fun fastPair(adv: BleAdvertisement): Fingerprint? {
         val data = adv.serviceData16[0xFE2C] ?: return if (0xFE2C in adv.serviceUuids16)
             Fingerprint(DeviceKind.AUDIO, "Fast Pair accessory", "Google Fast Pair service") else null
-        val model = if (data.size == 3) "%06X".format(
-            ((data[0].toInt() and 0xFF) shl 16) or ((data[1].toInt() and 0xFF) shl 8) or (data[2].toInt() and 0xFF),
-        ) else null
+        val modelId = if (data.size == 3)
+            ((data[0].toInt() and 0xFF) shl 16) or ((data[1].toInt() and 0xFF) shl 8) or (data[2].toInt() and 0xFF)
+        else null
+        modelId?.let { DeviceDb.fastPairModel(it) }?.let { m ->
+            return Fingerprint(m.kind, m.name, "Google Fast Pair model %06X".format(modelId), m.brand)
+        }
         // Fast Pair is overwhelmingly earbuds/headphones/speakers; other kinds advertise an Appearance.
         return Fingerprint(
-            DeviceKind.AUDIO, "Fast Pair accessory" + (model?.let { " (model $it)" } ?: ""),
-            "Google Fast Pair service data" + (if (model != null) " — discoverable" else ""),
+            DeviceKind.AUDIO, "Fast Pair accessory" + (modelId?.let { " (model %06X)".format(it) } ?: ""),
+            "Google Fast Pair service data" + (if (modelId != null) " — discoverable" else ""),
         )
     }
 
@@ -177,7 +223,8 @@ object BleFingerprinter {
     private fun appearance(value: Int): Fingerprint? {
         val category = value ushr 6
         val hit = APPEARANCE[category] ?: return null
-        return Fingerprint(hit.first, hit.second, "GAP appearance 0x%04X".format(value))
+        val sub = DeviceDb.appearance(value)?.subcategory
+        return Fingerprint(hit.first, if (sub != null) "${hit.second} · $sub" else hit.second, "GAP appearance 0x%04X".format(value))
     }
 
     private val APPEARANCE = mapOf(

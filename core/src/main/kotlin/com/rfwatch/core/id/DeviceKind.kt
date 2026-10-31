@@ -33,4 +33,6 @@ data class Fingerprint(
     val kind: DeviceKind,
     val model: String? = null,
     val evidence: String,
+    /** Vendor implied by the payload itself (e.g. Apple Continuity → Apple), when known. */
+    val brand: String? = null,
 )

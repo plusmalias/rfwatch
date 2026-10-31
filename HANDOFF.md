@@ -208,3 +208,25 @@ the console theme and the single lazy Radar scroll.
   vehicle is the only true positive test — a Wi-Fi hotspot named "AXON-TEST" or "flock-test"
   triggers the SSID rules for a safe self-test.
 - **Next (Claude):** device-database wiring (Room v3→v4 kind/model, Devices category chips).
+
+### 2026-10-31 (night, later) — Claude — device database wired; verified on the ZTE P660
+
+- **Room v3→v4** (`MIGRATION_3_4`, data preserved — 153 devices after install): devices gain
+  `kind`, `model`, `seenCount`, `rssiMin`, `rssiMax`, `wifiSecurity`, `wifiBand`.
+- `core/id/DeviceDb` loads the bundled TSVs; `BleFingerprinter` now resolves Fast Pair model
+  names (500), Apple audio models + Nearby Action types, Samsung Galaxy Buds/Watch EasySetup
+  models, appearance subcategories ("Watch · Sports Watch"), member-UUID owners → brand.
+  `Fingerprint.brand`; Wi-Fi brand from OUI (global BSSIDs only).
+- `DeviceIdentityClassifier` takes the fingerprint: rules (law / tracker / camera / fleet) win,
+  else the payload kind; category text = kind label. Repository fingerprints every BLE advert and
+  Wi-Fi result; Wi-Fi security + band captured.
+- **Devices tab:** chips with live counts per kind (Axon / law always shown), Wi-Fi / BLE;
+  cards show brand · model · category and "heard N× · min…max dBm · band · security".
+  Legacy rows map via `DeviceEntity.effectiveKind()`.
+- On-device: install OK, no crash, migration ran, live rows show e.g. "Microsoft · Computer",
+  "Logitech · Keyboard / controller", "Apple · Bluetooth item tracker". Police alerts not yet
+  triggered in the field (needs a real encounter or an "AXON-…"/"flock…" SSID self-test).
+- Tests: core 70/70, app 3/3.
+- **Next:** device actions (mine / trust / locate) via `repo.setDeviceFlags`, follower wiring
+  (`FollowerScorer` unused), retention purge (never called), CSV export, BLE-spam detection
+  (bursts of Continuity / Fast Pair / EasySetup pairing adverts from rotating addresses).

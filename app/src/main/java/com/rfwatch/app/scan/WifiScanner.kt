@@ -23,6 +23,8 @@ data class WifiSighting(
     val is80211mcResponder: Boolean,
     val timestampMs: Long,
     val radioDetails: String,
+    val capabilities: String = "",
+    val frequencyMhz: Int = 0,
 )
 
 /**
@@ -107,6 +109,8 @@ class WifiScanner(private val context: Context) {
             is80211mcResponder = rttResponder,
             timestampMs = now,
             radioDetails = radioDetails,
+            capabilities = capabilities.orEmpty(),
+            frequencyMhz = frequency,
         )
     }
 

@@ -14,6 +14,11 @@ enum class WifiSecurity(val label: String) {
 object WifiFingerprinter {
 
     fun fingerprint(ssid: String?, bssid: String): Fingerprint {
+        val fp = classify(ssid, bssid)
+        return if (fp.brand != null) fp else fp.copy(brand = VendorDb.ouiVendor(bssid))
+    }
+
+    private fun classify(ssid: String?, bssid: String): Fingerprint {
         val firstOctet = bssid.substringBefore(':').toIntOrNull(16)
         val locallyAdministered = firstOctet?.let(VendorDb::isLocallyAdministered) ?: false
         if (ssid != null) {

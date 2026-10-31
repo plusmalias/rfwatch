@@ -260,13 +260,19 @@ class RfWatchRepository(
                     add("Service-data UUIDs ${sighting.serviceDataUuids.joinToString(", ").ifEmpty { "none" }}")
                     add("${if (sighting.connectable) "Connectable" else "Not connectable"} · ${if (sighting.legacyAdvertisement) "legacy" else "extended"} advertisement · ${sighting.payloadLength} bytes")
                 }.joinToString(" · ")
-                onDevice(adv.address, Band.BLE, sighting.deviceName, adv.rssi, adv.timestampMs, facts, match, radioDetails)
+                val fingerprint = com.rfwatch.core.id.BleFingerprinter.fingerprint(adv, sighting.deviceName)
+                onDevice(adv.address, Band.BLE, sighting.deviceName, adv.rssi, adv.timestampMs, facts, match, radioDetails, fingerprint)
             }
         }
         scope.launch {
             wifiScanner.scans().collect { list ->
                 list.forEach { s ->
-                    onDevice(s.bssid, Band.WIFI, s.facts.ssid, s.facts.rssi, s.timestampMs, s.facts, null, s.radioDetails)
+                    onDevice(
+                        s.bssid, Band.WIFI, s.facts.ssid, s.facts.rssi, s.timestampMs, s.facts, null, s.radioDetails,
+                        fingerprint = com.rfwatch.core.id.WifiFingerprinter.fingerprint(s.facts.ssid, s.bssid),
+                        wifiSecurity = com.rfwatch.core.id.WifiFingerprinter.security(s.capabilities).label,
+                        wifiBand = com.rfwatch.core.id.WifiFingerprinter.band(s.frequencyMhz),
+                    )
                 }
             }
         }
@@ -310,9 +316,11 @@ class RfWatchRepository(
     private suspend fun onDevice(
         id: String, band: Band, name: String?, rssi: Int, ts: Long,
         facts: DeviceFacts, match: TrackerMatch?, radioDetails: String? = null,
+        fingerprint: com.rfwatch.core.id.Fingerprint? = null,
+        wifiSecurity: String? = null, wifiBand: String? = null,
     ) {
         val hits = ruleEngine.evaluate(facts)
-        val identity = DeviceIdentityClassifier.classify(band, facts, match, hits)
+        val identity = DeviceIdentityClassifier.classify(band, facts, match, hits, fingerprint)
         val topThreat = hits.maxByOrNull { it.threat.ordinal }?.threat ?: Threat.INFO
         val classification = when {
             match != null -> "TRACKER"
@@ -326,6 +334,9 @@ class RfWatchRepository(
             age in 0..MAX_FIX_AGE_MS && it.accuracyM <= MAX_FIX_ACCURACY_M
         }
         val previous = deviceCache[id]
+        // One stored observation per device per OBSERVATION_MIN_INTERVAL_MS keeps drive-by and
+        // follower history dense enough (≈30 m apart at 60 km/h) without a row per advert.
+        val recordObservation = ts - (lastObservationMs[id] ?: Long.MIN_VALUE / 2) >= OBSERVATION_MIN_INTERVAL_MS
         val updated = DeviceEntity(
                 id = id, band = band.name, displayName = name, lastMac = id,
                 firstSeenMs = previous?.firstSeenMs ?: ts, lastSeenMs = ts, lastRssi = rssi,
@@ -340,12 +351,17 @@ class RfWatchRepository(
                 observedAccuracyM = fix?.accuracyM ?: previous?.observedAccuracyM,
                 observedAtMs = fix?.timestampMs ?: previous?.observedAtMs,
                 radioDetails = radioDetails ?: previous?.radioDetails,
+                kind = identity.kind.name,
+                model = identity.model ?: previous?.model,
+                seenCount = (previous?.seenCount ?: 0) + if (recordObservation) 1 else 0,
+                rssiMin = minOf(previous?.rssiMin ?: rssi, rssi),
+                rssiMax = maxOf(previous?.rssiMax ?: rssi, rssi),
+                wifiSecurity = wifiSecurity ?: previous?.wifiSecurity,
+                wifiBand = wifiBand ?: previous?.wifiBand,
             )
         deviceCache[id] = updated
         dirtyDevices[id] = updated
-        // One stored observation per device per OBSERVATION_MIN_INTERVAL_MS keeps drive-by and
-        // follower history dense enough (≈30 m apart at 60 km/h) without a row per advert.
-        if (ts - (lastObservationMs[id] ?: Long.MIN_VALUE / 2) >= OBSERVATION_MIN_INTERVAL_MS) {
+        if (recordObservation) {
             lastObservationMs[id] = ts
             pendingObservations += ObservationEntity(
                 deviceId = id, band = band.name, rssi = rssi, timestampMs = ts,
