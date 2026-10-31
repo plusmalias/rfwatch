@@ -20,7 +20,7 @@ import net.sqlcipher.database.SupportFactory
         BaselineEntity::class,
         SessionEntity::class,
     ],
-    version = 4,
+    version = 5,
     exportSchema = false,
 )
 abstract class RfWatchDatabase : RoomDatabase() {
@@ -59,6 +59,12 @@ abstract class RfWatchDatabase : RoomDatabase() {
                 db.execSQL("ALTER TABLE devices ADD COLUMN wifiBand TEXT")
             }
         }
+        /** v5: user-given device names (inside the encrypted DB, wiped with all data). */
+        private val MIGRATION_4_5 = object : Migration(4, 5) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE devices ADD COLUMN nickname TEXT")
+            }
+        }
         /**
          * Opens the encrypted database. The passphrase comes from the Android Keystore via
          * [KeystoreKeyManager]; SQLCipher's [SupportFactory] encrypts the whole file at rest.
@@ -69,7 +75,7 @@ abstract class RfWatchDatabase : RoomDatabase() {
             val factory = SupportFactory(passphrase, null, /* clearPassphrase = */ true)
             return Room.databaseBuilder(context, RfWatchDatabase::class.java, "rfwatch.db")
                 .openHelperFactory(factory)
-                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
                 .fallbackToDestructiveMigration()
                 .build()
         }

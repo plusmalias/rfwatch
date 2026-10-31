@@ -1,5 +1,7 @@
 package com.rfwatch.app.ui.screens
 
+import com.rfwatch.app.ui.toRowInfo
+
 import android.content.Context
 import android.media.AudioManager
 import android.media.ToneGenerator
@@ -80,6 +82,7 @@ fun SweepScreen(vm: RfWatchViewModel, modifier: Modifier = Modifier) {
     val context = LocalContext.current
     val hasCompass = vm.hasCompass
     var target by remember { mutableStateOf<String?>(null) }
+    var targetQuery by remember { mutableStateOf("") }
     // Honour a hunt request from another screen (e.g. car sweep "Hunt this one").
     val requested by vm.huntRequest.collectAsState()
     LaunchedEffect(requested) {
@@ -136,30 +139,23 @@ fun SweepScreen(vm: RfWatchViewModel, modifier: Modifier = Modifier) {
         )
 
         if (target == null) {
-            Text("SELECT TARGET  ·  BLE updates faster than Wi-Fi", fontSize = 10.sp, color = ConsoleMuted, letterSpacing = 0.5.sp, modifier = Modifier.padding(top = 8.dp, bottom = 4.dp))
-            val candidates = contacts.values.sortedWith(compareBy<LiveContact> { it.band != Band.BLE }.thenByDescending { it.lastRssi })
-            LazyColumn {
-                items(candidates, key = { it.id }) { c ->
-                    Card(
-                        Modifier.fillMaxWidth().padding(vertical = 3.dp),
-                        colors = androidx.compose.material3.CardDefaults.cardColors(containerColor = ConsolePanel),
-                        border = BorderStroke(1.dp, ConsoleOutline),
-                    ) {
-                        Row(
-                            Modifier.fillMaxWidth().padding(10.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            Column(Modifier.weight(1f)) {
-                                Text(c.label, fontSize = 13.sp)
-                                Text(
-                                    "${c.band} · ${c.brand ?: "unknown brand"} · ${c.category ?: "device"} · ${c.lastRssi} dBm",
-                                    fontSize = 11.sp, color = deviceCategoryColor(c.category, c.classification),
-                                )
-                            }
-                            Button(onClick = { target = c.id; finishedGuided = false }) { Text("Select") }
-                        }
-                    }
+            Text("TAP A DEVICE TO FIND IT  ·  trackers first", fontSize = 10.sp, color = ConsoleMuted, letterSpacing = 0.5.sp, modifier = Modifier.padding(top = 8.dp, bottom = 4.dp))
+            // Trackers and flagged devices first, then BLE (updates faster), then strongest.
+            val stored = vm.devices.collectAsState().value.associateBy { it.id }
+            val q = targetQuery.trim().lowercase()
+            val candidates = contacts.values
+                .map { it to it.toRowInfo(stored[it.id]) }
+                .filter { (c, info) -> q.isEmpty() || "${info.title} ${info.subtitle} ${c.id}".lowercase().contains(q) }
+                .sortedWith(compareBy<Pair<LiveContact, com.rfwatch.app.ui.DeviceRowInfo>> { (c, info) ->
+                    when { info.badge == "CHECK" -> 0; c.kind == com.rfwatch.core.id.DeviceKind.TRACKER || c.trackerType != null -> 1; else -> 2 }
+                }.thenBy { it.first.band != Band.BLE }.thenByDescending { it.first.lastRssi })
+            androidx.compose.material3.OutlinedTextField(
+                value = targetQuery, onValueChange = { targetQuery = it }, singleLine = true,
+                placeholder = { Text("Search ${contacts.size} nearby devices") }, modifier = Modifier.fillMaxWidth().padding(bottom = 4.dp),
+            )
+            LazyColumn(verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                items(candidates, key = { it.first.id }) { (c, info) ->
+                    com.rfwatch.app.ui.DeviceRowCompact(info) { target = c.id; finishedGuided = false }
                 }
             }
         } else {

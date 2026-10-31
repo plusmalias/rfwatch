@@ -82,7 +82,7 @@ private val EVERYDAY_KINDS = setOf(
 )
 
 private fun searchText(d: DeviceEntity, kind: DeviceKind): String =
-    listOfNotNull(d.displayName, d.id, d.lastMac, d.brand, d.category, d.band, d.trackerType, d.model, kind.label)
+    listOfNotNull(d.nickname, d.displayName, d.id, d.lastMac, d.brand, d.category, d.band, d.trackerType, d.model, kind.label)
         .joinToString(" ").lowercase()
 
 /**

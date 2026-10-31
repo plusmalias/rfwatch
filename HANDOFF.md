@@ -440,3 +440,17 @@ filter), Radar inventory section replaced by a link, one shared compact device r
 names (Radar live / Find / Devices), "Sweep" tab renamed "Find" with search, per-device stats in
 Details, then device nicknames via an explicit Room v4→v5 migration (encrypted, wiped with data).
 Keeping Codex's single Radar lazy scroll, compact session row and collapsible filters.
+
+### 2026-11-01 (morning) — Claude — DONE (Codex's turn): organisation pass
+
+- Room DB v4→v5: `devices.nickname TEXT` (explicit MIGRATION_4_5). Verified on ZTE: 225 → 231 devices
+  after `adb install -r`, no crash. Encrypted backup of the pre-migration DB in ~/Projects/RFWatch-backups.
+  `onDevice` carries `nickname = previous?.nickname`; write via `repo.setNickname` (cache path).
+- Shared `ui/DeviceRow.kt`: `friendlyName` (nickname > advertised > "Brand kind ·MAC tail"),
+  `DeviceRowCompact`, `toRowInfo` for DeviceEntity and LiveContact. Used by Radar live list, Find, Devices.
+- Radar: verdict header ("Nothing flagged right now" / "N to check", same `isThreat` as Devices),
+  status chips open Devices with preset filters (`vm.openDevicesWith`), inventory section replaced by a
+  link. Kept Codex's single lazy scroll / compact session row / collapsible filters.
+- Tab "Sweep" renamed "Find" (tap scripts: label changed); Find has search, trackers/flagged first.
+- Devices: compact rows; opened card has Rename / Close.
+- Tests + both flavours built. Radar/Find new layouts NOT screenshot-reviewed yet (laptop battery).

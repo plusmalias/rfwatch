@@ -70,7 +70,7 @@ import com.rfwatch.app.ui.theme.ConsoleText
 import com.rfwatch.app.ui.theme.OkGreen
 
 private enum class Tab(val label: String) {
-    RADAR("Radar"), DEVICES("Devices"), SWEEP("Sweep"), MAP("Map"), MORE("Protect"),
+    RADAR("Radar"), DEVICES("Devices"), SWEEP("Find"), MAP("Map"), MORE("Protect"),
     CELL("Cell"), ROOM("Room"), LOG("Log"), SETTINGS("Settings"), SKIMMER("Skimmer"), STALKERWARE("Stalkerware"), CAR("Car check"), CAMERA_FINDER("Camera finder")
 }
 
@@ -118,6 +118,8 @@ class MainActivity : androidx.fragment.app.FragmentActivity() {
                 // Cross-screen device links (Details / Locate / Hunt / Map) switch tabs here;
                 // the target screen selects the device and consumes the request.
                 val deviceNav by vm.deviceNav.collectAsState()
+                val devicesRequest by vm.devicesRequest.collectAsState()
+                LaunchedEffect(devicesRequest) { if (devicesRequest != 0L) tab = Tab.DEVICES }
                 LaunchedEffect(deviceNav) {
                     val nav = deviceNav ?: return@LaunchedEffect
                     tab = when (nav.dest) {

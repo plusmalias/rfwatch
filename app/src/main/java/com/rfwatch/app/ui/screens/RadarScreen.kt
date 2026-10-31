@@ -1,5 +1,9 @@
 package com.rfwatch.app.ui.screens
 
+import com.rfwatch.app.ui.toRowInfo
+import kotlinx.coroutines.launch
+import androidx.compose.ui.draw.clip
+
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -128,18 +132,18 @@ fun RadarScreen(vm: RfWatchViewModel, modifier: Modifier = Modifier) {
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         item(key = "radar-header") {
+            // Same rule as the Devices "Threats" chip, so the two screens never disagree.
+            val now = System.currentTimeMillis()
+            val toCheck = devices.count { now - it.lastSeenMs < 2 * 60_000L && com.rfwatch.app.ui.isThreat(it, it.effectiveKind()) }
+            val liveFilter = com.rfwatch.app.ui.DeviceFilter(window = com.rfwatch.app.ui.TimeWindow.LIVE, status = setOf(com.rfwatch.app.ui.StatusFilter.THREATS))
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
-                    Text("LIVE SPECTRUM", fontSize = 10.sp, color = RadarCyan, letterSpacing = 1.5.sp)
-                    Text("${list.size} signals in view", fontSize = 20.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold)
+                    Text(if (toCheck == 0) "NOTHING FLAGGED RIGHT NOW" else "WORTH A LOOK", fontSize = 10.sp,
+                        color = if (toCheck == 0) OkGreen else WarnAmber, letterSpacing = 1.5.sp)
+                    Text(if (toCheck == 0) "${list.size} signals nearby" else "$toCheck to check · ${list.size} nearby",
+                        fontSize = 20.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold)
                 }
-                androidx.compose.material3.Surface(
-                    color = if (priorityCount > 0) DangerRed.copy(alpha = 0.12f) else ConsolePanelRaised,
-                    shape = CircleShape,
-                    border = BorderStroke(1.dp, if (priorityCount > 0) DangerRed.copy(alpha = 0.45f) else ConsoleOutline),
-                ) {
-                    Text("$priorityCount WATCH", Modifier.padding(horizontal = 12.dp, vertical = 7.dp), fontSize = 10.sp, color = if (priorityCount > 0) DangerRed else ConsoleMuted)
-                }
+                if (toCheck > 0) StatusPill("Show $toCheck ›", WarnAmber) { vm.openDevicesWith(liveFilter) }
             }
         }
         item(key = "status-strip") {
@@ -155,10 +159,25 @@ fun RadarScreen(vm: RfWatchViewModel, modifier: Modifier = Modifier) {
                     com.rfwatch.app.scan.BleScanState.STOPPED -> StatusPill("BLE stopped", WarnAmber)
                     com.rfwatch.app.scan.BleScanState.SCANNING -> Unit
                 }
-                StatusPill(if (activeLaw != null) "POLICE ${activeLaw.signatures.size}" else "No police", if (activeLaw != null) DangerRed else OkGreen)
-                StatusPill(if (followers.isNotEmpty()) "FOLLOWING ${followers.size}" else "No followers", if (followers.isNotEmpty()) WarnAmber else OkGreen)
-                StatusPill(if (recentDrones > 0) "DRONES $recentDrones" else "No drones", if (recentDrones > 0) Color(0xFFE040FB) else OkGreen)
-                StatusPill("Trackers $trackers", if (trackers > 0) RadarPink else ConsoleMuted)
+                val scope = androidx.compose.runtime.rememberCoroutineScope()
+                fun open(kind: com.rfwatch.core.id.DeviceKind, window: com.rfwatch.app.ui.TimeWindow) =
+                    vm.openDevicesWith(com.rfwatch.app.ui.DeviceFilter(kinds = setOf(kind), window = window))
+                StatusPill(if (activeLaw != null) "POLICE ${activeLaw.signatures.size}" else "No police", if (activeLaw != null) DangerRed else OkGreen) {
+                    open(com.rfwatch.core.id.DeviceKind.LAW_ENFORCEMENT, com.rfwatch.app.ui.TimeWindow.TODAY)
+                }
+                StatusPill(if (followers.isNotEmpty()) "FOLLOWING ${followers.size}" else "No followers", if (followers.isNotEmpty()) WarnAmber else OkGreen) {
+                    // Followers live on Radar's own card, just below.
+                    if (followers.isNotEmpty()) scope.launch {
+                        radarListState.layoutInfo.visibleItemsInfo.firstOrNull { it.key == "followers" }?.let { radarListState.animateScrollToItem(it.index) }
+                            ?: radarListState.animateScrollToItem(3)
+                    }
+                }
+                StatusPill(if (recentDrones > 0) "DRONES $recentDrones" else "No drones", if (recentDrones > 0) Color(0xFFE040FB) else OkGreen) {
+                    open(com.rfwatch.core.id.DeviceKind.DRONE, com.rfwatch.app.ui.TimeWindow.TODAY)
+                }
+                StatusPill("Trackers $trackers ›", if (trackers > 0) RadarPink else ConsoleMuted) {
+                    open(com.rfwatch.core.id.DeviceKind.TRACKER, com.rfwatch.app.ui.TimeWindow.LIVE)
+                }
                 StatusPill(
                     when { !home.isSet -> "Home: not set"; !home.mature -> "Home: learning ${home.visitsLearned}/3"; home.inside -> "Home: watching"; else -> "Away" },
                     if (home.isSet) RadarCyan else ConsoleMuted,
@@ -217,21 +236,17 @@ fun RadarScreen(vm: RfWatchViewModel, modifier: Modifier = Modifier) {
         if (list.isEmpty()) {
             item(key = "no-live-devices") { EmptyConsoleNotice("No live signals yet", "BLE and Wi-Fi detections appear here as the monitors receive them.") }
         }
+        val storedById = devices.associateBy { it.id }
         items(filtered, key = { "live-${it.id}" }) { c ->
-            ContactRow(c, vm, selected = selectedContactId == c.id) { selectedContactId = c.id }
-        }
-        item(key = "inventory-heading") {
-            Column(Modifier.padding(top = 10.dp)) {
-                Text("DEVICE INVENTORY", fontSize = 10.sp, color = RadarCyan, letterSpacing = 1.3.sp)
-                Text("${devices.size} saved records", fontSize = 18.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold)
-                Text("Previously heard devices and their latest signal details", fontSize = 11.sp, color = ConsoleMuted)
+            com.rfwatch.app.ui.DeviceRowCompact(c.toRowInfo(storedById[c.id]), selected = selectedContactId == c.id) {
+                selectedContactId = if (selectedContactId == c.id) null else c.id
             }
         }
-        if (devices.isEmpty()) {
-            item(key = "empty-inventory") { EmptyConsoleNotice("Inventory is empty", "Records will collect as BLE and Wi-Fi monitoring runs.") }
-        }
-        items(devices, key = { "saved-${it.id}" }) { device ->
-            InventoryRow(device)
+        item(key = "inventory-link") {
+            // The full saved inventory lives on the Devices tab (search, filters, details).
+            TextButton(onClick = { vm.openDevicesWith(com.rfwatch.app.ui.DeviceFilter()) }, modifier = Modifier.fillMaxWidth()) {
+                Text("All ${devices.size} saved devices → Devices", fontSize = 13.sp)
+            }
         }
     }
 
@@ -301,8 +316,9 @@ private fun ScanSessionCard(
 }
 
 @Composable
-private fun StatusPill(text: String, color: Color) {
+private fun StatusPill(text: String, color: Color, onClick: (() -> Unit)? = null) {
     androidx.compose.material3.Surface(
+        modifier = if (onClick != null) Modifier.clip(CircleShape).clickable(onClick = onClick) else Modifier,
         color = color.copy(alpha = 0.12f), shape = CircleShape, border = BorderStroke(1.dp, color.copy(alpha = 0.5f)),
     ) { Text(text, Modifier.padding(horizontal = 10.dp, vertical = 5.dp), fontSize = 11.sp, color = color, letterSpacing = 0.6.sp) }
 }

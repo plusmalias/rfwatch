@@ -53,6 +53,14 @@ class RfWatchViewModel(private val repo: RfWatchRepository) : ViewModel() {
         if (dest == DeviceDest.HUNT) huntRequest.value = deviceId
         _deviceNav.value = DeviceNav(deviceId, dest)
     }
+    /** Opens the Devices tab with [filter] applied (status chips on Radar use this). */
+    private val _devicesRequest = MutableStateFlow(0L)
+    val devicesRequest: StateFlow<Long> = _devicesRequest
+    fun openDevicesWith(filter: DeviceFilter) {
+        _deviceFilter.value = filter.copy(sort = _deviceFilter.value.sort)
+        _devicesRequest.value = System.nanoTime()
+    }
+
     /** Called by the screen that handled [nav]. */
     fun consumeNav(nav: DeviceNav) { _deviceNav.compareAndSet(nav, null) }
 
@@ -132,6 +140,10 @@ class RfWatchViewModel(private val repo: RfWatchRepository) : ViewModel() {
 
     fun setDeviceFlags(id: String, own: Boolean? = null, trusted: Boolean? = null) {
         viewModelScope.launch { repo.setDeviceFlags(id, own, trusted) }
+    }
+
+    fun setNickname(id: String, nickname: String?) {
+        viewModelScope.launch { repo.setNickname(id, nickname) }
     }
 
     fun analyzeFollower(deviceId: String, onResult: (FollowerScore) -> Unit) {

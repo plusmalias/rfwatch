@@ -1,5 +1,7 @@
 package com.rfwatch.app.ui.screens
 
+import com.rfwatch.app.ui.toRowInfo
+
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -159,8 +161,9 @@ fun DevicesScreen(vm: RfWatchViewModel, modifier: Modifier = Modifier, onRoom: (
                     DeviceCard(selected, selected = true, vm = vm) { selectedId = null }
                 }
             }
+            val now = System.currentTimeMillis()
             items(view.visible.filterNot { it.id == selectedId }, key = { it.id }) { d ->
-                DeviceCard(d, selected = false, vm = vm) { selectedId = d.id }
+                com.rfwatch.app.ui.DeviceRowCompact(d.toRowInfo(now)) { selectedId = d.id }
             }
             if (view.visible.isEmpty()) {
                 item(key = "empty") {
@@ -182,6 +185,28 @@ private fun DeviceCard(d: com.rfwatch.app.data.DeviceEntity, selected: Boolean, 
     var rssiHistory by remember(d.id) { mutableStateOf(emptyList<Int>()) }
     var showRawAdvertisement by remember(d.id) { mutableStateOf(false) }
     var followerScore by remember(d.id) { mutableStateOf<FollowerScore?>(null) }
+    var renaming by remember(d.id) { mutableStateOf(false) }
+    if (renaming) {
+        var text by remember(d.id) { mutableStateOf(d.nickname ?: "") }
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { renaming = false },
+            title = { Text("Name this device") },
+            text = {
+                Column {
+                    Text("Only stored on this phone, inside the encrypted database.", fontSize = 12.sp, color = ConsoleMuted)
+                    OutlinedTextField(value = text, onValueChange = { text = it.take(40) }, singleLine = true,
+                        placeholder = { Text("e.g. My AirPods") }, modifier = Modifier.padding(top = 8.dp))
+                }
+            },
+            confirmButton = { TextButton(onClick = { vm.setNickname(d.id, text); renaming = false }) { Text("Save") } },
+            dismissButton = {
+                Row {
+                    if (d.nickname != null) TextButton(onClick = { vm.setNickname(d.id, null); renaming = false }) { Text("Remove name") }
+                    TextButton(onClick = { renaming = false }) { Text("Cancel") }
+                }
+            },
+        )
+    }
     LaunchedEffect(d.id, selected) {
         if (selected) {
             while (isActive) {
@@ -200,7 +225,17 @@ private fun DeviceCard(d: com.rfwatch.app.data.DeviceEntity, selected: Boolean, 
         border = BorderStroke(1.dp, if (selected) com.rfwatch.app.ui.theme.RadarCyan.copy(alpha = 0.7f) else ConsoleOutline),
     ) {
                     Column(Modifier.padding(8.dp)) {
-                        Text((if (selected) "● SELECTED  /  " else "") + (d.displayName ?: d.id), fontSize = 14.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold)
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                com.rfwatch.app.ui.friendlyName(d.nickname, d.displayName, d.brand, d.effectiveKind(), d.id),
+                                fontSize = 16.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold, modifier = Modifier.weight(1f),
+                            )
+                            if (selected) {
+                                TextButton(onClick = { renaming = true }) { Text(if (d.nickname == null) "Rename" else "Edit name") }
+                                TextButton(onClick = onClick) { Text("Close") }
+                            }
+                        }
+                        if (d.nickname != null && d.displayName != null) Text("Advertises as \"${d.displayName}\"", fontSize = 11.sp, color = ConsoleMuted)
                         Text(
                             listOfNotNull(
                                 d.brand ?: if (d.band == "BLE") "Brand not advertised" else "Brand unknown",

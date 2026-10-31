@@ -836,6 +836,7 @@ class RfWatchRepository(
                 rssiMax = maxOf(previous?.rssiMax ?: rssi, rssi),
                 wifiSecurity = wifiSecurity ?: previous?.wifiSecurity,
                 wifiBand = wifiBand ?: previous?.wifiBand,
+                nickname = previous?.nickname,
             )
         deviceCache[id] = updated
         dirtyDevices[id] = updated
@@ -1155,6 +1156,18 @@ class RfWatchRepository(
                 ownDeviceConfirmed = own ?: current.ownDeviceConfirmed,
                 isAllowlisted = trusted ?: current.isAllowlisted,
             )
+            deviceCache[id] = updated
+            dirtyDevices[id] = updated
+            flushPending()
+        }
+    }
+
+    /** Names a device (blank clears). Goes through the cache like [setDeviceFlags]. */
+    suspend fun setNickname(id: String, nickname: String?) {
+        withContext(ingestDispatcher) {
+            ensureDeviceCache()
+            val current = deviceCache[id] ?: return@withContext
+            val updated = current.copy(nickname = nickname?.trim()?.take(40)?.takeIf { it.isNotEmpty() })
             deviceCache[id] = updated
             dirtyDevices[id] = updated
             flushPending()

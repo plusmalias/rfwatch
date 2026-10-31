@@ -47,6 +47,8 @@ data class DeviceEntity(
     val rssiMax: Int? = null,
     val wifiSecurity: String? = null,
     val wifiBand: String? = null,
+    /** User-given name ("Mum's iPhone"); v5. Display only — never sent anywhere. */
+    val nickname: String? = null,
 )
 
 /** One RSSI observation, GPS- and heading-tagged where available. */
