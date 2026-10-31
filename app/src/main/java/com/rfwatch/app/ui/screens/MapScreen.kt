@@ -41,6 +41,7 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.rfwatch.app.BuildConfig
 import com.rfwatch.app.data.DeviceEntity
 import com.rfwatch.app.ui.RfWatchViewModel
+import com.rfwatch.core.df.DriveByEstimator
 import com.rfwatch.core.df.EmitterEstimate
 import com.rfwatch.core.df.EstimateStatus
 import com.rfwatch.core.model.GpsFix
@@ -104,7 +105,8 @@ private data class MappedDevice(
     val locationBasis: String get() = when (estimate?.status) {
         EstimateStatus.LOCATED -> "Drive-by fit · ±${estimate.ellipse?.semiMajorM?.toInt() ?: "?"} m error"
         EstimateStatus.MOBILE -> "Last phone GPS point where signal was heard; device position unknown"
-        else -> "Last phone GPS point where signal was heard; device position unknown"
+        else -> "Last phone GPS point where signal was heard · " +
+            (estimate?.reason?.let { "not located: $it" } ?: "not located yet (needs a live, repeatedly heard device)")
     }
     val markerColor: String get() = colorHex(deviceCategoryColor(entity.category, entity.classification))
     val motionColor: String get() = when (estimate?.status) {
@@ -156,6 +158,7 @@ private fun OnlineDeviceMap(
         }
     }
     val movingCount = mapped.count { it.estimate?.status == EstimateStatus.MOBILE }
+    val locatedCount = mapped.count { it.estimate?.status == EstimateStatus.LOCATED }
     val selected = mapped.firstOrNull { it.entity.id == selectedId }
 
     // Direction-finding fits update while this screen is visible. Only a bounded set of
@@ -337,7 +340,10 @@ private fun OnlineDeviceMap(
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
             Column(Modifier.weight(1f)) {
                 Text("LIVE DEVICE MAP", fontSize = 17.sp)
-                Text("${mapped.size} mapped · $movingCount movement candidates", fontSize = 11.sp, color = Color(0xFF9CA3AF))
+                Text(
+                    "${mapped.size} mapped · $locatedCount located · $movingCount moving · ${mapped.size - locatedCount - movingCount} heard-only",
+                    fontSize = 11.sp, color = Color(0xFF9CA3AF),
+                )
             }
             Column(horizontalAlignment = Alignment.End) {
                 OutlinedButton(onClick = {
@@ -350,7 +356,8 @@ private fun OnlineDeviceMap(
             }
         }
         Text(
-            "Green outline = fixed-source estimate · amber = motion candidate · grey = only heard here",
+            "Outline: green = position estimated · amber = moving · grey = shown where you heard it. " +
+                "Estimates need ≥${DriveByEstimator.MIN_SAMPLES} GPS-tagged hearings spread over ≥${DriveByEstimator.MIN_SPREAD_M.toInt()} m — walk or drive past; standing still keeps everything grey.",
             fontSize = 10.sp, color = Color(0xFF9CA3AF), modifier = Modifier.padding(bottom = 5.dp),
         )
         Box(Modifier.fillMaxWidth().weight(1f)) {

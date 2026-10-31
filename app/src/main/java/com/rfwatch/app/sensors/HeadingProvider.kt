@@ -32,6 +32,9 @@ class HeadingProvider(context: Context) {
     private val rotationSensor: Sensor? = sensorManager.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR)
     private val magnetometer: Sensor? = sensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD)
 
+    /** False on phones without a magnetometer/rotation vector (e.g. ZTE P660): no compass heading. */
+    val hasCompass: Boolean get() = rotationSensor != null
+
     @Volatile private var latestFix: GpsFix? = null
     @Volatile private var fieldMagnitudeUt: Double? = null
     @Volatile private var magAccuracy: SensorAccuracy = SensorAccuracy.UNRELIABLE

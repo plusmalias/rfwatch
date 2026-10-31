@@ -19,6 +19,8 @@ class RfWatchViewModel(private val repo: RfWatchRepository) : ViewModel() {
     val userLocation = repo.userLocation
     val contacts = repo.contacts
     val sweep = repo.sweep
+    val sweepLive = repo.sweepLive
+    val hasCompass: Boolean get() = repo.hasCompass
     val room = repo.roomFindings
     val cell = repo.cellAssessment
 
@@ -26,7 +28,8 @@ class RfWatchViewModel(private val repo: RfWatchRepository) : ViewModel() {
     val alerts = repo.alertFlow.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
     val events = repo.eventFlow.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    fun startSweep(deviceId: String) = repo.startSweep(deviceId)
+    fun startSweep(deviceId: String, guided: Boolean = false) = repo.startSweep(deviceId, guided)
+    fun setGuidedHeading(deg: Double) = repo.setGuidedHeading(deg)
     fun finishSweep(): SweepResult? = repo.finishSweep()
 
     fun estimate(deviceId: String, onResult: (EmitterEstimate) -> Unit) {

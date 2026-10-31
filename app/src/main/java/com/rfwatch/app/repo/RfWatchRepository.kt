@@ -51,6 +51,9 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
+/** Live progress of a running sweep: how many usable samples the target has produced. */
+data class SweepLive(val samples: Int, val stepSamples: Int, val lastRssi: Int?, val headingAvailable: Boolean)
+
 /** A live contact shown on the radar. Bearing/estimate are null until a DF method runs. */
 data class LiveContact(
     val id: String,
@@ -128,8 +131,17 @@ class RfWatchRepository(
     val cellAssessment: StateFlow<CellAssessment?> = _cell.asStateFlow()
 
     @Volatile private var sweepTargetId: String? = null
+    // Guided sweeps (no compass) supply the heading: degrees clockwise from the start direction.
+    @Volatile private var guidedHeadingDeg: Double? = null
+    private val sweepLock = Any()
     private val sweepHeadings = ArrayList<Double>()
     private val sweepRssi = ArrayList<Double>()
+    private var sweepStepSamples = 0
+    private val _sweepLive = MutableStateFlow<SweepLive?>(null)
+    val sweepLive: StateFlow<SweepLive?> = _sweepLive.asStateFlow()
+
+    /** Whether this phone can give a compass heading (needed for the continuous sweep). */
+    val hasCompass: Boolean get() = headingProvider.hasCompass
 
     val deviceFlow get() = database.deviceDao().observeAll()
     val alertFlow get() = database.alertDao().recent()
@@ -333,10 +345,14 @@ class RfWatchRepository(
             _room.value = roomMap.values.sortedByDescending { it.threat.ordinal }
         }
 
-        // Live sweep capture.
+        // Live sweep capture (every advert, not throttled like stored observations).
         if (sweepTargetId == id) {
-            _heading.value.deg?.let { h ->
-                sweepHeadings.add(h); sweepRssi.add(rssi.toDouble())
+            val h = guidedHeadingDeg ?: _heading.value.deg
+            synchronized(sweepLock) {
+                if (h != null) {
+                    sweepHeadings.add(h); sweepRssi.add(rssi.toDouble()); sweepStepSamples++
+                }
+                _sweepLive.value = SweepLive(sweepHeadings.size, sweepStepSamples, rssi, h != null)
             }
         }
 
@@ -471,17 +487,36 @@ class RfWatchRepository(
 
     // ---- Sweep (step 2) ----
 
-    fun startSweep(deviceId: String) {
-        sweepTargetId = deviceId
-        sweepHeadings.clear(); sweepRssi.clear()
+    /**
+     * Starts capturing RSSI from [deviceId]. With [guided] the caller drives the heading via
+     * [setGuidedHeading] (step sweep for phones without a compass); otherwise the compass is used.
+     */
+    fun startSweep(deviceId: String, guided: Boolean = false) {
+        synchronized(sweepLock) {
+            sweepHeadings.clear(); sweepRssi.clear(); sweepStepSamples = 0
+            guidedHeadingDeg = if (guided) 0.0 else null
+            sweepTargetId = deviceId
+            _sweepLive.value = SweepLive(0, 0, null, guided || _heading.value.deg != null)
+        }
         _sweep.value = null
     }
 
+    /** Guided sweep: the user now faces [deg] clockwise from where they started. */
+    fun setGuidedHeading(deg: Double) {
+        synchronized(sweepLock) {
+            guidedHeadingDeg = deg
+            sweepStepSamples = 0
+        }
+    }
+
     fun finishSweep(): SweepResult? {
-        val result = if (sweepHeadings.size >= 6) {
-            SweepFit.fit(sweepHeadings.toDoubleArray(), sweepRssi.toDoubleArray())
-        } else null
-        sweepTargetId = null
+        val result = synchronized(sweepLock) {
+            sweepTargetId = null
+            guidedHeadingDeg = null
+            if (sweepHeadings.size >= MIN_SWEEP_SAMPLES) {
+                SweepFit.fit(sweepHeadings.toDoubleArray(), sweepRssi.toDoubleArray())
+            } else null
+        }
         _sweep.value = result
         return result
     }
@@ -537,6 +572,7 @@ class RfWatchRepository(
 
     companion object {
         private const val ALERT_DEBOUNCE_MS = 60_000L
+        const val MIN_SWEEP_SAMPLES = 6
         private const val FLUSH_INTERVAL_MS = 3_000L
         private const val OBSERVATION_MIN_INTERVAL_MS = 2_000L
         private const val CONTACT_PUBLISH_INTERVAL_MS = 1_000L

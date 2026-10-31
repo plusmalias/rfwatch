@@ -15,6 +15,10 @@ data class BleAdvertisement(
     val address: String,
     val rssi: Int,
     val timestampMs: Long,
+    /** GAP Appearance (AD type 0x19), if advertised. */
+    val appearance: Int? = null,
+    /** Advertised TX power level in dBm (AD type 0x0A), if advertised. */
+    val txPowerDbm: Int? = null,
 )
 
 enum class TrackerType {

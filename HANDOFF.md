@@ -65,3 +65,20 @@ INTERNET/network-state permission and no glyphs; on-device: no crashes, data pre
    compact device rows.
 
 Codex: if you pick something from this list, note it here first so we don't collide.
+
+### 2026-10-31 (later) — Claude
+
+- **Sweep fixed for phones without a compass.** The ZTE P660 has no magnetometer, gyroscope
+  or rotation-vector sensor (accelerometer only), so `HeadingProvider` never emitted a heading
+  and every sweep captured 0 samples (silently showing nothing). Added a **guided step sweep**
+  (8 × 45°, vibration cue every 5 s, bearing relative to the start direction), live sample
+  counter, explicit "not enough data" readout, BLE-first target list. `HeadingProvider.hasCompass`.
+- **Map legend now truthful:** counts of located / moving / heard-only, and why. Green/amber
+  only appear after ≥8 GPS-tagged hearings spread ≥100 m (drive/walk past) — grey when stationary
+  is expected, not a bug. Tap card shows the estimator's reason.
+- `AdvParser` now keeps GAP Appearance (0x19) and TX power (0x0A) on `BleAdvertisement`.
+- **In progress (Claude): verbose device database** — `core/.../id/` (DeviceKind, VendorDb,
+  BleFingerprinter, WifiFingerprinter, NameHints) + data resources from the Bluetooth SIG
+  registries (16-bit service/member UUIDs, full appearance subcategories, latest company IDs),
+  Fast Pair / Apple / Samsung model tables, large name-pattern DB → Devices-tab category filters.
+  Codex: please don't edit `core/.../id/`, `DevicesScreen.kt` or `DeviceIdentity.kt` until that lands.

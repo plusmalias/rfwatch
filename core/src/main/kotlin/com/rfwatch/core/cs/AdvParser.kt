@@ -17,11 +17,15 @@ object AdvParser {
     private const val AD_SERVICE_SOLICITATION_16 = 0x14
     private const val AD_SERVICE_DATA_16 = 0x16
     private const val AD_MANUFACTURER = 0xFF
+    private const val AD_TX_POWER = 0x0A
+    private const val AD_APPEARANCE = 0x19
 
     fun fromRawAdvBytes(bytes: ByteArray, address: String, rssi: Int, timestampMs: Long): BleAdvertisement {
         val manufacturer = HashMap<Int, ByteArray>()
         val serviceData = HashMap<Int, ByteArray>()
         val serviceUuids = HashSet<Int>()
+        var appearance: Int? = null
+        var txPower: Int? = null
 
         var i = 0
         while (i < bytes.size) {
@@ -43,6 +47,10 @@ object AdvParser {
                     serviceData[uuid] = data.copyOfRange(2, data.size)
                     serviceUuids.add(uuid)
                 }
+                AD_APPEARANCE -> if (data.size >= 2) {
+                    appearance = (data[0].toInt() and 0xFF) or ((data[1].toInt() and 0xFF) shl 8)
+                }
+                AD_TX_POWER -> if (data.isNotEmpty()) txPower = data[0].toInt() // signed dBm
                 AD_COMPLETE_16, AD_INCOMPLETE_16, AD_SERVICE_SOLICITATION_16 -> {
                     var j = 0
                     while (j + 1 < data.size) {
@@ -53,7 +61,7 @@ object AdvParser {
             }
             i += len + 1
         }
-        return BleAdvertisement(manufacturer, serviceData, serviceUuids, address, rssi, timestampMs)
+        return BleAdvertisement(manufacturer, serviceData, serviceUuids, address, rssi, timestampMs, appearance, txPower)
     }
 
     /** Parse a hex string ("1cff4c00…", whitespace allowed) into bytes. */
