@@ -25,6 +25,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -75,6 +76,20 @@ fun RadarScreen(vm: RfWatchViewModel, modifier: Modifier = Modifier) {
     // Keep discovery order stable. RSSI fluctuates per packet, so sorting on it makes targets jump.
     val list = contacts.values.toList()
     var selectedContactId by remember { mutableStateOf<String?>(null) }
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val prefs = remember { context.getSharedPreferences("rfwatch_settings", android.content.Context.MODE_PRIVATE) }
+    var radarFilter by remember { mutableStateOf(prefs.getString("radar_filter", RADAR_FILTER_ALL) ?: RADAR_FILTER_ALL) }
+    val filtered = list.filter { it.matchesRadarFilter(radarFilter) }
+    val positions by vm.positions.collectAsState()
+    val userLocation by vm.userLocation.collectAsState()
+    val selectedContact = selectedContactId?.let { contacts[it] }
+    val latestIds by androidx.compose.runtime.rememberUpdatedState(filtered.map { it.id })
+    LaunchedEffect(Unit) {
+        while (true) {
+            vm.refreshPositions(latestIds)
+            kotlinx.coroutines.delay(5_000)
+        }
+    }
     val facing = heading.deg ?: 0.0
     val priorityCount = list.count { it.classification == "PRIORITY" || it.classification == "TRACKER" }
     val session by vm.scanSession.collectAsState()
@@ -113,42 +128,12 @@ fun RadarScreen(vm: RfWatchViewModel, modifier: Modifier = Modifier) {
                 item(key = "law-banner") { LawBanner(encounter) }
             }
         }
+        item(key = "radar-filter") { RadarFilterChips(list, radarFilter) { radarFilter = it; prefs.edit().putString("radar_filter", it).apply() } }
         item(key = "radar-scope") {
-            Card(
-                Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = ConsolePanel),
-                border = BorderStroke(1.dp, ConsoleOutline),
-            ) {
-                Column(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp)) {
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                        Text("PROXIMITY SCOPE", fontSize = 10.sp, color = ConsoleMuted, letterSpacing = 1.sp)
-                        Text(
-                            heading.deg?.let { "HEADING ${it.toInt()}°" } ?: "HEADING UNAVAILABLE",
-                            fontSize = 11.sp, color = if (heading.deg == null) WarnAmber else RadarCyan,
-                        )
-                    }
-                    Canvas(Modifier.fillMaxWidth().height(205.dp).padding(vertical = 6.dp)) {
-                        drawRadar(list, facing, selectedContactId)
-                    }
-                    Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
-                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                            LegendDot(RadarCyan, "You / BLE")
-                            LegendDot(SignalBlue, "Wi-Fi")
-                            LegendDot(RadarPink, "Tracker")
-                        }
-                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                            LegendDot(DangerRed, "Axon / law")
-                            LegendDot(WarnAmber, "Camera / IoT")
-                            LegendDot(Color(0xFFB79CFF), "Fleet")
-                        }
-                    }
-                    Text(
-                        "Without a measured bearing, dots sit in their category's sector (stable order) and closer to the centre means a stronger signal — " +
-                            "a rough RSSI proxy, not a distance. Only drive-by fixes are plotted at a real direction.",
-                        fontSize = 10.sp, color = Color(0xFF78909A),
-                    )
-                }
-            }
+            LocationScopePanel(filtered, positions, userLocation, selectedContactId) { selectedContactId = it }
+        }
+        selectedContact?.let { c ->
+            item(key = "locate-${c.id}") { DeviceLocateChart(vm, c, userLocation) { selectedContactId = null } }
         }
         item(key = "live-devices-heading") {
             Row(Modifier.fillMaxWidth().padding(top = 4.dp), horizontalArrangement = Arrangement.SpaceBetween) {
@@ -159,7 +144,7 @@ fun RadarScreen(vm: RfWatchViewModel, modifier: Modifier = Modifier) {
         if (list.isEmpty()) {
             item(key = "no-live-devices") { EmptyConsoleNotice("No live signals yet", "BLE and Wi-Fi detections appear here as the monitors receive them.") }
         }
-        items(list, key = { "live-${it.id}" }) { c ->
+        items(filtered, key = { "live-${it.id}" }) { c ->
             ContactRow(c, vm, selected = selectedContactId == c.id) { selectedContactId = c.id }
         }
         item(key = "inventory-heading") {
@@ -278,105 +263,7 @@ private fun LegendDot(color: Color, label: String) {
     }
 }
 
-private fun DrawScope.drawRadar(contacts: List<LiveContact>, facingDeg: Double, selectedId: String?) {
-    val cx = size.width / 2f
-    val cy = size.height / 2f
-    val maxR = min(cx, cy) * 0.92f
-    val grid = Color(0xFF1C4852)
-
-    // Range rings.
-    for (i in 1..3) {
-        drawCircle(grid.copy(alpha = if (i == 3) 0.9f else 0.55f), radius = maxR * i / 3f, center = Offset(cx, cy), style = Stroke(if (i == 3) 2f else 1.2f))
-    }
-    // Light compass spokes and perimeter ticks keep the scope legible without implying a distance scale.
-    for (i in 0 until 8) {
-        val a = Math.toRadians(i * 45.0)
-        drawLine(grid.copy(alpha = 0.55f), Offset(cx, cy), Offset(cx + (maxR * cos(a)).toFloat(), cy + (maxR * sin(a)).toFloat()), strokeWidth = 1f)
-    }
-    for (i in 0 until 36) {
-        val a = Math.toRadians(i * 10.0)
-        val inner = maxR * if (i % 3 == 0) 0.92f else 0.96f
-        drawLine(
-            grid.copy(alpha = 0.8f),
-            Offset(cx + (inner * cos(a)).toFloat(), cy + (inner * sin(a)).toFloat()),
-            Offset(cx + (maxR * cos(a)).toFloat(), cy + (maxR * sin(a)).toFloat()),
-            strokeWidth = if (i % 3 == 0) 1.5f else 1f,
-        )
-    }
-    // Own-position marker.
-    drawCircle(RadarCyan, radius = 5f, center = Offset(cx, cy))
-
-    val maxDist = (contacts.mapNotNull { it.estimate?.distanceFromUserM }.maxOrNull() ?: 100.0).coerceAtLeast(50.0)
-
-    // Category lanes for contacts without a real bearing: fixed sectors, stable order by id.
-    val lanes = contacts.filterNot { it.hasRealBearing() }.groupBy { laneOf(it) }
-        .mapValues { (_, list) -> list.sortedBy { it.id } }
-    val labelPaint = android.graphics.Paint().apply {
-        isAntiAlias = true; textSize = 22f; color = android.graphics.Color.argb(150, 145, 164, 176)
-        textAlign = android.graphics.Paint.Align.CENTER
-    }
-    RADAR_LANES.forEachIndexed { i, name ->
-        val center = Math.toRadians(i * LANE_DEG)
-        drawLine(grid.copy(alpha = 0.9f), Offset(cx, cy),
-            Offset(cx + (maxR * sin(center - Math.toRadians(LANE_DEG / 2))).toFloat(), cy - (maxR * cos(center - Math.toRadians(LANE_DEG / 2))).toFloat()),
-            strokeWidth = 1.4f)
-        drawContext.canvas.nativeCanvas.drawText(
-            name, cx + (maxR * 0.78f * sin(center)).toFloat(), cy - (maxR * 0.78f * cos(center)).toFloat() + 8f, labelPaint,
-        )
-    }
-
-    contacts.forEach { c ->
-        val est = c.estimate
-        val color = colorFor(c)
-        if (est != null && est.status == EstimateStatus.LOCATED && est.bearingFromUserDeg != null) {
-            val rel = Math.toRadians(est.bearingFromUserDeg!! - facingDeg)
-            val rNorm = ((est.distanceFromUserM ?: maxDist) / maxDist).coerceIn(0.1, 1.0)
-            val r = maxR * rNorm.toFloat()
-            val px = cx + (r * sin(rel)).toFloat()
-            val py = cy - (r * cos(rel)).toFloat()
-            // Uncertainty wedge: angular half-width from the ellipse vs distance.
-            val halfWedge = est.ellipse?.let {
-                Math.toDegrees(Math.atan2(it.semiMajorM, (est.distanceFromUserM ?: maxDist).coerceAtLeast(1.0)))
-            } ?: 15.0
-            drawWedge(cx, cy, r, est.bearingFromUserDeg!! - facingDeg, halfWedge, color.copy(alpha = 0.18f))
-            if (c.id == selectedId) drawCircle(RadarCyan, radius = 15f, center = Offset(px, py), style = Stroke(2f))
-            drawCircle(color, radius = 7f, center = Offset(px, py))
-        } else {
-            // Bearing unknown → the contact's category lane; radius from signal strength.
-            val lane = laneOf(c)
-            val members = lanes[lane].orEmpty()
-            val index = members.indexOfFirst { it.id == c.id }.coerceAtLeast(0)
-            val spread = LANE_DEG * 0.8
-            val angleDeg = lane * LANE_DEG - spread / 2 + spread * (index + 0.5) / members.size.coerceAtLeast(1)
-            val strength = ((c.lastRssi + 100.0) / 70.0).coerceIn(0.0, 1.0)
-            val r = maxR * (0.95 - 0.8 * strength).toFloat()
-            val a = Math.toRadians(angleDeg)
-            val px = cx + (r * sin(a)).toFloat()
-            val py = cy - (r * cos(a)).toFloat()
-            if (c.id == selectedId) drawCircle(RadarCyan, radius = 11f, center = Offset(px, py), style = Stroke(2f))
-            drawCircle(colorFor(c).copy(alpha = 0.85f), radius = if (c.id == selectedId) 6f else 4.5f, center = Offset(px, py))
-        }
-    }
-}
-
-private val RADAR_LANES = listOf("TRACKER", "LAW", "CAMERA", "VEHICLE", "WI-FI", "BLE")
-private const val LANE_DEG = 60.0
 private const val LAW_BANNER_KEEP_MS = 10 * 60_000L
-
-private fun LiveContact.hasRealBearing() =
-    estimate?.status == EstimateStatus.LOCATED && estimate.bearingFromUserDeg != null
-
-private fun laneOf(c: LiveContact): Int {
-    val label = c.category.orEmpty().lowercase()
-    return when {
-        c.trackerType != null || "tracker" in label -> 0
-        "axon" in label || "law" in label || "police" in label -> 1
-        "camera" in label || "iot" in label -> 2
-        "fleet" in label || "vehicle" in label -> 3
-        c.band == com.rfwatch.core.model.Band.WIFI -> 4
-        else -> 5
-    }
-}
 
 @Composable
 private fun LawBanner(encounter: com.rfwatch.core.alerts.LawEncounter) {
@@ -402,20 +289,6 @@ private fun LawBanner(encounter: com.rfwatch.core.alerts.LawEncounter) {
             Text("Vendor radio signatures only — not proof that police are present.", fontSize = 10.sp, color = ConsoleMuted)
         }
     }
-}
-
-private fun DrawScope.drawWedge(cx: Float, cy: Float, r: Float, centerDeg: Double, halfDeg: Double, color: Color) {
-    val steps = 10
-    val start = centerDeg - halfDeg
-    val path = androidx.compose.ui.graphics.Path().apply {
-        moveTo(cx, cy)
-        for (i in 0..steps) {
-            val a = Math.toRadians(start + (2 * halfDeg) * i / steps)
-            lineTo(cx + (r * sin(a)).toFloat(), cy - (r * cos(a)).toFloat())
-        }
-        close()
-    }
-    drawPath(path, color)
 }
 
 private fun colorFor(c: LiveContact): Color = deviceCategoryColor(c.category, c.classification)

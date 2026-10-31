@@ -84,6 +84,17 @@ data class LiveContact(
     val lastSeenMs: Long = 0,
     val brand: String? = null,
     val category: String? = null,
+    val kind: com.rfwatch.core.id.DeviceKind = com.rfwatch.core.id.DeviceKind.UNKNOWN,
+)
+
+/** One GPS-tagged hearing of a device, for the per-device locate chart. */
+data class DeviceSighting(val lat: Double, val lon: Double, val rssi: Int, val timestampMs: Long, val accuracyM: Double)
+
+/** Everything the locate chart needs for one device. */
+data class LocateData(
+    val sightings: List<DeviceSighting>,
+    val centroid: com.rfwatch.core.df.CentroidEstimate?,
+    val driveBy: EmitterEstimate?,
 )
 
 /**
@@ -262,6 +273,33 @@ class RfWatchRepository(
             else -> FollowerExclusion.NONE
         }
         FollowerScorer.score(deviceId, sightings, userTrack, exclusion)
+    }
+
+    private val _positions = MutableStateFlow<Map<String, com.rfwatch.core.df.CentroidEstimate>>(emptyMap())
+    /** RSSI-weighted position estimates for devices on the Radar (refreshed while it is visible). */
+    val positions: StateFlow<Map<String, com.rfwatch.core.df.CentroidEstimate>> = _positions.asStateFlow()
+
+    /** Recompute RSSI-centroid positions for [ids] from their recent GPS-tagged observations. */
+    suspend fun refreshPositions(ids: Collection<String>) {
+        val next = HashMap<String, com.rfwatch.core.df.CentroidEstimate>()
+        for (id in ids.take(POSITION_DEVICE_LIMIT)) {
+            val obs = database.observationDao().recentGeoForDevice(id, POSITION_SAMPLE_LIMIT).map { it.toRadioObservation() }
+            com.rfwatch.core.df.RssiCentroidLocator.estimate(obs)?.let { next[id] = it }
+        }
+        _positions.value = next
+    }
+
+    /** Sightings + both position estimates for one device's locate chart. */
+    suspend fun locateData(deviceId: String): LocateData {
+        val rows = database.observationDao().recentGeoForDevice(deviceId, LOCATE_SAMPLE_LIMIT)
+        val obs = rows.map { it.toRadioObservation() }
+        return LocateData(
+            sightings = rows.mapNotNull { r ->
+                if (r.lat == null || r.lon == null) null else DeviceSighting(r.lat, r.lon, r.rssi, r.timestampMs, r.gpsAccuracyM ?: 20.0)
+            },
+            centroid = com.rfwatch.core.df.RssiCentroidLocator.estimate(obs),
+            driveBy = _contacts.value[deviceId]?.estimate,
+        )
     }
 
     /** Refresh a bounded set of live motion/location fits while the online map is visible. */
@@ -509,6 +547,7 @@ class RfWatchRepository(
             trackerType = match?.type, lastRssi = rssi, lastSeenMs = ts,
             brand = identity.brand ?: prevContact?.brand,
             category = identity.category,
+            kind = identity.kind,
         )
         contactsDirty = true
 
@@ -802,6 +841,9 @@ class RfWatchRepository(
         private const val OBSERVATION_MIN_INTERVAL_MS = 2_000L
         private const val CONTACT_PUBLISH_INTERVAL_MS = 1_000L
         private const val LAW_TICK_MS = 5_000L
+        private const val POSITION_DEVICE_LIMIT = 80
+        private const val POSITION_SAMPLE_LIMIT = 120
+        private const val LOCATE_SAMPLE_LIMIT = 400
         private const val CELL_SCAN_INTERVAL_MS = 6_000L
         private const val MAX_FIX_AGE_MS = 120_000L
         private const val MAX_FIX_ACCURACY_M = 100.0

@@ -27,6 +27,9 @@ class RfWatchViewModel(private val repo: RfWatchRepository) : ViewModel() {
     val room = repo.roomFindings
     val cell = repo.cellAssessment
     val lawEncounter = repo.lawEncounter
+    val positions = repo.positions
+    suspend fun refreshPositions(ids: Collection<String>) = repo.refreshPositions(ids)
+    suspend fun locateData(deviceId: String) = repo.locateData(deviceId)
     val scanSession = repo.scanSession
 
     val devices = repo.deviceFlow.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
