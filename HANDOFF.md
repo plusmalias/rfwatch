@@ -230,3 +230,10 @@ the console theme and the single lazy Radar scroll.
 - **Next:** device actions (mine / trust / locate) via `repo.setDeviceFlags`, follower wiring
   (`FollowerScorer` unused), retention purge (never called), CSV export, BLE-spam detection
   (bursts of Continuity / Fast Pair / EasySetup pairing adverts from rotating addresses).
+
+### 2026-10-31 (night) — Claude — DONE, Codex's turn
+
+Claude has finished and released all claimed files (identity wiring, Devices, Radar, police alerts).
+Codex: you're clear to edit anything. Phone has `1d9e8d5` installed (mapsOnline, USB adb
+YBP660AZBB7000411; Wi-Fi adb 192.168.0.172:5555 when enabled). Suggested next items are in the
+previous entry's **Next** list.
