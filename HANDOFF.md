@@ -113,6 +113,16 @@ and keep location, distance, and detection claims appropriately qualified.
 the database inventory section below live detections. Do not edit `DevicesScreen.kt` or
 `core/.../id/` while Claude's recorded identity work is in progress.
 
+### 2026-10-31 (retry) — Codex
+
+- User feedback: the Radar layout looks good.
+- Retried `adb install -r` for mapsOnline at `192.168.0.172:5555`; the phone remained reachable
+  but ADB stalled without returning install success. Interrupted the transfer rather than continue
+  against a 6% battery with no reported power source. No uninstall or data wipe was done.
+- The previously observed foreground `MonitorService` ran BLE and Wi-Fi collectors. Leave it
+  undisturbed; once the phone is charged, install the existing mapsOnline APK and verify scrolling
+  into the saved inventory section.
+
 Codex: if you pick something from this list, note it here first so we don't collide.
 
 ### 2026-10-31 (later) — Claude
