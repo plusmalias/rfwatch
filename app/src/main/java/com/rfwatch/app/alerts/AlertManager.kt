@@ -96,7 +96,7 @@ class AlertManager(private val context: Context) : TextToSpeech.OnInitListener {
         AlertType.TRACKER_FOLLOWING -> 0xFFF277A6
         AlertType.EMERGENCY_VEHICLE -> 0xFF3B82F6
         AlertType.ATTACK_TOOL, AlertType.BLE_SPAM, AlertType.EVIL_TWIN -> 0xFF22D3EE
-        AlertType.SKIMMER_SUSPECTED -> 0xFFFF3B4E
+        AlertType.SKIMMER_SUSPECTED, AlertType.STALKERWARE -> 0xFFFF3B4E
     }
 
     /** Screen flash (if the app is open) and optional camera-torch strobe for a loud alert. */
@@ -223,6 +223,7 @@ class AlertManager(private val context: Context) : TextToSpeech.OnInitListener {
             AlertType.BLE_SPAM -> longArrayOf(0, 60, 40, 60, 40, 60, 40, 60, 40, 60)
             AlertType.EVIL_TWIN -> longArrayOf(0, 500, 100, 100, 100, 500)
             AlertType.SKIMMER_SUSPECTED -> longArrayOf(0, 700, 200, 700)
+            AlertType.STALKERWARE -> longArrayOf(0, 300, 150, 300)
         }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             vibrator.vibrate(VibrationEffect.createWaveform(pattern, -1))
@@ -252,6 +253,7 @@ class AlertManager(private val context: Context) : TextToSpeech.OnInitListener {
             AlertType.BLE_SPAM to "Bluetooth spam attack",
             AlertType.EVIL_TWIN to "Fake / evil-twin Wi-Fi",
             AlertType.SKIMMER_SUSPECTED to "Possible card skimmer",
+            AlertType.STALKERWARE to "Stalkerware check result",
         ).map { (type, name) ->
             NotificationChannel(channelId(type), name, NotificationManager.IMPORTANCE_HIGH).apply {
                 enableVibration(true)

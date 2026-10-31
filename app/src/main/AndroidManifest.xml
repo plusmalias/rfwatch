@@ -43,6 +43,11 @@
     <uses-feature android:name="android.hardware.sensor.compass" android:required="false" />
     <uses-feature android:name="android.hardware.location.gps" android:required="false" />
 
+    <!-- Stalkerware check: list every installed app to compare against known indicators.
+         Never uploaded; the app is distributed outside Play, where this needs no special review. -->
+    <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES"
+        tools:ignore="QueryAllPackagesPermission" />
+
     <application
         android:name=".RfWatchApp"
         android:allowBackup="false"

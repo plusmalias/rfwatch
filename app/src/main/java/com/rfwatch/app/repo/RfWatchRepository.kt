@@ -500,6 +500,21 @@ class RfWatchRepository(
         }
     }
 
+    /** Logs a stalkerware scan (verbose, local only) and alerts on CRITICAL/HIGH apps — no speech, discreet. */
+    suspend fun logStalkerwareScan(results: List<com.rfwatch.core.cs.AppAssessment>) {
+        val now = System.currentTimeMillis()
+        val flagged = results.filter { it.risk == com.rfwatch.core.cs.AppRisk.CRITICAL || it.risk == com.rfwatch.core.cs.AppRisk.HIGH }
+        val summary = "Stalkerware check: ${results.size} apps, ${flagged.size} critical/high. " + flagged.joinToString(" | ") {
+            "${it.risk} ${it.score} ${it.facts.label} (${it.facts.packageName})${it.family?.let { f -> " = ${f.name}" } ?: ""}: ${it.reasons.joinToString("; ")}"
+        }
+        database.eventDao().insert(com.rfwatch.app.data.EventEntity(kind = "STALKERWARE_SCAN", timestampMs = now, detail = summary))
+        if (flagged.isNotEmpty()) {
+            val detail = flagged.joinToString { "${it.facts.label} (${it.risk})" }
+            alertManager.raise(AlertType.STALKERWARE, titleFor(AlertType.STALKERWARE), detail, null, 1.0, speak = false)
+            database.alertDao().insert(com.rfwatch.app.data.AlertEntity(type = AlertType.STALKERWARE.name, timestampMs = now, deviceId = null, message = summary))
+        }
+    }
+
     /** Evidence report share intent (all alerts, or one device's full history). */
     suspend fun evidenceIntent(context: android.content.Context, deviceId: String?): android.content.Intent {
         withContext(ingestDispatcher) { flushPending() }
@@ -1155,6 +1170,7 @@ class RfWatchRepository(
         AlertType.BLE_SPAM -> "Bluetooth spam attack nearby"
         AlertType.EVIL_TWIN -> "Possible fake Wi-Fi (evil twin)"
         AlertType.SKIMMER_SUSPECTED -> "Possible card skimmer nearby"
+        AlertType.STALKERWARE -> "Possible stalkerware on this phone"
     }
 
     companion object {

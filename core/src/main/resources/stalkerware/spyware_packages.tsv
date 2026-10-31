@@ -1,0 +1,738 @@
+# package	campaign	type — MVT indicators STIX2 (app:id), plus AssoEchap sample package names
+Aktualizacja.apps	Spyone	mercenary spyware / malware
+YWZiZDFjZTg2NTZlOGI4NDkyYWJjZDJjZDE5ZTM0Mjk.MzkwMmNhZGFiZGZhMjMyZjQzNTJkYmQ1ODg1ZjI1NzA	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+a.tck.lvmchi	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+afs.hbmoczc	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+ahmyth.mine.king.ahmyth	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+and.GuardTrial	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+and.LocatorTrial	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+android.helper.system	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+android.sys.process	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+apk.keylogger	AndroidSpy	mercenary spyware / malware
+apk.kgl	AndroidSpy	mercenary spyware / malware
+apk.kwoapsnde	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+apk.screenshotrecorder	AndroidSpy	mercenary spyware / malware
+app.EasyLogger	EasyLogger	mercenary spyware / malware
+app.Easylogger	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+app.Elogger	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+app.childsafetytracker	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+app.cybrook.trackvieo	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+app.cybrook.trackviep	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+app.cybrook.trackvieq	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+app.cybrook.trackvier	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+app.cybrook.trackvies	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+app.cybrook.trackviet	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+app.cybrook.trackvieu	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+app.cybrook.trackviev	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+app.cybrook.trackview	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+app.cybrook.trackviex	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+app.cybrook.trackviey	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+app.cybrook.trackviez	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+app.cybrook.trustserv	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+app.everspy.ru	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+app.gpsme	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+app.lifecircle	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+app.seniorsafety	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+app.spy24.spy24installer	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+app.spy24.systemwifi	Spy24	mercenary spyware / malware
+app.trackview	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+app.trackview.pro	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+br.com.appfornecedor.legal	MeuSpy	mercenary spyware / malware
+br.com.cloud.aplicativo	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+br.com.cloud.backup	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+br.com.daggers.gameap	MeuSpy	mercenary spyware / malware
+br.com.daggers.toshtec	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+br.com.eaglespy	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+br.com.galaxys.gameap	MeuSpy	mercenary spyware / malware
+br.com.gamelevel.cloudv3	MeuSpy	mercenary spyware / malware
+br.com.gamelevel.playstart	MeuSpy	mercenary spyware / malware
+br.com.maceda.android.antifurtow	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+br.com.monsthers.gameap	MeuSpy	mercenary spyware / malware
+br.com.phonecell.cloud1	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+br.com.phonecell.go5ge	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+br.com.phonecell.maps	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+br.com.phonecell.radio	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+br.com.phonecell.services	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+br.com.rastreadordenamorado	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+br.com.sistema.aplicativo	MeuSpy	mercenary spyware / malware
+bv.vemzye	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+city.russ.alltrackercorp	AllTracker	mercenary spyware / malware
+city.russ.alltrackerfamily	AllTracker	mercenary spyware / malware
+city.russ.alltrackerinstaller	AllTracker	mercenary spyware / malware
+cm.google.android.apps.assistant	ResidentBat (ResidentBat)	mercenary spyware / malware
+cmf0.c3b5bm90zq.patch	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+cn.trackview.shentan	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.AwamiSolution.smartkeylogger	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.USIB.Child.ChildControl	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.accesibilityservice	NoviSpy (Serbia) (NoviSpy)	mercenary spyware / malware
+com.accountable2you.ap1	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.adobe.flash.dex	WyrmSpy and DragonEgg (WyrmSpy_DragonEgg)	mercenary spyware / malware
+com.adobe.flash.jni	WyrmSpy and DragonEgg (WyrmSpy_DragonEgg)	mercenary spyware / malware
+com.adobe.flash.listen.beta	WyrmSpy and DragonEgg (WyrmSpy_DragonEgg)	mercenary spyware / malware
+com.afreesmstracker.app	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.agpstracker.app	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.aif.tracksp	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.aisistem.instalao	MeuSpy	mercenary spyware / malware
+com.aixlunro.uqfhkagb	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.aiyi.admin	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.ajygpxjy.bnthtjou	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.aleghe.hatra	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.alienmanfc6.wheresmyandroid	WheresMyDroid	mercenary spyware / malware
+com.amon	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.androdid.inteernet.aa21111227	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.android.core	Morpheus (Morpheus)	mercenary spyware / malware
+com.android.core.mngi	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.android.core.mngj	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.android.core.mngk	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.android.core.mngl	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.android.core.mngn	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.android.core.mngo	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.android.core.mngp	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.android.core.mngq	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.android.core.mngr	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.android.core.mngs	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.android.core.mngt	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.android.core.mngu	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.android.core.mngv	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.android.core.mngw	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.android.core.mngx	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.android.core.mngy	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.android.core.mngz	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.android.core.mnt	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.android.core.mnta	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.android.core.mntah	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.android.core.mntb	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.android.core.mntd	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.android.core.mnte	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.android.core.mntf	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.android.core.mntg	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.android.core.mnth	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.android.core.mnti	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.android.core.mntj	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.android.core.mntk	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.android.core.mntl	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.android.core.mntm	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.android.core.mntn	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.android.core.mnto	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.android.core.mntp	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.android.core.mntq	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.android.core.mntr	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.android.core.mnts	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.android.core.mntt	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.android.core.mntu	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.android.core.mntv	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.android.core.mntw	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.android.core.mntx	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.android.core.mnty	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.android.core.mntz	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.android.core.monitor	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.android.core.monitor.debug	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.android.core.monitor.null	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.android.core.monitornull	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.android.cored	Morpheus (Morpheus)	mercenary spyware / malware
+com.android.corew	Morpheus (Morpheus)	mercenary spyware / malware
+com.android.framework.safety	ResidentBat (ResidentBat)	mercenary spyware / malware
+com.android.fystem.maps	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.android.innovaspy	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.android.inputmethod.latinmy	KidsShield	mercenary spyware / malware
+com.android.internet.a20200817	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.android.internet.a20210916	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.android.internet.a20220729	iKeyMonitor	mercenary spyware / malware
+com.android.internet.a20220829	iKeyMonitor	mercenary spyware / malware
+com.android.internet.a20220914	iKeyMonitor	mercenary spyware / malware
+com.android.keyboardhelper	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.android.omg	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.android.phone.dialer	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.android.preference.help.mole	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.android.services	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.android.settings.app	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.android.system.app	OneSpy	mercenary spyware / malware
+com.android.system.configs.service	WyrmSpy and DragonEgg (WyrmSpy_DragonEgg)	mercenary spyware / malware
+com.android.system.devicelogs	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.android.system.maps	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.android.wifi.tracker	Trackji	mercenary spyware / malware
+com.androidlost	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.androidlost.smshandler	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.androidservices.support	RCS Lab Spyware (RCSLab)	mercenary spyware / malware
+com.ant.spymie.keylogger	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.aphonetracker.app	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.app.audiorec	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.app.call_rec_hidden	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.app.com.app.com.app.aplintal	MeuSpy	mercenary spyware / malware
+com.app.insapp2	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.app.keylogger	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.app.recorder	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.app.remote_control	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.app.spy_call_recorder	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.app.videorec	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.apps.anti_theft	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.apps.rct.CellTrackerActivity	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.apspy.app	PhoneSpying	mercenary spyware / malware
+com.as.clipboardmanager	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.as.facecapture	AndroidSpy	mercenary spyware / malware
+com.as.gpstracker	AndroidSpy	mercenary spyware / malware
+com.as.keylogger	AndroidSpy	mercenary spyware / malware
+com.as.keylogger2	AndroidSpy	mercenary spyware / malware
+com.as.klogger	AndroidSpy	mercenary spyware / malware
+com.as.screenrecorder	AndroidSpy	mercenary spyware / malware
+com.as.urllogger	AndroidSpy	mercenary spyware / malware
+com.ass.antitheft	AbsoluTrack	mercenary spyware / malware
+com.ass.ladieschildprotection	AbsoluTrack	mercenary spyware / malware
+com.ass.remotesecurity	AbsoluTrack	mercenary spyware / malware
+com.at.wwka	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.ati.client	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.ati.monitor	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.ati.webwatcherconsole	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.atinc.slcompanion	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.atiw.wc	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.atracker.app	AppSpy	mercenary spyware / malware
+com.autoforward.monitor	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.avi.scbase	pcTattletale	mercenary spyware / malware
+com.awarenesstech.monitor	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.awarenesstech.wwpapp	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.awarenesstechnologies.sideloadedws	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.awti.slc	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.backup.tt	jjspy	mercenary spyware / malware
+com.bettertomorrowapps.spyyourlovefree	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.bnahrrbc.kwexsnhl	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.brot.storage.work	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.bul.b	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.bulgakov.bug	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.bulgakov.controlphone	Bulgok	mercenary spyware / malware
+com.bytepioneers.coupletracker	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.bzbqbkya.hgozttiu	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.callhist.calltr	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.camhart.netcountable	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.catrsy.jaluc	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.cellph.montrb	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.chaoqi.spyapp	Spylix	mercenary spyware / malware
+com.cisai.safenetchild	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.cldprotect	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.client.appA	Cellebrite (Cellebrite)	mercenary spyware / malware
+com.client.requestlogs	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.cocospy	Cocospy	mercenary spyware / malware
+com.connection.manager	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.contentwatch.ghoti.cp2.child	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.contentwatch.ghoti.cp2.parent	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.cryzp.leplluln	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.cycle.start.mess	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.dbzbpr.skt	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.ddiutilities.monitor	DDI	mercenary spyware / malware
+com.dev4playapps.whatsdeleted	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.devspark.securityotp	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.discovenger.app	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.droidwatcher	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.dromon	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.duiyun.cocospy	TeenSafe	mercenary spyware / malware
+com.duiyun.cocospy.v2	TeenSafe	mercenary spyware / malware
+com.duiyun.fonemonitor	TeenSafe	mercenary spyware / malware
+com.duiyun.spyic	TeenSafe	mercenary spyware / malware
+com.duiyun.spyine	TeenSafe	mercenary spyware / malware
+com.duiyun.spyzie	TeenSafe	mercenary spyware / malware
+com.dy.spyzie.v4	Spyzie	mercenary spyware / malware
+com.elpatr.woac	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.elysium.core	Spyrtacus (Spyrtacus)	mercenary spyware / malware
+com.epasufob.kybavfgt	Spyone	mercenary spyware / malware
+com.epbzrqcg.syzzkuqx	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.ernell.thht	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.example.ghazi.sms	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.example.hellospy	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.example.lovespy.app	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.example.openanotherapp	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.example.reverseshell2	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.example.wosc.androidclient	CatWatchful	mercenary spyware / malware
+com.eyezy.android	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.eytewqrm.wvdkgmrl	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.familyorbit.child	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.fbhpdsej.gnuebduy	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.femimesusu.libapasopi	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.fenced.ai	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.fhekpqbq.otlzonjx	KidsShield	mercenary spyware / malware
+com.fintur.support	RCS Lab Spyware (RCSLab)	mercenary spyware / malware
+com.fone	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.fp.backup	FlexiSpy	mercenary spyware / malware
+com.fzvsdrtb.qamlhxri	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.gcm_call_sms_tracker	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.gcm_call_sms_tracker.updated	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.gcm_call_tracker	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.gcm_celltracker	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.geozilla.family	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.get.mtf	MobileTrackerFree	mercenary spyware / malware
+com.gh.ob	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.github.muneebwanee.dash	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.gizmoquip.smstracker	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.google.android.bacfup	Tracku	mercenary spyware / malware
+com.google.android.network	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.google.android.safe	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.google.android.service	ResidentBat (ResidentBat)	mercenary spyware / malware
+com.google.bat	ResidentBat (ResidentBat)	mercenary spyware / malware
+com.googleplay.settings	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.googlesettings.setting	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.greatdata	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.gss.whereismyphone	AbsoluTrack	mercenary spyware / malware
+com.gu.activity	NoviSpy (Serbia) (NoviSpy)	mercenary spyware / malware
+com.guest	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.gzomoyig.qwgawtaz	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.hellospy	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.hellospy.system	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.hihonor.core.service	ResidentBat (ResidentBat)	mercenary spyware / malware
+com.hp.vc	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.hp.vd	FreeAndroidSpy	mercenary spyware / malware
+com.huaweisettingsapp.mkz	ResidentBat (ResidentBat)	mercenary spyware / malware
+com.hx.rootwifi	WyrmSpy and DragonEgg (WyrmSpy_DragonEgg)	mercenary spyware / malware
+com.hyadesinc.curiosus	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.ibm.fb	AndroidMonitor	mercenary spyware / malware
+com.igyluazm.iytdhsky	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.imonitor.ainfo	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.ispyoo	iSpyoo	mercenary spyware / malware
+com.ispyoo.traceyou	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.itqredn8dzrl	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.jgeuhcex.ejcxndak	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.juzyuwqt.thxxnjvf	Spyone	mercenary spyware / malware
+com.jyotin.ct	CellTracker	mercenary spyware / malware
+com.kaspersky.safekids	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.kfhdha.fkjfgjdi	EspiaoAndroid	mercenary spyware / malware
+com.kiddoware.kidsplace	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.kids.pro	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.kids.whatsapp	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.kidslox.app	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.kidsmobmon	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.laucass.androsmscontrol	Spyone	mercenary spyware / malware
+com.laucass.phonecontrolenabler	Spyone	mercenary spyware / malware
+com.laucass.phonecontroltarget	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.li.activity	NoviSpy (Serbia) (NoviSpy)	mercenary spyware / malware
+com.life360.android.safetymapd	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.life360.safetymap	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.linkedln.service	ResidentBat (ResidentBat)	mercenary spyware / malware
+com.local_cell_tracker	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.local_cell_tracker_updated	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.lrvciyti.unrxnfig	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.lsdroid.cerberus	Cerberus	mercenary spyware / malware
+com.lsdroid.cerberus.client	Cerberus	mercenary spyware / malware
+com.lsdroid.cerberus.enterprise	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.lsdroid.cerberus.kids	Cerberus	mercenary spyware / malware
+com.lsdroid.cerberus.persona	Cerberus	mercenary spyware / malware
+com.lsdroid.cerberus.persona2	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.lsdroid.cerberuss	Cerberus	mercenary spyware / malware
+com.lsdroid.lsp	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.m.service.control	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.mango.findmyphone	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.mango.findmyphone2	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.mango.findmyphone3	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.map.system	TrackMyPhone	mercenary spyware / malware
+com.maxxspy	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.maxxspy.system	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.metasploit.stage	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.meuspy	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.microsoft.familysafety	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.minspy.v2	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.minspy.v3	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.mit.networkadapter	VIPTrack	mercenary spyware / malware
+com.mit.viptrackpro	VIPTrack	mercenary spyware / malware
+com.mmguardian.childapp	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.mmguardian.parentapp	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.mmguardian.tabletsecurity	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.mnwkvijy.wzyxgrft	VipTelefonProgrami	mercenary spyware / malware
+com.mob.service.control	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.mobiispy	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.mobiispy.system	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.mobile.asgard	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.mobile.gps	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.mobile.loc	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.mobile.loki	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.mobilefence.family	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.mobilefindfree	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.mobileservice.sync	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.mobileservices2.synchronization	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.mobilespy.io	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.mobiletracker	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.mobiletrackerfree.secondapp	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.mobiletrackerfree.www	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.mobitra.todv	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.mobphn.monit	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.mobtr.danbel	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.monitor.phone.s0ft.phonemonitor	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.monitorchecker	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.monspap.alarm	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.mophtr.td	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.moxlndmp.uhzhgzjh	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.mrblue.setting	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.mrbluetooth.setting	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.mrecorder.callrecorder	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.mrtred.setred	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.mspy.lite	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.mtf.d	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.mtf.download	MobileTrackerFree	mercenary spyware / malware
+com.mxspy	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.my.spy.app	MySpyApps	mercenary spyware / malware
+com.myappspqwddeexo	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.nationaledtech.Boomerang	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.netowrk.service	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.nhevvtmt.thinkquo	BrunoEspiao	mercenary spyware / malware
+com.nsmon.guard	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.ntckdlhc.oifhnjwp	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.oneplussync.bat	ResidentBat (ResidentBat)	mercenary spyware / malware
+com.ots.antitheft	AbsoluTrack	mercenary spyware / malware
+com.ots.ladieschildprotection	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.ots.remotesecurity	AbsoluTrack	mercenary spyware / malware
+com.ots.womenchildsafety	AbsoluTrack	mercenary spyware / malware
+com.ownspy.android	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.panspy.android	PanSpy	mercenary spyware / malware
+com.parental.control.kidgy	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.phone.tracker.smsb	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.phonespector.app	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.phonetrackerofficial	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.phonetrackerofficial1	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.phtranlo.tifach	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.play.services	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.popo.analyse	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.probit.flare	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.prophoto.editor	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.protect	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.protect.download	MobileTrackerFree	mercenary spyware / malware
+com.psac.a.processservice	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.pser.sysutils	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.pt.bark	bark	mercenary spyware / malware
+com.pvojpamt.tzzyqjyb	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.qustodio.mdm.app.family.pro	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.qustodio.par.qustodio-family-parental-control-app	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.qustodio.qustodioapp	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.qwertyuiop.asdfghjkl	OneSpy	mercenary spyware / malware
+com.qzogle.android.jacfut	Tracku	mercenary spyware / malware
+com.qzogle.xndroid.jacfup	Tracku	mercenary spyware / malware
+com.qzogle.xndroid.jacfut	Tracku	mercenary spyware / malware
+com.rana_aditya.child	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.realtime.spyapp	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.remote.app	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.rephko.stha	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.retina.phonesheriff	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.retina21.ms41	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.retina22.ms6	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.retinasoft.ephonetracker	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.rspl15.nanny.android	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.rspl16.nanny.android	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.rspl17.nanny.android	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.rspl18.nanny.android	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.rspl19.nanny.android	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.rspl20.nanny.android	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.rspl21.nanny.android	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.rspl22.retinaspy	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.runaki.synclogs	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.s2m	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.s2m.seas	SpyToMobile	mercenary spyware / malware
+com.sa.app	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.safesecureservice	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.saloomughal.spyapp	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.sap4mobile	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.saxfamqvxj	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.sc.cocospy.v2	TeenSafe	mercenary spyware / malware
+com.sc.fonemonitor	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.sc.fonemonitor.v2	TeenSafe	mercenary spyware / malware
+com.sc.minspy.v2	TeenSafe	mercenary spyware / malware
+com.sc.neatspy.v2	TeenSafe	mercenary spyware / malware
+com.sc.safespy.v2	TeenSafe	mercenary spyware / malware
+com.sc.safespy.v3	TeenSafe	mercenary spyware / malware
+com.sc.spyic.v2	TeenSafe	mercenary spyware / malware
+com.sc.spyic.v3	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.sc.spyier.v2	TeenSafe	mercenary spyware / malware
+com.sc.spyine.v2	TeenSafe	mercenary spyware / malware
+com.sc.spyzie.v2	TeenSafe	mercenary spyware / malware
+com.sc.teensafe.v2	TeenSafe	mercenary spyware / malware
+com.screentime	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.screentime.rc	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.sec.android.internet.im.service.im20190118	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.sec.android.internet.im.service.im20190419	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.sec.android.internet.im.service.im20210815	iKeyMonitor	mercenary spyware / malware
+com.sec.provider.mobile.android	MonitorUltra	mercenary spyware / malware
+com.selgdg.febgdsra	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.selgdg.mardsdaf	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.semantic.childcontrol	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.sepfsp.jasend	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.serv.services	NoviSpy (Serbia) (NoviSpy)	mercenary spyware / malware
+com.service.mug	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.services.phone	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.sev.android.systemdev	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.shadow.client.android	ShadowSpy	mercenary spyware / malware
+com.shadyspy.monitor	ShadySpy	mercenary spyware / malware
+com.simundkarten.g4.cc.starter	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.sl360	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.smart	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.smart.guardoffline	AbsoluTrack	mercenary spyware / malware
+com.smartback	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.smstra.xanris	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.snapch.monabcab	EasyPhoneTrack	mercenary spyware / malware
+com.snapchat.trmonap	EasyPhoneTrack	mercenary spyware / malware
+com.softalogy.thiefguard	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.soh	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.spappm_mondow.alarm	EasyPhoneTrack	mercenary spyware / malware
+com.spapptrakapp.alarm	SpyPhoneApp	mercenary spyware / malware
+com.spatrakappp.alarm	SpyPhoneApp	mercenary spyware / malware
+com.spy2mobile	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.spy2mobile.light	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.spyapp247.system	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.spyhumanrev	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.spyic	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.spynote.software.stubspynote	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.spytoapp.system	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.spyzee	Spyzie	mercenary spyware / malware
+com.ssurebrec	Cerberus	mercenary spyware / malware
+com.stmrsa.htxt	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.surebrec	Cerberus	mercenary spyware / malware
+com.system.settings	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.system.task	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.system.user	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.systemservice	TheTruthSpy	mercenary spyware / malware
+com.tag.viptrack	VIPTrack	mercenary spyware / malware
+com.tbntxear.vfmkjxme	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.tccplos.spth	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.telephony.android	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.tevi.walpi	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.thaxygpc.xjsjobpn	BrunoEspiao	mercenary spyware / malware
+com.thecybernanny.andapp	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.thetruth	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.thewispy	TheWiSpy	mercenary spyware / malware
+com.timeon.litclient	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.tools.secretcamcorder	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.topspy	1TopSpy	mercenary spyware / malware
+com.topspy.system	1TopSpy	mercenary spyware / malware
+com.tracker.sms.mobile	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.trackerapps.whatsaptracker	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.tracking_smartphone	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.trackmyphone_pro	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.trackmyphones.livefamilytracker	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.trackmyphones.recoverphoneusingchatmessages	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.trackmyphones.tmpusingchatmessages	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.trackview	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.trackzone.kids	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.trandmon.tool	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.trphwhat.prob	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.ts_settings	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.ttsapp.catchcheating	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.tuner.funnelwebview	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.tutorial.instalao	MeuSpy	mercenary spyware / malware
+com.udxlbuno.plwnnhop	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.uxgbipup.pdtvcgzc	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.uzoifhzk.qmqnpwaf	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.viewcalls.rem	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.viewsms.remb	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.virsys.tracker	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.vodaservices	RCS Lab Spyware (RCSLab)	mercenary spyware / malware
+com.vvt.android.syncmanager	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.w0f0	SpyLive360	mercenary spyware / malware
+com.w1f1	SpyLive360	mercenary spyware / malware
+com.wSpyEra	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.wb.production	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.wheremychildren.ios	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.whtrack.monit	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.wifi0	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.wifiset.service	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.wifisettings.service	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.wisemo.host.v10	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.wisemo.wsmguest.v18	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.wlset.info	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.wondershare.famisafe	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.wondershare.famisafe.kids	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.ws.sc	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.ws.scli	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.wtspy.apps	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.ww.companion	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.wwtspy	WtSpy	mercenary spyware / malware
+com.wzogle.zndroid.yacfup	Tracku	mercenary spyware / malware
+com.xdja.jxclient	RCS Lab Spyware (RCSLab)	mercenary spyware / malware
+com.xdja.safekeyservice	RCS Lab Spyware (RCSLab)	mercenary spyware / malware
+com.xhunter.client	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.xno.systemservice	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.xnspy.dashboard	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.yurpdpvxnybmlgh	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.zkftwsel.fqnoquuv	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+com.zoemob.gpstracking	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+core.framework	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+core.update.framework	mSpy	mercenary spyware / malware
+cybrook.trackview	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+dell.scream.application	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+edu.virginia.cs.cs4720.ispy	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+efexmsz.mzuooelftl	AndroidPolice	mercenary spyware / malware
+fka.ugsonrqogw	AndroidPolice	mercenary spyware / malware
+fod.loqpf	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+g.google.llc	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+googlesettings.setting	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+ifk.ghumlh	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+iiw.orqjtwbkx	AndroidPolice	mercenary spyware / malware
+in.servidor.service	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+in.spyapp.patanjali.android	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+inc.imonitor	iMonitorSpy	mercenary spyware / malware
+io.github.vvb2060.packageinstaller.test	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+iqual.calculadora.pro	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+ir.spy24.updater	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+ir.spy24.wifi	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+it.taog	Spyrtacus (Spyrtacus)	mercenary spyware / malware
+kenkbltcf.pwpwkvdwmjk	AndroidPolice	mercenary spyware / malware
+lookOut.Secure	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+m.mob.control	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+m.mob.service2020	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+m.mobile.control	SpyHuman	mercenary spyware / malware
+m.phone.control2020	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+m.protect.children	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+m.protect.parental	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+m.secu.children	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+m.security.parental	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+me.hawkshaw	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+med.mspy.mspy	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+mg.locations.track5	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+mhu.bylbcwc	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+mob.protect.children	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+mob.service.parental2020	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+mobile.controlparental2020	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+mobile.monitor.child2021	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+mobile.monitor.child2022	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+mobile.monitor.child2023	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+mobile.monitor.child2034	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+mobile.parental2021	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+mobile.protect.children	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+mobile.protect.children2020	MobileTrackerFree	mercenary spyware / malware
+net.androidcoreapp.androidbackup	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+net.cybrook.trackvieo	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+net.cybrook.trackviep	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+net.cybrook.trackvieq	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+net.cybrook.trackvier	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+net.cybrook.trackvies	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+net.cybrook.trackviet	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+net.cybrook.trackvieu	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+net.cybrook.trackviev	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+net.cybrook.trackview	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+net.cybrook.trackviex	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+net.cybrook.trackviey	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+net.cybrook.trackviez	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+net.cybrook.trustserv	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+net.delphiboardlayer.androidcoreapp	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+net.droid.talk218	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+net.homesafe	TrackView	mercenary spyware / malware
+net.kidlogger.kidlogger	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+net.majorkernelpanic.spydroid	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+net.reptilicus.clientapp	Reptilicus	mercenary spyware / malware
+net.someapp1.somecorp2	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+net.spy24.wifi	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+net.system_updater_abs341	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+net.teslineservice.kidl5	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+net.trackview	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+net.trackview.pro	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+net.vkurhandler	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+ns.antapp.module	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+one.enix.smsforward	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+oo.ptkqyawh	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+org.alltracker.security	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+org.connecting.updived.hygeist.interplays	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+org.findmykids.app	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+org.findmykids.child	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+org.gtmedia.seekdroid	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+org.poleward.burghs.hydrotherapy.homonymously	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+org.secure.smsgps	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+org.system.kernel	OwnSpy	mercenary spyware / malware
+org.traccar.client	Traccar	mercenary spyware / malware
+org.traccar.client.hidden	Traccar	mercenary spyware / malware
+org.urates.amirates.suffocate.chiliast	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+org.util.carriersvc	Spyrtacus (Spyrtacus)	mercenary spyware / malware
+phone.Secure	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+pl.lidwin.letmespy	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+pl.lidwin.letmespy2	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+pl.lidwin.letmespy3	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+pl.lidwin.letmespy4	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+pl.lidwin.letmespy5	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+pl.lidwin.lms	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+pl.lidwin.remote	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+pl.lidwin.remote1	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+pl.lidwin.remote2	LetMeSpy	mercenary spyware / malware
+pl.radeal.lms4	LetMeSpy	mercenary spyware / malware
+pl.spyone.agent2	Spyone	mercenary spyware / malware
+remote.google.rt.googleservice	WyrmSpy and DragonEgg (WyrmSpy_DragonEgg)	mercenary spyware / malware
+ru.usafe.kid.unisafekids	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+ru.usafe.u_safe	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+ru.usafe.usafe	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+se.vkur.clientapp	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+seC.fqjx.sqBB	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+security.mobile.parental	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+service.download.app	MobileTrackerFree	mercenary spyware / malware
+stealthLight.sys	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+su.unisafe.unisafe	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+sy.slvzccd	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+sys.base.service	Spyrtacus (Spyrtacus)	mercenary spyware / malware
+system.framework	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+t.tools.app	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+tech.logsettings	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+technic.settings	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+tej.flashkeylogger	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+tej.flashkeyloggerpro	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+tej.flashkeylogges	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+tracker.mob.gps	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+tv.familynk	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+tv.familynl	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+update.service.android	mSpy	mercenary spyware / malware
+update.service.android.installer	mSpy	mercenary spyware / malware
+update.service.android.pynger	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+us.trackview	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+vmf.uxytqgrl	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+vn.ehkfqgvn	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+wosc.cwf	CatWatchful	mercenary spyware / malware
+wosc.cwf2	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+xd.spy.app	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+xx.an	WyrmSpy and DragonEgg (WyrmSpy_DragonEgg)	mercenary spyware / malware
+yc.sysupd.client	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+yogaworkouts.dailyyoga.yogafitness	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+yr.tubjypbl	Known stalkerware (MVT / Echap indicator list)	mercenary spyware / malware
+apk.gpstracker	AndroidSpy	stalkerware
+apk.stracker	AndroidSpy	stalkerware
+app.ELogger	EasyLogger	stalkerware
+binbu.pjyvmek	AndroidPolice	stalkerware
+com.android.system	Copy9	stalkerware
+com.as.textrecorder	AndroidSpy	stalkerware
+com.as.xxx	AndroidSpy	stalkerware
+com.babili.ribisosisubugu	SpyApp	stalkerware
+com.cowdb.syuaxlle	MyCellSpy	stalkerware
+com.cplro.uhkfoupe	MyCellSpy	stalkerware
+com.duiyun.clickfree	TeenSafe	stalkerware
+com.duiyun.minspy	TeenSafe	stalkerware
+com.duiyun.minspy.v2	TeenSafe	stalkerware
+com.duiyun.neatspy	TeenSafe	stalkerware
+com.duiyun.neatspy.v2	TeenSafe	stalkerware
+com.duiyun.spyier	TeenSafe	stalkerware
+com.duiyun.spyier.v2	TeenSafe	stalkerware
+com.duiyun.spyzie.v2	TeenSafe	stalkerware
+com.jlxmpcuf.hoiacxkl	KidsShield	stalkerware
+com.lhsat.wlvpfwzx	MyCellSpy	stalkerware
+com.msxjmqfy.igdzmeyk	KidsShield	stalkerware
+com.odkaxsul.gpnwsxhb	KidsShield	stalkerware
+com.ovcmgvyi.eemutqqz	VipTelefonProgrami	stalkerware
+com.parentcontrol.production	Spyzie	stalkerware
+com.phone_tra_app_sp.alarm	SpyPhoneApp	stalkerware
+com.phone_tra_app_sp.alert	SpyPhoneApp	stalkerware
+com.phone_tra_app_spa.alarm	SpyPhoneApp	stalkerware
+com.phone_tra_app_spap.alarm	SpyPhoneApp	stalkerware
+com.ppjlmwis.mwoyklts	KidsShield	stalkerware
+com.qpbowavl.dbqhyjcw	VipTelefonProgrami	stalkerware
+com.sec.android.as	AndroidSpy	stalkerware
+com.skfrde.gfttrob	Spyzie	stalkerware
+com.spatrakapp.alarm	SpyPhoneApp	stalkerware
+com.sptrakapp.alarm	SpyPhoneApp	stalkerware
+com.sptrakappp.alarm	SpyPhoneApp	stalkerware
+com.tivxneso.bhduhugy	KidsShield	stalkerware
+com.twamkhhm.pjupawot	KidsShield	stalkerware
+com.vitefa.fosupevilucugo	SpyApp	stalkerware
+com.vudezilamoqo.voderuna	SpyApp	stalkerware
+com.zefyi.proof	Spyzie	stalkerware
+com.zkfzumps.ngrpdoxs	KidsShield	stalkerware
+com.zofuponusa.zevaduzaqu	SpyApp	stalkerware
+cumvaygcz.mtecod	AndroidPolice	stalkerware
+fdtdmli.cif	AndroidPolice	stalkerware
+fyfnlvlf.rgcvoviyid	AndroidPolice	stalkerware
+gvhy.xmlhefy	AndroidPolice	stalkerware
+itgfn.lqugctafitpe	AndroidPolice	stalkerware
+iznobhuck.ntcrxlglq	AndroidPolice	stalkerware
+ljyhiftvq.fyhmno	AndroidPolice	stalkerware
+mgag.rmbclay	AndroidPolice	stalkerware
+nojbuq.fijqeip	AndroidPolice	stalkerware
+pqaqjxfxv.uistudb	AndroidPolice	stalkerware
+sesqzh.sggzey	AndroidPolice	stalkerware
+ubnwzwh.ygoifnzgy	AndroidPolice	stalkerware
+vo.dbbc	AndroidPolice	stalkerware
+wws.mzrnbn	AndroidPolice	stalkerware
+zqlt.debkyrph	AndroidPolice	stalkerware

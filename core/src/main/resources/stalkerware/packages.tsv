@@ -1,0 +1,545 @@
+# package	family	type	aliases — source: AssoEchap/stalkerware-indicators (CC BY 4.0)
+com.apspy.app	TheTruthSpy	stalkerware	Copy9, InoSPy, ExactSpy, FoneTracker, GuestSpy, MxSpy, PhoneSpying, PhoneTracker, SpyZee, TheSpyApp, iSpyoo, XySpy
+com.fone	TheTruthSpy	stalkerware	Copy9, InoSPy, ExactSpy, FoneTracker, GuestSpy, MxSpy, PhoneSpying, PhoneTracker, SpyZee, TheSpyApp, iSpyoo, XySpy
+com.guest	TheTruthSpy	stalkerware	Copy9, InoSPy, ExactSpy, FoneTracker, GuestSpy, MxSpy, PhoneSpying, PhoneTracker, SpyZee, TheSpyApp, iSpyoo, XySpy
+com.ispyoo	TheTruthSpy	stalkerware	Copy9, InoSPy, ExactSpy, FoneTracker, GuestSpy, MxSpy, PhoneSpying, PhoneTracker, SpyZee, TheSpyApp, iSpyoo, XySpy
+com.ispyoo.traceyou	TheTruthSpy	stalkerware	Copy9, InoSPy, ExactSpy, FoneTracker, GuestSpy, MxSpy, PhoneSpying, PhoneTracker, SpyZee, TheSpyApp, iSpyoo, XySpy
+com.mxspy	TheTruthSpy	stalkerware	Copy9, InoSPy, ExactSpy, FoneTracker, GuestSpy, MxSpy, PhoneSpying, PhoneTracker, SpyZee, TheSpyApp, iSpyoo, XySpy
+com.spyzee	TheTruthSpy	stalkerware	Copy9, InoSPy, ExactSpy, FoneTracker, GuestSpy, MxSpy, PhoneSpying, PhoneTracker, SpyZee, TheSpyApp, iSpyoo, XySpy
+com.systemservice	TheTruthSpy	stalkerware	Copy9, InoSPy, ExactSpy, FoneTracker, GuestSpy, MxSpy, PhoneSpying, PhoneTracker, SpyZee, TheSpyApp, iSpyoo, XySpy
+com.thetruth	TheTruthSpy	stalkerware	Copy9, InoSPy, ExactSpy, FoneTracker, GuestSpy, MxSpy, PhoneSpying, PhoneTracker, SpyZee, TheSpyApp, iSpyoo, XySpy
+com.ttsapp.catchcheating	TheTruthSpy	stalkerware	Copy9, InoSPy, ExactSpy, FoneTracker, GuestSpy, MxSpy, PhoneSpying, PhoneTracker, SpyZee, TheSpyApp, iSpyoo, XySpy
+com.android.innovaspy	HelloSpy	stalkerware	1TopSpy, HelloSPy, MaxxSpy, MobiiSpy, SpyHide
+com.example.hellospy	HelloSpy	stalkerware	1TopSpy, HelloSPy, MaxxSpy, MobiiSpy, SpyHide
+com.googlesettings.setting	HelloSpy	stalkerware	1TopSpy, HelloSPy, MaxxSpy, MobiiSpy, SpyHide
+com.hellospy	HelloSpy	stalkerware	1TopSpy, HelloSPy, MaxxSpy, MobiiSpy, SpyHide
+com.hellospy.system	HelloSpy	stalkerware	1TopSpy, HelloSPy, MaxxSpy, MobiiSpy, SpyHide
+com.maxxspy	HelloSpy	stalkerware	1TopSpy, HelloSPy, MaxxSpy, MobiiSpy, SpyHide
+com.maxxspy.system	HelloSpy	stalkerware	1TopSpy, HelloSPy, MaxxSpy, MobiiSpy, SpyHide
+com.mobiispy	HelloSpy	stalkerware	1TopSpy, HelloSPy, MaxxSpy, MobiiSpy, SpyHide
+com.mobiispy.system	HelloSpy	stalkerware	1TopSpy, HelloSPy, MaxxSpy, MobiiSpy, SpyHide
+com.mrblue.setting	HelloSpy	stalkerware	1TopSpy, HelloSPy, MaxxSpy, MobiiSpy, SpyHide
+com.mrbluetooth.setting	HelloSpy	stalkerware	1TopSpy, HelloSPy, MaxxSpy, MobiiSpy, SpyHide
+com.mrtred.setred	HelloSpy	stalkerware	1TopSpy, HelloSPy, MaxxSpy, MobiiSpy, SpyHide
+com.prophoto.editor	HelloSpy	stalkerware	1TopSpy, HelloSPy, MaxxSpy, MobiiSpy, SpyHide
+com.topspy	HelloSpy	stalkerware	1TopSpy, HelloSPy, MaxxSpy, MobiiSpy, SpyHide
+com.topspy.system	HelloSpy	stalkerware	1TopSpy, HelloSPy, MaxxSpy, MobiiSpy, SpyHide
+com.virsys.tracker	HelloSpy	stalkerware	1TopSpy, HelloSPy, MaxxSpy, MobiiSpy, SpyHide
+com.wifiset.service	HelloSpy	stalkerware	1TopSpy, HelloSPy, MaxxSpy, MobiiSpy, SpyHide
+com.wifisettings.service	HelloSpy	stalkerware	1TopSpy, HelloSPy, MaxxSpy, MobiiSpy, SpyHide
+googlesettings.setting	HelloSpy	stalkerware	1TopSpy, HelloSPy, MaxxSpy, MobiiSpy, SpyHide
+com.sa.app	SpyAdvice	stalkerware	FreeSpyPhone
+com.brot.storage.work	Reptilicus	stalkerware	CyberNanny, Vkur
+com.cycle.start.mess	Reptilicus	stalkerware	CyberNanny, Vkur
+com.thecybernanny.andapp	Reptilicus	stalkerware	CyberNanny, Vkur
+net.androidcoreapp.androidbackup	Reptilicus	stalkerware	CyberNanny, Vkur
+net.delphiboardlayer.androidcoreapp	Reptilicus	stalkerware	CyberNanny, Vkur
+net.reptilicus.clientapp	Reptilicus	stalkerware	CyberNanny, Vkur
+net.system_updater_abs341	Reptilicus	stalkerware	CyberNanny, Vkur
+net.vkurhandler	Reptilicus	stalkerware	CyberNanny, Vkur
+se.vkur.clientapp	Reptilicus	stalkerware	CyberNanny, Vkur
+yc.sysupd.client	Reptilicus	stalkerware	CyberNanny, Vkur
+com.retina.phonesheriff	PhoneSheriff	stalkerware	MobileNanny, PeekTab, RetinaX, RetinaSpy
+com.retina21.ms41	PhoneSheriff	stalkerware	MobileNanny, PeekTab, RetinaX, RetinaSpy
+com.retina22.ms6	PhoneSheriff	stalkerware	MobileNanny, PeekTab, RetinaX, RetinaSpy
+com.rspl22.retinaspy	PhoneSheriff	stalkerware	MobileNanny, PeekTab, RetinaX, RetinaSpy
+com.retinasoft.ephonetracker	PhoneSheriff	stalkerware	MobileNanny, PeekTab, RetinaX, RetinaSpy
+com.rspl15.nanny.android	PhoneSheriff	stalkerware	MobileNanny, PeekTab, RetinaX, RetinaSpy
+com.rspl16.nanny.android	PhoneSheriff	stalkerware	MobileNanny, PeekTab, RetinaX, RetinaSpy
+com.rspl17.nanny.android	PhoneSheriff	stalkerware	MobileNanny, PeekTab, RetinaX, RetinaSpy
+com.rspl18.nanny.android	PhoneSheriff	stalkerware	MobileNanny, PeekTab, RetinaX, RetinaSpy
+com.rspl19.nanny.android	PhoneSheriff	stalkerware	MobileNanny, PeekTab, RetinaX, RetinaSpy
+com.rspl20.nanny.android	PhoneSheriff	stalkerware	MobileNanny, PeekTab, RetinaX, RetinaSpy
+com.rspl21.nanny.android	PhoneSheriff	stalkerware	MobileNanny, PeekTab, RetinaX, RetinaSpy
+com.ownspy.android	OwnSpy	stalkerware	SaferSpy, WebDetetive
+org.system.kernel	OwnSpy	stalkerware	SaferSpy, WebDetetive
+com.aiyi.admin	Cocospy	stalkerware	FoneMonitor, MinSpy, NeatSpy, SafeSpy, Spyic, Spyine, Spyzie, TeenSafe
+com.cocospy	Cocospy	stalkerware	FoneMonitor, MinSpy, NeatSpy, SafeSpy, Spyic, Spyine, Spyzie, TeenSafe
+com.duiyun.cocospy	Cocospy	stalkerware	FoneMonitor, MinSpy, NeatSpy, SafeSpy, Spyic, Spyine, Spyzie, TeenSafe
+com.duiyun.cocospy.v2	Cocospy	stalkerware	FoneMonitor, MinSpy, NeatSpy, SafeSpy, Spyic, Spyine, Spyzie, TeenSafe
+com.duiyun.fonemonitor	Cocospy	stalkerware	FoneMonitor, MinSpy, NeatSpy, SafeSpy, Spyic, Spyine, Spyzie, TeenSafe
+com.duiyun.spyine	Cocospy	stalkerware	FoneMonitor, MinSpy, NeatSpy, SafeSpy, Spyic, Spyine, Spyzie, TeenSafe
+com.duiyun.spyzie	Cocospy	stalkerware	FoneMonitor, MinSpy, NeatSpy, SafeSpy, Spyic, Spyine, Spyzie, TeenSafe
+com.duiyun.spyic	Cocospy	stalkerware	FoneMonitor, MinSpy, NeatSpy, SafeSpy, Spyic, Spyine, Spyzie, TeenSafe
+com.minspy.v2	Cocospy	stalkerware	FoneMonitor, MinSpy, NeatSpy, SafeSpy, Spyic, Spyine, Spyzie, TeenSafe
+com.minspy.v3	Cocospy	stalkerware	FoneMonitor, MinSpy, NeatSpy, SafeSpy, Spyic, Spyine, Spyzie, TeenSafe
+com.sc.cocospy.v2	Cocospy	stalkerware	FoneMonitor, MinSpy, NeatSpy, SafeSpy, Spyic, Spyine, Spyzie, TeenSafe
+com.sc.fonemonitor	Cocospy	stalkerware	FoneMonitor, MinSpy, NeatSpy, SafeSpy, Spyic, Spyine, Spyzie, TeenSafe
+com.sc.fonemonitor.v2	Cocospy	stalkerware	FoneMonitor, MinSpy, NeatSpy, SafeSpy, Spyic, Spyine, Spyzie, TeenSafe
+com.sc.minspy.v2	Cocospy	stalkerware	FoneMonitor, MinSpy, NeatSpy, SafeSpy, Spyic, Spyine, Spyzie, TeenSafe
+com.sc.neatspy.v2	Cocospy	stalkerware	FoneMonitor, MinSpy, NeatSpy, SafeSpy, Spyic, Spyine, Spyzie, TeenSafe
+com.sc.safespy.v2	Cocospy	stalkerware	FoneMonitor, MinSpy, NeatSpy, SafeSpy, Spyic, Spyine, Spyzie, TeenSafe
+com.sc.safespy.v3	Cocospy	stalkerware	FoneMonitor, MinSpy, NeatSpy, SafeSpy, Spyic, Spyine, Spyzie, TeenSafe
+com.sc.spyic.v2	Cocospy	stalkerware	FoneMonitor, MinSpy, NeatSpy, SafeSpy, Spyic, Spyine, Spyzie, TeenSafe
+com.sc.spyic.v3	Cocospy	stalkerware	FoneMonitor, MinSpy, NeatSpy, SafeSpy, Spyic, Spyine, Spyzie, TeenSafe
+com.sc.spyier.v2	Cocospy	stalkerware	FoneMonitor, MinSpy, NeatSpy, SafeSpy, Spyic, Spyine, Spyzie, TeenSafe
+com.sc.spyine.v2	Cocospy	stalkerware	FoneMonitor, MinSpy, NeatSpy, SafeSpy, Spyic, Spyine, Spyzie, TeenSafe
+com.sc.spyzie.v2	Cocospy	stalkerware	FoneMonitor, MinSpy, NeatSpy, SafeSpy, Spyic, Spyine, Spyzie, TeenSafe
+com.dy.spyzie.v4	Cocospy	stalkerware	FoneMonitor, MinSpy, NeatSpy, SafeSpy, Spyic, Spyine, Spyzie, TeenSafe
+com.sc.teensafe.v2	Cocospy	stalkerware	FoneMonitor, MinSpy, NeatSpy, SafeSpy, Spyic, Spyine, Spyzie, TeenSafe
+com.spyic	Cocospy	stalkerware	FoneMonitor, MinSpy, NeatSpy, SafeSpy, Spyic, Spyine, Spyzie, TeenSafe
+com.wb.production	Cocospy	stalkerware	FoneMonitor, MinSpy, NeatSpy, SafeSpy, Spyic, Spyine, Spyzie, TeenSafe
+com.ws.sc	Cocospy	stalkerware	FoneMonitor, MinSpy, NeatSpy, SafeSpy, Spyic, Spyine, Spyzie, TeenSafe
+com.ws.scli	Cocospy	stalkerware	FoneMonitor, MinSpy, NeatSpy, SafeSpy, Spyic, Spyine, Spyzie, TeenSafe
+com.mit.viptrackpro	VIPTrack	stalkerware	
+com.mit.networkadapter	VIPTrack	stalkerware	
+com.tag.viptrack	VIPTrack	stalkerware	
+app.EasyLogger	EasyLogger	stalkerware	
+app.Easylogger	EasyLogger	stalkerware	
+app.Elogger	EasyLogger	stalkerware	
+app.childsafetytracker	EasyLogger	stalkerware	
+app.seniorsafety	EasyLogger	stalkerware	
+com.android.core.monitor.debug	Hoverwatch	stalkerware	SpyBubble, Refog
+com.android.core.monitor.null	Hoverwatch	stalkerware	SpyBubble, Refog
+com.android.core.monitornull	Hoverwatch	stalkerware	SpyBubble, Refog
+com.android.core.monitor	Hoverwatch	stalkerware	SpyBubble, Refog
+com.android.core.mnt	Hoverwatch	stalkerware	SpyBubble, Refog
+com.android.core.mnta	Hoverwatch	stalkerware	SpyBubble, Refog
+com.android.core.mntah	Hoverwatch	stalkerware	SpyBubble, Refog
+com.android.core.mntb	Hoverwatch	stalkerware	SpyBubble, Refog
+com.android.core.mntd	Hoverwatch	stalkerware	SpyBubble, Refog
+com.android.core.mnte	Hoverwatch	stalkerware	SpyBubble, Refog
+com.android.core.mntf	Hoverwatch	stalkerware	SpyBubble, Refog
+com.android.core.mntg	Hoverwatch	stalkerware	SpyBubble, Refog
+com.android.core.mnth	Hoverwatch	stalkerware	SpyBubble, Refog
+com.android.core.mnti	Hoverwatch	stalkerware	SpyBubble, Refog
+com.android.core.mntj	Hoverwatch	stalkerware	SpyBubble, Refog
+com.android.core.mntk	Hoverwatch	stalkerware	SpyBubble, Refog
+com.android.core.mntl	Hoverwatch	stalkerware	SpyBubble, Refog
+com.android.core.mntm	Hoverwatch	stalkerware	SpyBubble, Refog
+com.android.core.mntn	Hoverwatch	stalkerware	SpyBubble, Refog
+com.android.core.mnto	Hoverwatch	stalkerware	SpyBubble, Refog
+com.android.core.mntp	Hoverwatch	stalkerware	SpyBubble, Refog
+com.android.core.mntq	Hoverwatch	stalkerware	SpyBubble, Refog
+com.android.core.mntr	Hoverwatch	stalkerware	SpyBubble, Refog
+com.android.core.mnts	Hoverwatch	stalkerware	SpyBubble, Refog
+com.android.core.mntt	Hoverwatch	stalkerware	SpyBubble, Refog
+com.android.core.mntu	Hoverwatch	stalkerware	SpyBubble, Refog
+com.android.core.mntv	Hoverwatch	stalkerware	SpyBubble, Refog
+com.android.core.mntw	Hoverwatch	stalkerware	SpyBubble, Refog
+com.android.core.mntx	Hoverwatch	stalkerware	SpyBubble, Refog
+com.android.core.mnty	Hoverwatch	stalkerware	SpyBubble, Refog
+com.android.core.mntz	Hoverwatch	stalkerware	SpyBubble, Refog
+cmf0.c3b5bm90zq.patch	Hoverwatch	stalkerware	SpyBubble, Refog
+pl.lidwin.letmespy	LetMeSpy	stalkerware	RemoteCommand, RemCmd
+pl.lidwin.letmespy2	LetMeSpy	stalkerware	RemoteCommand, RemCmd
+pl.lidwin.letmespy3	LetMeSpy	stalkerware	RemoteCommand, RemCmd
+pl.lidwin.letmespy4	LetMeSpy	stalkerware	RemoteCommand, RemCmd
+pl.lidwin.letmespy5	LetMeSpy	stalkerware	RemoteCommand, RemCmd
+pl.lidwin.lms	LetMeSpy	stalkerware	RemoteCommand, RemCmd
+pl.lidwin.remote	LetMeSpy	stalkerware	RemoteCommand, RemCmd
+pl.lidwin.remote1	LetMeSpy	stalkerware	RemoteCommand, RemCmd
+pl.lidwin.remote2	LetMeSpy	stalkerware	RemoteCommand, RemCmd
+pl.radeal.lms4	LetMeSpy	stalkerware	RemoteCommand, RemCmd
+com.android.core.mngi	Snoopza	stalkerware	
+com.android.core.mngj	Snoopza	stalkerware	
+com.android.core.mngk	Snoopza	stalkerware	
+com.android.core.mngl	Snoopza	stalkerware	
+com.android.core.mngn	Snoopza	stalkerware	
+com.android.core.mngo	Snoopza	stalkerware	
+com.android.core.mngp	Snoopza	stalkerware	
+com.android.core.mngq	Snoopza	stalkerware	
+com.android.core.mngr	Snoopza	stalkerware	
+com.android.core.mngs	Snoopza	stalkerware	
+com.android.core.mngt	Snoopza	stalkerware	
+com.android.core.mngu	Snoopza	stalkerware	
+com.android.core.mngv	Snoopza	stalkerware	
+com.android.core.mngw	Snoopza	stalkerware	
+com.android.core.mngx	Snoopza	stalkerware	
+com.android.core.mngy	Snoopza	stalkerware	
+com.android.core.mngz	Snoopza	stalkerware	
+com.app.audiorec	TrackMyPhones	stalkerware	
+com.app.call_rec_hidden	TrackMyPhones	stalkerware	
+com.app.keylogger	TrackMyPhones	stalkerware	
+com.app.spy_call_recorder	TrackMyPhones	stalkerware	
+com.app.recorder	TrackMyPhones	stalkerware	
+com.app.videorec	TrackMyPhones	stalkerware	
+com.apps.anti_theft	TrackMyPhones	stalkerware	
+com.apps.rct.CellTrackerActivity	TrackMyPhones	stalkerware	
+com.dev4playapps.whatsdeleted	TrackMyPhones	stalkerware	
+com.gcm_call_sms_tracker	TrackMyPhones	stalkerware	
+com.gcm_call_sms_tracker.updated	TrackMyPhones	stalkerware	
+com.gcm_call_tracker	TrackMyPhones	stalkerware	
+com.gcm_celltracker	TrackMyPhones	stalkerware	
+com.local_cell_tracker	TrackMyPhones	stalkerware	
+com.local_cell_tracker_updated	TrackMyPhones	stalkerware	
+com.soh	TrackMyPhones	stalkerware	
+com.trackerapps.whatsaptracker	TrackMyPhones	stalkerware	
+com.trackmyphone_pro	TrackMyPhones	stalkerware	
+com.trackmyphones.livefamilytracker	TrackMyPhones	stalkerware	
+com.trackmyphones.recoverphoneusingchatmessages	TrackMyPhones	stalkerware	
+com.trackmyphones.tmpusingchatmessages	TrackMyPhones	stalkerware	
+com.vvt.android.syncmanager	FlexiSpy	stalkerware	
+com.telephony.android	FlexiSpy	stalkerware	
+com.fp.backup	FlexiSpy	stalkerware	
+com.android.phone.dialer	FlexiSpy	stalkerware	
+com.lsdroid.cerberuss	Cerberus	stalkerware	Cerberus Enterprise, Cerberus Kids, Cerberus Personal Safety, Lock Screen Protector, System Framework
+com.lsdroid.cerberus.persona	Cerberus	stalkerware	Cerberus Enterprise, Cerberus Kids, Cerberus Personal Safety, Lock Screen Protector, System Framework
+com.lsdroid.cerberus.persona2	Cerberus	stalkerware	Cerberus Enterprise, Cerberus Kids, Cerberus Personal Safety, Lock Screen Protector, System Framework
+com.lsdroid.cerberus.kids	Cerberus	stalkerware	Cerberus Enterprise, Cerberus Kids, Cerberus Personal Safety, Lock Screen Protector, System Framework
+com.lsdroid.cerberus.client	Cerberus	stalkerware	Cerberus Enterprise, Cerberus Kids, Cerberus Personal Safety, Lock Screen Protector, System Framework
+com.lsdroid.cerberus	Cerberus	stalkerware	Cerberus Enterprise, Cerberus Kids, Cerberus Personal Safety, Lock Screen Protector, System Framework
+com.surebrec	Cerberus	stalkerware	Cerberus Enterprise, Cerberus Kids, Cerberus Personal Safety, Lock Screen Protector, System Framework
+com.ssurebrec	Cerberus	stalkerware	Cerberus Enterprise, Cerberus Kids, Cerberus Personal Safety, Lock Screen Protector, System Framework
+com.lsdroid.cerberus.enterprise	Cerberus	stalkerware	Cerberus Enterprise, Cerberus Kids, Cerberus Personal Safety, Lock Screen Protector, System Framework
+com.lsdroid.lsp	Cerberus	stalkerware	Cerberus Enterprise, Cerberus Kids, Cerberus Personal Safety, Lock Screen Protector, System Framework
+android.helper.system	mSpy	stalkerware	FakeSys, KidSecured, Phonsee, SecureChildren, celSpy, eyeZy, mSpyOnline
+android.sys.process	mSpy	stalkerware	FakeSys, KidSecured, Phonsee, SecureChildren, celSpy, eyeZy, mSpyOnline
+com.android.keyboardhelper	mSpy	stalkerware	FakeSys, KidSecured, Phonsee, SecureChildren, celSpy, eyeZy, mSpyOnline
+com.mspy.lite	mSpy	stalkerware	FakeSys, KidSecured, Phonsee, SecureChildren, celSpy, eyeZy, mSpyOnline
+core.framework	mSpy	stalkerware	FakeSys, KidSecured, Phonsee, SecureChildren, celSpy, eyeZy, mSpyOnline
+com.eyezy.android	mSpy	stalkerware	FakeSys, KidSecured, Phonsee, SecureChildren, celSpy, eyeZy, mSpyOnline
+core.update.framework	mSpy	stalkerware	FakeSys, KidSecured, Phonsee, SecureChildren, celSpy, eyeZy, mSpyOnline
+med.mspy.mspy	mSpy	stalkerware	FakeSys, KidSecured, Phonsee, SecureChildren, celSpy, eyeZy, mSpyOnline
+system.framework	mSpy	stalkerware	FakeSys, KidSecured, Phonsee, SecureChildren, celSpy, eyeZy, mSpyOnline
+update.service.android	mSpy	stalkerware	FakeSys, KidSecured, Phonsee, SecureChildren, celSpy, eyeZy, mSpyOnline
+update.service.android.installer	mSpy	stalkerware	FakeSys, KidSecured, Phonsee, SecureChildren, celSpy, eyeZy, mSpyOnline
+com.app.com.app.com.app.aplintal	MeuSpy	stalkerware	
+com.app.insapp2	MeuSpy	stalkerware	
+com.meuspy	MeuSpy	stalkerware	
+br.com.cloud.aplicativo	MeuSpy	stalkerware	
+br.com.cloud.backup	MeuSpy	stalkerware	
+br.com.daggers.gameap	MeuSpy	stalkerware	
+br.com.daggers.toshtec	MeuSpy	stalkerware	
+br.com.phonecell.cloud1	MeuSpy	stalkerware	
+br.com.phonecell.go5ge	MeuSpy	stalkerware	
+br.com.phonecell.maps	MeuSpy	stalkerware	
+br.com.phonecell.radio	MeuSpy	stalkerware	
+br.com.phonecell.services	MeuSpy	stalkerware	
+br.com.sistema.aplicativo	MeuSpy	stalkerware	
+br.com.monsthers.gameap	MeuSpy	stalkerware	
+in.servidor.service	MeuSpy	stalkerware	
+br.com.galaxys.gameap	MeuSpy	stalkerware	
+br.com.gamelevel.playstart	MeuSpy	stalkerware	
+br.com.gamelevel.cloudv3	MeuSpy	stalkerware	
+com.tutorial.instalao	MeuSpy	stalkerware	
+com.aisistem.instalao	MeuSpy	stalkerware	
+br.com.appfornecedor.legal	MeuSpy	stalkerware	
+com.atracker.app	AppSpy	stalkerware	MobileFindFree, FreeSpy
+com.agpstracker.app	AppSpy	stalkerware	MobileFindFree, FreeSpy
+com.aphonetracker.app	AppSpy	stalkerware	MobileFindFree, FreeSpy
+com.afreesmstracker.app	AppSpy	stalkerware	MobileFindFree, FreeSpy
+com.mobilefindfree	AppSpy	stalkerware	MobileFindFree, FreeSpy
+a.tck.lvmchi	MobileTrackerFree	stalkerware	MonitorLoverman, MTrack, CellTracker, TrackMobil
+com.androdid.inteernet.aa21111227	MobileTrackerFree	stalkerware	MonitorLoverman, MTrack, CellTracker, TrackMobil
+com.jyotin.ct	MobileTrackerFree	stalkerware	MonitorLoverman, MTrack, CellTracker, TrackMobil
+com.lrvciyti.unrxnfig	MobileTrackerFree	stalkerware	MonitorLoverman, MTrack, CellTracker, TrackMobil
+com.m.service.control	MobileTrackerFree	stalkerware	MonitorLoverman, MTrack, CellTracker, TrackMobil
+com.mob.service.control	MobileTrackerFree	stalkerware	MonitorLoverman, MTrack, CellTracker, TrackMobil
+com.mobile.gps	MobileTrackerFree	stalkerware	MonitorLoverman, MTrack, CellTracker, TrackMobil
+com.mobile.loc	MobileTrackerFree	stalkerware	MonitorLoverman, MTrack, CellTracker, TrackMobil
+com.mobiletracker	MobileTrackerFree	stalkerware	MonitorLoverman, MTrack, CellTracker, TrackMobil
+com.mobiletrackerfree.secondapp	MobileTrackerFree	stalkerware	MonitorLoverman, MTrack, CellTracker, TrackMobil
+com.mobiletrackerfree.www	MobileTrackerFree	stalkerware	MonitorLoverman, MTrack, CellTracker, TrackMobil
+com.mtf.d	MobileTrackerFree	stalkerware	MonitorLoverman, MTrack, CellTracker, TrackMobil
+com.netowrk.service	MobileTrackerFree	stalkerware	MonitorLoverman, MTrack, CellTracker, TrackMobil
+com.services.phone	MobileTrackerFree	stalkerware	MonitorLoverman, MTrack, CellTracker, TrackMobil
+g.google.llc	MobileTrackerFree	stalkerware	MonitorLoverman, MTrack, CellTracker, TrackMobil
+m.mob.control	MobileTrackerFree	stalkerware	MonitorLoverman, MTrack, CellTracker, TrackMobil
+m.mob.service2020	MobileTrackerFree	stalkerware	MonitorLoverman, MTrack, CellTracker, TrackMobil
+m.phone.control2020	MobileTrackerFree	stalkerware	MonitorLoverman, MTrack, CellTracker, TrackMobil
+m.protect.children	MobileTrackerFree	stalkerware	MonitorLoverman, MTrack, CellTracker, TrackMobil
+m.protect.parental	MobileTrackerFree	stalkerware	MonitorLoverman, MTrack, CellTracker, TrackMobil
+m.secu.children	MobileTrackerFree	stalkerware	MonitorLoverman, MTrack, CellTracker, TrackMobil
+m.security.parental	MobileTrackerFree	stalkerware	MonitorLoverman, MTrack, CellTracker, TrackMobil
+mob.protect.children	MobileTrackerFree	stalkerware	MonitorLoverman, MTrack, CellTracker, TrackMobil
+mob.service.parental2020	MobileTrackerFree	stalkerware	MonitorLoverman, MTrack, CellTracker, TrackMobil
+mobile.controlparental2020	MobileTrackerFree	stalkerware	MonitorLoverman, MTrack, CellTracker, TrackMobil
+mobile.monitor.child2021	MobileTrackerFree	stalkerware	MonitorLoverman, MTrack, CellTracker, TrackMobil
+mobile.monitor.child2022	MobileTrackerFree	stalkerware	MonitorLoverman, MTrack, CellTracker, TrackMobil
+mobile.monitor.child2023	MobileTrackerFree	stalkerware	MonitorLoverman, MTrack, CellTracker, TrackMobil
+mobile.monitor.child2034	MobileTrackerFree	stalkerware	MonitorLoverman, MTrack, CellTracker, TrackMobil
+mobile.parental2021	MobileTrackerFree	stalkerware	MonitorLoverman, MTrack, CellTracker, TrackMobil
+mobile.protect.children	MobileTrackerFree	stalkerware	MonitorLoverman, MTrack, CellTracker, TrackMobil
+mobile.protect.children2020	MobileTrackerFree	stalkerware	MonitorLoverman, MTrack, CellTracker, TrackMobil
+security.mobile.parental	MobileTrackerFree	stalkerware	MonitorLoverman, MTrack, CellTracker, TrackMobil
+service.download.app	MobileTrackerFree	stalkerware	MonitorLoverman, MTrack, CellTracker, TrackMobil
+tracker.mob.gps	MobileTrackerFree	stalkerware	MonitorLoverman, MTrack, CellTracker, TrackMobil
+yogaworkouts.dailyyoga.yogafitness	MobileTrackerFree	stalkerware	MonitorLoverman, MTrack, CellTracker, TrackMobil
+com.get.mtf	MobileTrackerFree	stalkerware	MonitorLoverman, MTrack, CellTracker, TrackMobil
+com.mtf.download	MobileTrackerFree	stalkerware	MonitorLoverman, MTrack, CellTracker, TrackMobil
+com.protect.download	MobileTrackerFree	stalkerware	MonitorLoverman, MTrack, CellTracker, TrackMobil
+com.android.internet.a20200817	iKeyMonitor	stalkerware	
+com.android.internet.a20210916	iKeyMonitor	stalkerware	
+com.android.internet.a20220729	iKeyMonitor	stalkerware	
+com.android.internet.a20220829	iKeyMonitor	stalkerware	
+com.android.internet.a20220914	iKeyMonitor	stalkerware	
+com.sec.android.internet.im.service.im20190118	iKeyMonitor	stalkerware	
+com.sec.android.internet.im.service.im20190419	iKeyMonitor	stalkerware	
+com.sec.android.internet.im.service.im20210815	iKeyMonitor	stalkerware	
+com.panspy.android	PanSpy	stalkerware	SurveilStar
+com.androidlost	AndroidLost	stalkerware	
+com.androidlost.smshandler	AndroidLost	stalkerware	
+com.metasploit.stage	Metasploit	stalkerware	ForeverSpy
+net.spy24.wifi	Spy24	stalkerware	
+com.example.openanotherapp	Spy24	stalkerware	
+ir.spy24.updater	Spy24	stalkerware	
+ir.spy24.wifi	Spy24	stalkerware	
+app.spy24.systemwifi	Spy24	stalkerware	
+app.spy24.spy24installer	Spy24	stalkerware	
+wosc.cwf	CatWatchful	stalkerware	
+wosc.cwf2	CatWatchful	stalkerware	
+com.example.wosc.androidclient	CatWatchful	stalkerware	
+org.secure.smsgps	HighsterMobile	stalkerware	AutoForward, DDI, DDIUtilities, EasySpy, Highster, HighsterSpy, PhoneSpector, SafeGuarde, SurePoint, TurboSpy
+com.autoforward.monitor	HighsterMobile	stalkerware	AutoForward, DDI, DDIUtilities, EasySpy, Highster, HighsterSpy, PhoneSpector, SafeGuarde, SurePoint, TurboSpy
+com.phonespector.app	HighsterMobile	stalkerware	AutoForward, DDI, DDIUtilities, EasySpy, Highster, HighsterSpy, PhoneSpector, SafeGuarde, SurePoint, TurboSpy
+com.ddiutilities.monitor	HighsterMobile	stalkerware	AutoForward, DDI, DDIUtilities, EasySpy, Highster, HighsterSpy, PhoneSpector, SafeGuarde, SurePoint, TurboSpy
+com.imonitor.ainfo	iMonitorSpy	stalkerware	
+inc.imonitor	iMonitorSpy	stalkerware	
+org.poleward.burghs.hydrotherapy.homonymously	MobileTool	stalkerware	MobTool, Jopsik
+org.urates.amirates.suffocate.chiliast	MobileTool	stalkerware	MobTool, Jopsik
+org.connecting.updived.hygeist.interplays	MobileTool	stalkerware	MobTool, Jopsik
+com.runaki.synclogs	ShadowSpy	stalkerware	
+com.client.requestlogs	ShadowSpy	stalkerware	
+com.shadow.client.android	ShadowSpy	stalkerware	
+com.cldprotect	SpyHuman	stalkerware	
+m.mobile.control	SpyHuman	stalkerware	
+com.saxfamqvxj	SpyHuman	stalkerware	
+com.safesecureservice	SpyHuman	stalkerware	
+com.myappspqwddeexo	SpyHuman	stalkerware	
+com.yurpdpvxnybmlgh	SpyHuman	stalkerware	
+com.spyhumanrev	SpyHuman	stalkerware	
+com.tuner.funnelwebview	uMobix	stalkerware	
+com.system.user	uMobix	stalkerware	
+com.play.services	uMobix	stalkerware	
+com.ant.spymie.keylogger	Spymie	stalkerware	
+com.android.services	TheOneSpy	stalkerware	OgyMogy
+com.android.omg	TheOneSpy	stalkerware	OgyMogy
+com.kids.pro	ClevGuard	stalkerware	KidsGuard
+com.kids.whatsapp	ClevGuard	stalkerware	KidsGuard
+com.spappm_mondow.alarm	EasyPhoneTrack	stalkerware	Ppapp
+com.monspap.alarm	EasyPhoneTrack	stalkerware	Ppapp
+com.aleghe.hatra	EasyPhoneTrack	stalkerware	Ppapp
+com.snapchat.trmonap	EasyPhoneTrack	stalkerware	Ppapp
+com.snapch.monabcab	EasyPhoneTrack	stalkerware	Ppapp
+com.pt.bark	bark	stalkerware	
+com.sl360	SpyLive360	stalkerware	
+com.itqredn8dzrl	SpyLive360	stalkerware	
+com.wifi0	SpyLive360	stalkerware	
+com.w0f0	SpyLive360	stalkerware	
+com.w1f1	SpyLive360	stalkerware	
+com.system.task	XNSpy	stalkerware	ZTI, SpyXiz4, SpyXiz4Me, TrackMyPhone
+com.map.system	XNSpy	stalkerware	ZTI, SpyXiz4, SpyXiz4Me, TrackMyPhone
+com.xnspy.dashboard	XNSpy	stalkerware	ZTI, SpyXiz4, SpyXiz4Me, TrackMyPhone
+com.psac.a.processservice	MobiSpy	stalkerware	
+ns.antapp.module	NeoSpy	stalkerware	
+com.nsmon.guard	NeoSpy	stalkerware	
+city.russ.alltrackercorp	AllTracker	stalkerware	Russcity
+city.russ.alltrackerfamily	AllTracker	stalkerware	Russcity
+city.russ.alltrackerinstaller	AllTracker	stalkerware	Russcity
+org.alltracker.security	AllTracker	stalkerware	Russcity
+com.spappm_mondow.alarm	SpyPhoneApp	stalkerware	
+com.spapptrakapp.alarm	SpyPhoneApp	stalkerware	
+com.spatrakappp.alarm	SpyPhoneApp	stalkerware	
+com.ibm.fb	AndroidMonitor	stalkerware	UltimatePhoneSpy
+tech.logsettings	TalkLog	stalkerware	
+t.tools.app	TalkLog	stalkerware	
+technic.settings	TalkLog	stalkerware	
+iqual.calculadora.pro	SpyMasterPro	stalkerware	
+com.semantic.childcontrol	SpyMasterPro	stalkerware	
+com.hp.vd	FreeAndroidSpy	stalkerware	
+com.hp.vc	FreeAndroidSpy	stalkerware	
+com.googleplay.settings	NetSpy	stalkerware	
+com.sc.spyier.v2	Spyier	stalkerware	
+com.bettertomorrowapps.spyyourlovefree	CouplerTracker	stalkerware	
+com.bytepioneers.coupletracker	CouplerTracker	stalkerware	
+com.mobile.loki	GPSTrackerLoki	stalkerware	
+com.mobile.asgard	GPSTrackerLoki	stalkerware	
+com.spyapp247.system	SpyApp247	stalkerware	
+com.service.mug	SpyMug	stalkerware	
+com.wwtspy	WtSpy	stalkerware	
+com.wtspy.apps	WtSpy	stalkerware	
+com.xno.systemservice	Xnore	stalkerware	
+com.kfhdha.fkjfgjdi	EspiaoAndroid	stalkerware	FoxSpy
+com.avi.scbase	pcTattletale	stalkerware	
+com.wSpyEra	SpyEra	stalkerware	
+br.com.maceda.android.antifurtow	AntiFurtoDroid	stalkerware	
+com.gcm_call_sms_tracker.updated	CallSMSTracker	stalkerware	Quizmo, Multiverze, HiddenSMSTracker
+com.gizmoquip.smstracker	CallSMSTracker	stalkerware	Quizmo, Multiverze, HiddenSMSTracker
+com.aif.tracksp	AiSpyer	stalkerware	
+com.spytoapp.system	SpyToApp	stalkerware	
+com.saloomughal.spyapp	BlurSpy	stalkerware	XOXOSpy
+com.android.system.devicelogs	AppMia	stalkerware	
+com.tools.secretcamcorder	SecretCamRecorder	stalkerware	
+ru.usafe.u_safe	Unisafe	stalkerware	
+ru.usafe.usafe	Unisafe	stalkerware	
+ru.usafe.kid.unisafekids	Unisafe	stalkerware	
+su.unisafe.unisafe	Unisafe	stalkerware	
+app.cybrook.trackvieo	TrackView	stalkerware	LifeCircle
+app.cybrook.trackviep	TrackView	stalkerware	LifeCircle
+app.cybrook.trackvieq	TrackView	stalkerware	LifeCircle
+app.cybrook.trackvier	TrackView	stalkerware	LifeCircle
+app.cybrook.trackvies	TrackView	stalkerware	LifeCircle
+app.cybrook.trackviet	TrackView	stalkerware	LifeCircle
+app.cybrook.trackvieu	TrackView	stalkerware	LifeCircle
+app.cybrook.trackviev	TrackView	stalkerware	LifeCircle
+app.cybrook.trackview	TrackView	stalkerware	LifeCircle
+app.cybrook.trackviex	TrackView	stalkerware	LifeCircle
+app.cybrook.trackviey	TrackView	stalkerware	LifeCircle
+app.cybrook.trackviez	TrackView	stalkerware	LifeCircle
+app.cybrook.trustserv	TrackView	stalkerware	LifeCircle
+app.lifecircle	TrackView	stalkerware	LifeCircle
+app.trackview	TrackView	stalkerware	LifeCircle
+app.trackview.pro	TrackView	stalkerware	LifeCircle
+cn.trackview.shentan	TrackView	stalkerware	LifeCircle
+com.trackview	TrackView	stalkerware	LifeCircle
+cybrook.trackview	TrackView	stalkerware	LifeCircle
+net.cybrook.trackvieo	TrackView	stalkerware	LifeCircle
+net.cybrook.trackviep	TrackView	stalkerware	LifeCircle
+net.cybrook.trackvieq	TrackView	stalkerware	LifeCircle
+net.cybrook.trackvier	TrackView	stalkerware	LifeCircle
+net.cybrook.trackvies	TrackView	stalkerware	LifeCircle
+net.cybrook.trackviet	TrackView	stalkerware	LifeCircle
+net.cybrook.trackvieu	TrackView	stalkerware	LifeCircle
+net.cybrook.trackviev	TrackView	stalkerware	LifeCircle
+net.cybrook.trackview	TrackView	stalkerware	LifeCircle
+net.cybrook.trackviex	TrackView	stalkerware	LifeCircle
+net.cybrook.trackviey	TrackView	stalkerware	LifeCircle
+net.cybrook.trackviez	TrackView	stalkerware	LifeCircle
+net.cybrook.trustserv	TrackView	stalkerware	LifeCircle
+net.homesafe	TrackView	stalkerware	LifeCircle
+net.trackview	TrackView	stalkerware	LifeCircle
+net.trackview.pro	TrackView	stalkerware	LifeCircle
+tv.familynk	TrackView	stalkerware	LifeCircle
+tv.familynl	TrackView	stalkerware	LifeCircle
+us.trackview	TrackView	stalkerware	LifeCircle
+com.tracking_smartphone	TrackingSmartphone	stalkerware	XZBO, TrackSmart, TrackingSmart
+com.app.remote_control	TrackingSmartphone	stalkerware	XZBO, TrackSmart, TrackingSmart
+com.ts_settings	TrackingSmartphone	stalkerware	XZBO, TrackSmart, TrackingSmart
+com.phonetrackerofficial	SpyphoneMobileTracker	stalkerware	
+com.phonetrackerofficial1	SpyphoneMobileTracker	stalkerware	
+mg.locations.track5	OneLocator	stalkerware	PhoneTrackerByNumber, FamilyLocator
+com.realtime.spyapp	RealtimeSpy	stalkerware	ttspy
+afs.hbmoczc	AndroidPolice	stalkerware	MonitorChecker, AndrMonitor, AndroidMon, Dromon
+bv.vemzye	AndroidPolice	stalkerware	MonitorChecker, AndrMonitor, AndroidMon, Dromon
+com.amon	AndroidPolice	stalkerware	MonitorChecker, AndrMonitor, AndroidMon, Dromon
+com.monitorchecker	AndroidPolice	stalkerware	MonitorChecker, AndrMonitor, AndroidMon, Dromon
+fod.loqpf	AndroidPolice	stalkerware	MonitorChecker, AndrMonitor, AndroidMon, Dromon
+ifk.ghumlh	AndroidPolice	stalkerware	MonitorChecker, AndrMonitor, AndroidMon, Dromon
+mhu.bylbcwc	AndroidPolice	stalkerware	MonitorChecker, AndrMonitor, AndroidMon, Dromon
+oo.ptkqyawh	AndroidPolice	stalkerware	MonitorChecker, AndrMonitor, AndroidMon, Dromon
+sy.slvzccd	AndroidPolice	stalkerware	MonitorChecker, AndrMonitor, AndroidMon, Dromon
+vmf.uxytqgrl	AndroidPolice	stalkerware	MonitorChecker, AndrMonitor, AndroidMon, Dromon
+vn.ehkfqgvn	AndroidPolice	stalkerware	MonitorChecker, AndrMonitor, AndroidMon, Dromon
+yr.tubjypbl	AndroidPolice	stalkerware	MonitorChecker, AndrMonitor, AndroidMon, Dromon
+com.dromon	AndroidPolice	stalkerware	MonitorChecker, AndrMonitor, AndroidMon, Dromon
+kenkbltcf.pwpwkvdwmjk	AndroidPolice	stalkerware	MonitorChecker, AndrMonitor, AndroidMon, Dromon
+iiw.orqjtwbkx	AndroidPolice	stalkerware	MonitorChecker, AndrMonitor, AndroidMon, Dromon
+efexmsz.mzuooelftl	AndroidPolice	stalkerware	MonitorChecker, AndrMonitor, AndroidMon, Dromon
+fka.ugsonrqogw	AndroidPolice	stalkerware	MonitorChecker, AndrMonitor, AndroidMon, Dromon
+com.sec.provider.mobile.android	MonitorUltra	stalkerware	
+com.thewispy	TheWiSpy	stalkerware	
+YWZiZDFjZTg2NTZlOGI4NDkyYWJjZDJjZDE5ZTM0Mjk.MzkwMmNhZGFiZGZhMjMyZjQzNTJkYmQ1ODg1ZjI1NzA	Observer	stalkerware	
+com.system.settings	Observer	stalkerware	
+com.mobileservices2.synchronization	Mrecorder	stalkerware	mobrec
+com.mrecorder.callrecorder	Mrecorder	stalkerware	mobrec
+com.mobileservice.sync	Mrecorder	stalkerware	mobrec
+com.connection.manager	Mrecorder	stalkerware	mobrec
+com.popo.analyse	PhoneSpy	stalkerware	
+com.wlset.info	PhoneSpy	stalkerware	
+com.shadyspy.monitor	ShadySpy	stalkerware	
+com.ass.antitheft	AbsoluTrack	stalkerware	RemoteSecurity
+com.ass.remotesecurity	AbsoluTrack	stalkerware	RemoteSecurity
+com.ass.ladieschildprotection	AbsoluTrack	stalkerware	RemoteSecurity
+com.ots.ladieschildprotection	AbsoluTrack	stalkerware	RemoteSecurity
+com.ots.remotesecurity	AbsoluTrack	stalkerware	RemoteSecurity
+com.ots.antitheft	AbsoluTrack	stalkerware	RemoteSecurity
+com.softalogy.thiefguard	AbsoluTrack	stalkerware	RemoteSecurity
+com.ots.womenchildsafety	AbsoluTrack	stalkerware	RemoteSecurity
+com.gss.whereismyphone	AbsoluTrack	stalkerware	RemoteSecurity
+com.smart.guardoffline	AbsoluTrack	stalkerware	RemoteSecurity
+com.AwamiSolution.smartkeylogger	SmartKeylogger	stalkerware	Hiddad
+org.traccar.client	Traccar	stalkerware	Traca
+org.traccar.client.hidden	Traccar	stalkerware	Traca
+dell.scream.application	SpyNote	stalkerware	Scream, Screamon
+com.spynote.software.stubspynote	SpyNote	stalkerware	Scream, Screamon
+tej.flashkeylogger	FlashKeylogger	stalkerware	FlashKeylog
+tej.flashkeyloggerpro	FlashKeylogger	stalkerware	FlashKeylog
+tej.flashkeylogges	FlashKeylogger	stalkerware	FlashKeylog
+stealthLight.sys	MobiStealth	stalkerware	Stealthcell
+phone.Secure	MobiStealth	stalkerware	Stealthcell
+and.LocatorTrial	MobiStealth	stalkerware	Stealthcell
+and.GuardTrial	MobiStealth	stalkerware	Stealthcell
+lookOut.Secure	MobiStealth	stalkerware	Stealthcell
+one.enix.smsforward	SMSForward	stalkerware	SMForw
+net.droid.talk218	Ahmyth	stalkerware	
+ahmyth.mine.king.ahmyth	Ahmyth	stalkerware	
+com.xhunter.client	xHunter	stalkerware	
+com.android.preference.help.mole	BosSpy	stalkerware	
+com.mobilespy.io	Fenced	stalkerware	MobileSpyIo
+com.fenced.ai	Fenced	stalkerware	MobileSpyIo
+br.com.rastreadordenamorado	RastreadorDeNamorado	stalkerware	
+com.android.wifi.tracker	Trackji	stalkerware	
+xd.spy.app	XDSpy	stalkerware	
+com.remote.app	XploitSPY	stalkerware	
+com.devspark.securityotp	SpySMS	stalkerware	
+com.droidwatcher	DroidWatcher	stalkerware	
+com.rana_aditya.child	Spyzier	stalkerware	
+me.hawkshaw	AndroidSpyApp	stalkerware	
+net.majorkernelpanic.spydroid	SpyDroid	stalkerware	
+com.example.ghazi.sms	SpyAppGhazi	stalkerware	
+com.hyadesinc.curiosus	Curiosus	stalkerware	
+com.example.lovespy.app	LoveSpy	stalkerware	
+edu.virginia.cs.cs4720.ispy	ISpy	stalkerware	
+in.spyapp.patanjali.android	PatanSpyApp	stalkerware	
+com.github.muneebwanee.dash	Dash	stalkerware	
+com.femimesusu.libapasopi	SpyApp	stalkerware	
+com.my.spy.app	MySpyApps	stalkerware	
+com.android.system.app	OneSpy	stalkerware	OneMonitar, ChyldMonitor
+com.android.settings.app	OneSpy	stalkerware	OneMonitar, ChyldMonitor
+seC.fqjx.sqBB	OneSpy	stalkerware	OneMonitar, ChyldMonitor
+com.qwertyuiop.asdfghjkl	OneSpy	stalkerware	OneMonitar, ChyldMonitor
+com.alienmanfc6.wheresmyandroid	WheresMyDroid	stalkerware	
+com.wisemo.wsmguest.v18	WiseMo	stalkerware	
+com.wisemo.host.v10	WiseMo	stalkerware	
+org.findmykids.app	FindMyKids	stalkerware	
+org.findmykids.child	FindMyKids	stalkerware	
+com.moxlndmp.uhzhgzjh	BrunoEspiao	stalkerware	
+com.fzvsdrtb.qamlhxri	BrunoEspiao	stalkerware	
+com.thaxygpc.xjsjobpn	BrunoEspiao	stalkerware	
+com.nhevvtmt.thinkquo	BrunoEspiao	stalkerware	
+com.jgeuhcex.ejcxndak	Spyone	stalkerware	
+com.eytewqrm.wvdkgmrl	Spyone	stalkerware	
+com.epbzrqcg.syzzkuqx	Spyone	stalkerware	
+com.laucass.phonecontrolenabler	Spyone	stalkerware	
+com.laucass.phonecontroltarget	Spyone	stalkerware	
+com.laucass.androsmscontrol	Spyone	stalkerware	
+com.juzyuwqt.thxxnjvf	Spyone	stalkerware	
+com.epasufob.kybavfgt	Spyone	stalkerware	
+pl.spyone.agent2	Spyone	stalkerware	
+Aktualizacja.apps	Spyone	stalkerware	
+br.com.eaglespy	eagleSPY	stalkerware	
+com.pvojpamt.tzzyqjyb	PhoneMonitor	stalkerware	
+com.monitor.phone.s0ft.phonemonitor	PhoneMonitor	stalkerware	
+com.google.android.network	Buhsam	stalkerware	
+com.example.reverseshell2	AndroRat	stalkerware	
+io.github.vvb2060.packageinstaller.test	Msafely	stalkerware	
+com.simundkarten.g4.cc.starter	Stalkerware	stalkerware	
+com.wisemo.host.v10	WiseMo	watchware	
+com.wondershare.famisafe	FamiSafe	watchware	
+com.wondershare.famisafe.kids	FamiSafe	watchware	
+com.kaspersky.safekids	KasperskySafeKids	watchware	
+app.gpsme	KidsControl	watchware	
+org.findmykids.app	FindMyKids	watchware	
+com.accountable2you.ap1	Accountable2you	watchware	
+com.zoemob.gpstracking	ZoeMob	watchware	
+com.life360.android.safetymapd	Life360	watchware	
+com.microsoft.familysafety	MicrosoftFamilySafe	watchware	
+com.geozilla.family	GeoZilla	watchware	
+com.kidslox.app	KidsLox	watchware	
+com.USIB.Child.ChildControl	FamiShield	watchware	Mitbe
+com.qustodio.qustodioapp	Qustodio	watchware	
+com.screentime.rc	ScreenTime	watchware	
+com.mmguardian.parentapp	MMGuardian	watchware	
+com.mmguardian.tabletsecurity	MMGuardian	watchware	
+com.mmguardian.childapp	MMGuardian	watchware	
+com.probit.flare	FlareFamilyLocator	watchware	
+com.familyorbit.child	FamilyOrbit	watchware	
+com.camhart.netcountable	Trulpe	watchware	
+com.nationaledtech.Boomerang	Boomrang	watchware	
+com.mobilefence.family	MobileFence	watchware	
+com.parental.control.kidgy	Kidgy	watchware	
+com.kiddoware.kidsplace	Kiddoware	watchware	
+com.contentwatch.ghoti.cp2.child	Netnanny	watchware	
+org.gtmedia.seekdroid	SeekDroid	watchware	
+com.timeon.litclient	LockItTight	watchware	

@@ -31,6 +31,7 @@ class AppContainer(context: Context) {
     val rttRanger: RttRanger by lazy { RttRanger(appContext) }
     val cellScanner: CellScanner by lazy { CellScanner(appContext) }
     val classicScanner: com.rfwatch.app.scan.ClassicScanner by lazy { com.rfwatch.app.scan.ClassicScanner(appContext) }
+    val appScanner: com.rfwatch.app.scan.AppScanner by lazy { com.rfwatch.app.scan.AppScanner(appContext) }
 
     /** Rule engine built from the bundled packs (all enabled by default). */
     val ruleEngine: RuleEngine by lazy { RuleEngine(RulePacks.loadBuiltin()) }

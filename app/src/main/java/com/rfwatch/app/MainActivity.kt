@@ -70,7 +70,7 @@ import com.rfwatch.app.ui.theme.OkGreen
 
 private enum class Tab(val label: String) {
     RADAR("Radar"), DEVICES("Devices"), SWEEP("Sweep"), MAP("Map"), MORE("More"),
-    CELL("Cell"), ROOM("Room"), LOG("Log"), SETTINGS("Settings"), SKIMMER("Skimmer")
+    CELL("Cell"), ROOM("Room"), LOG("Log"), SETTINGS("Settings"), SKIMMER("Skimmer"), STALKERWARE("Stalkerware")
 }
 
 class MainActivity : ComponentActivity() {
@@ -186,6 +186,7 @@ class MainActivity : ComponentActivity() {
                                 Tab.LOG -> EventLogScreen(vm, contentModifier)
                                 Tab.SETTINGS -> SettingsScreen(contentModifier)
                                 Tab.SKIMMER -> com.rfwatch.app.ui.screens.SkimmerScreen(contentModifier)
+                                Tab.STALKERWARE -> com.rfwatch.app.ui.screens.StalkerwareScreen(contentModifier)
                                 Tab.MORE -> MoreScreen(
                                     modifier = contentModifier,
                                     onCell = { tab = Tab.CELL },
@@ -193,6 +194,7 @@ class MainActivity : ComponentActivity() {
                                     onLog = { tab = Tab.LOG },
                                     onSettings = { tab = Tab.SETTINGS },
                                     tools = listOf(
+                                        Triple("Stalkerware check", "Scan this phone's apps for stalkerware & spyware (thousands of indicators).") { tab = Tab.STALKERWARE },
                                         Triple("Skimmer check", "Fuel pump / ATM card-skimmer Bluetooth check with full evidence.") { tab = Tab.SKIMMER },
                                     ),
                                 )

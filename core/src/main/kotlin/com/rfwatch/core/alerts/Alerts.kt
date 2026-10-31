@@ -19,6 +19,7 @@ enum class AlertType {
     BLE_SPAM,
     EVIL_TWIN,
     SKIMMER_SUSPECTED,
+    STALKERWARE,
 }
 
 /**
@@ -63,6 +64,7 @@ object AlertPhrasing {
             AlertType.BLE_SPAM -> "Bluetooth spam attack nearby"
             AlertType.EVIL_TWIN -> "Possible fake Wi-Fi network copying a known one"
             AlertType.SKIMMER_SUSPECTED -> "Possible card skimmer Bluetooth module nearby"
+            AlertType.STALKERWARE -> "Possible stalkerware found on this phone"
         }
         val speakDirection = relativeBearingDeg != null && confidence > MIN_SPOKEN_CONFIDENCE
         return if (speakDirection) "$base, ${relativeSector(relativeBearingDeg!!)}" else base
