@@ -47,6 +47,7 @@ class AppContainer(context: Context) {
             cellScanner = cellScanner,
             headingProvider = headingProvider,
             locationProvider = locationProvider,
+            onStatus = { com.rfwatch.app.widget.StatusWidget.push(appContext, it) },
         )
     }
 }

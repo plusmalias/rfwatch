@@ -31,6 +31,8 @@ class MonitorService : LifecycleService() {
         // while its collectors on this service's scope are still active.
         val repo = (application as RfWatchApp).container.repository
         repo.startMonitoring(lifecycleScope)
+        running.value = true
+        repo.publishStatus()
         return START_STICKY
     }
 
@@ -56,7 +58,15 @@ class MonitorService : LifecycleService() {
         }
     }
 
+    override fun onDestroy() {
+        running.value = false
+        (application as RfWatchApp).container.repository.publishStatus()
+        super.onDestroy()
+    }
+
     companion object {
+        /** Whether monitoring is running (read by the quick-settings tile and widget). */
+        val running = kotlinx.coroutines.flow.MutableStateFlow(false)
         private const val NOTIF_ID = 42
         fun start(context: Context) {
             val i = Intent(context, MonitorService::class.java)

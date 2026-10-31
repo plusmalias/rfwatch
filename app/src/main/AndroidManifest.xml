@@ -102,6 +102,28 @@
                 android:resource="@xml/export_paths" />
         </provider>
 
+        <receiver
+            android:name=".widget.StatusWidget"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/rfwatch_widget_info" />
+        </receiver>
+
+        <service
+            android:name=".widget.ScanTileService"
+            android:exported="true"
+            android:icon="@drawable/ic_tile_radar"
+            android:label="RF scan"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+        </service>
+
         <service
             android:name=".monitor.MonitorService"
             android:exported="false"

@@ -133,6 +133,8 @@ class RfWatchRepository(
     private val cellScanner: CellScanner,
     private val headingProvider: HeadingProvider,
     private val locationProvider: LocationProvider,
+    /** Receives the widget / tile status summary (see [publishStatus]). */
+    private val onStatus: (com.rfwatch.app.widget.StatusSummary) -> Unit = {},
 ) {
     // All scan ingestion runs on one background thread: the caches below are plain maps
     // touched only from this dispatcher, and the main thread never parses adverts.
@@ -609,6 +611,7 @@ class RfWatchRepository(
             while (isActive) {
                 delay(LAW_TICK_MS)
                 handleLawAction(lawTracker.tick(System.currentTimeMillis()))
+                publishStatus()
             }
         }
         scope.launch {
@@ -940,6 +943,34 @@ class RfWatchRepository(
         database.alertDao().insert(com.rfwatch.app.data.AlertEntity(type = AlertType.EMERGENCY_VEHICLE.name, timestampMs = ts, deviceId = id, message = detail))
         val fix = fixHolder.current
         database.eventDao().insert(com.rfwatch.app.data.EventEntity(kind = "EMERGENCY", timestampMs = ts, deviceId = id, detail = detail, lat = fix?.lat, lon = fix?.lon))
+    }
+
+    /** Builds the one-glance status for the home-screen widget and quick-settings tile. */
+    fun publishStatus() {
+        val now = System.currentTimeMillis()
+        val running = com.rfwatch.app.monitor.MonitorService.running.value
+        val law = _lawEncounter.value?.takeIf { it.active }
+        val followers = _followers.value
+        val drones = _drones.value.values.filter { now - it.lastSeenMs < 5 * 60_000L }
+        val home = _home.value
+        val headline = when {
+            !running -> "Not monitoring"
+            law != null -> "Police equipment nearby"
+            followers.isNotEmpty() -> "${followers.size} travelling with you"
+            drones.isNotEmpty() -> "Drone nearby"
+            home.inside && home.newDevices.isNotEmpty() -> "New device at home"
+            else -> "Monitoring · ${_contacts.value.size} signals"
+        }
+        val lines = buildList {
+            law?.signatures?.take(2)?.forEach { add("• ${it.label.substringBefore(" (")} ${it.lastRssi} dBm") }
+            if (followers.isNotEmpty()) add("• Travelling with you: ${followers.size}")
+            if (drones.isNotEmpty()) add("• Drones: " + drones.joinToString { it.info.serial ?: "unidentified" })
+            if (home.isSet) add("• Home watch: " + if (home.mature) "on" else "learning ${home.visitsLearned}/${com.rfwatch.core.cs.Baseline.MIN_SESSIONS}")
+            if (running) add("• ${_contacts.value.count { it.value.kind == com.rfwatch.core.id.DeviceKind.TRACKER }} trackers in range")
+        }
+        runCatching {
+            onStatus(com.rfwatch.app.widget.StatusSummary(running, headline, lines, law != null || followers.isNotEmpty() || drones.isNotEmpty()))
+        }
     }
 
     private suspend fun handleLawAction(action: com.rfwatch.core.alerts.LawAction, ruleId: String? = null) {
