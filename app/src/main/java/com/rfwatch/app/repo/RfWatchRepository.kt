@@ -571,6 +571,14 @@ class RfWatchRepository(
         )
     }
 
+    /** Debug diagnostic (logcat tag RFWatchDup): where Map/Locate duplicates come from. Counts only. */
+    suspend fun logDuplicateReport() {
+        val devices = withContext(ingestDispatcher) { flushPending(); ensureDeviceCache(); deviceCache.values.toList() }
+        val sample = devices.sortedByDescending { it.seenCount }.take(5)
+        val locate = sample.associateWith { database.observationDao().recentGeoForDevice(it.id, LOCATE_SAMPLE_LIMIT) }
+        DuplicateReport.analyze(devices, locate).lines().forEach { android.util.Log.i("RFWatchDup", it) }
+    }
+
     /** Refresh a bounded set of live motion/location fits while the online map is visible. */
     suspend fun refreshMapEstimates() {
         val candidates = database.deviceDao().recentMapped(MAP_ESTIMATE_DEVICE_LIMIT)

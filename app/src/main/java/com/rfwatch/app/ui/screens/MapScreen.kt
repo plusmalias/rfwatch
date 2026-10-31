@@ -166,6 +166,7 @@ private fun OnlineDeviceMap(
     var mapError by remember { mutableStateOf(false) }
     val events by vm.events.collectAsState()
     var showHistory by remember { mutableStateOf(false) }
+    var showMapHelp by remember { mutableStateOf(false) }
     var selectedEvent by remember { mutableStateOf<com.rfwatch.app.data.EventEntity?>(null) }
     val latestEvents by rememberUpdatedState(events)
 
@@ -205,6 +206,7 @@ private fun OnlineDeviceMap(
 
     // Direction-finding fits update while this screen is visible. Only a bounded set of
     // recent GPS histories are evaluated; under-sampled emitters remain explicitly unknown.
+    LaunchedEffect(vm) { if (BuildConfig.DEBUG) vm.logDuplicateReport() }
     LaunchedEffect(vm) {
         while (true) {
             vm.refreshMapEstimates()
@@ -422,32 +424,39 @@ private fun OnlineDeviceMap(
             )
         }
         navNotice?.let { Text(it, fontSize = 11.sp, color = com.rfwatch.app.ui.theme.WarnAmber) }
-        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
+        Row(Modifier.fillMaxWidth().padding(top = 2.dp), verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
                 Text(if (showHistory) "ENCOUNTER HISTORY" else "LIVE DEVICE MAP", fontSize = 10.sp, color = MaterialTheme.colorScheme.primary, letterSpacing = 1.2.sp)
-                Text("${mapped.size} located records", fontSize = 16.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold)
                 Text(
-                    "${mapped.size} mapped · $locatedCount located · $movingCount moving · ${mapped.size - locatedCount - movingCount} heard-only",
-                    fontSize = 11.sp, color = Color(0xFF9CA3AF),
+                    "${mapped.size} on map · $locatedCount located · $movingCount moving",
+                    fontSize = 15.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
                 )
             }
-            Column(horizontalAlignment = Alignment.End) {
-                OutlinedButton(onClick = {
-                    val fix = userLocation
-                    if (fix != null) {
-                        mapRef.value?.animateCamera(CameraUpdateFactory.newLatLngZoom(LatLng(fix.lat, fix.lon), 16.0), 350)
-                    }
-                }, enabled = userLocation != null) { Text("My location") }
-                OutlinedButton(onClick = { fitMapToDevices(mapRef.value, mapped, userLocation) }) { Text("Fit all") }
+            androidx.compose.material3.TextButton(onClick = { showMapHelp = !showMapHelp }) { Text(if (showMapHelp) "Hide help" else "ⓘ Help", fontSize = 12.sp) }
+        }
+        // Compact legend; the full explanation is behind Help.
+        Row(Modifier.fillMaxWidth().padding(bottom = 4.dp), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
+            listOf(Color(0xFF34D399) to "position estimated", Color(0xFFF59E0B) to "moving", Color(0xFFCBD5E1) to "where you heard it").forEach { (c, label) ->
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Canvas(Modifier.size(10.dp)) { drawCircle(c, style = androidx.compose.ui.graphics.drawscope.Stroke(2.5f)) }
+                    Text(label, fontSize = 10.sp, color = Color(0xFF9CA3AF))
+                }
             }
         }
-        Text(
-            "Outline: green = position estimated · amber = moving · grey = shown where you heard it. " +
-                "Estimates need ≥${DriveByEstimator.MIN_SAMPLES} GPS-tagged hearings spread over ≥${DriveByEstimator.MIN_SPREAD_M.toInt()} m — walk or drive past; standing still keeps everything grey.",
+        if (showMapHelp) Text(
+            "Fill colour = device category. Outline: green = position estimated · amber = moving · grey = drawn where your phone heard it (not the device). " +
+                "Estimates need ≥${DriveByEstimator.MIN_SAMPLES} GPS-tagged hearings spread over ≥${DriveByEstimator.MIN_SPREAD_M.toInt()} m — walk or drive past; standing still keeps everything grey. " +
+                "Blue circles are groups — tap to zoom in. Online tiles reveal the visible area to the tile server; radio records stay on-device.",
             fontSize = 10.sp, color = Color(0xFF9CA3AF), modifier = Modifier.padding(bottom = 5.dp),
         )
         Box(if (showHistory) Modifier.fillMaxWidth().height(380.dp) else Modifier.fillMaxWidth().weight(1f)) {
             AndroidView(factory = { mapView }, modifier = Modifier.fillMaxSize())
+            Column(Modifier.align(Alignment.TopEnd).padding(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp), horizontalAlignment = Alignment.End) {
+                MapOverlayButton("◎ Me", enabled = userLocation != null) {
+                    userLocation?.let { fix -> mapRef.value?.animateCamera(CameraUpdateFactory.newLatLngZoom(LatLng(fix.lat, fix.lon), 16.0), 350) }
+                }
+                MapOverlayButton("⤢ Fit", enabled = mapped.isNotEmpty() || userLocation != null) { fitMapToDevices(mapRef.value, mapped, userLocation) }
+            }
             if (mapError) {
                 Card(Modifier.align(Alignment.Center).padding(20.dp), colors = CardDefaults.cardColors(containerColor = ConsolePanel), border = androidx.compose.foundation.BorderStroke(1.dp, ConsoleOutline)) {
                     Text("Map tiles unavailable. Check internet and retry by reopening Map.", Modifier.padding(12.dp), fontSize = 12.sp)
@@ -463,7 +472,6 @@ private fun OnlineDeviceMap(
                 fontSize = 10.sp, color = Color(0xFF17333D),
             )
         }
-        Text("Online map tiles reveal the visible area requested; radio records stay on-device.", Modifier.padding(top = 4.dp), fontSize = 9.sp, color = Color(0xFF9CA3AF))
         if (showHistory) {
             HistoryPanel(events, selectedEvent) { e ->
                 selectedEvent = e
@@ -483,6 +491,19 @@ private fun OnlineDeviceMap(
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun MapOverlayButton(label: String, enabled: Boolean, onClick: () -> Unit) {
+    androidx.compose.material3.Surface(
+        onClick = onClick, enabled = enabled,
+        shape = androidx.compose.foundation.shape.RoundedCornerShape(8.dp),
+        color = ConsolePanel.copy(alpha = 0.92f),
+        border = androidx.compose.foundation.BorderStroke(1.dp, ConsoleOutline),
+    ) {
+        Text(label, Modifier.padding(horizontal = 10.dp, vertical = 6.dp), fontSize = 12.sp,
+            color = if (enabled) Color(0xFFE2E8F0) else ConsoleMuted)
     }
 }
 

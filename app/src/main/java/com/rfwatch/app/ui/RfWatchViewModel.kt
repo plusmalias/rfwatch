@@ -116,6 +116,7 @@ class RfWatchViewModel(private val repo: RfWatchRepository) : ViewModel() {
         repo.recentObservations(deviceId)
 
     suspend fun refreshMapEstimates() = repo.refreshMapEstimates()
+    fun logDuplicateReport() { viewModelScope.launch { runCatching { repo.logDuplicateReport() } } }
 
     fun startScanSession() {
         viewModelScope.launch { repo.startScanSession() }
