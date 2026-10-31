@@ -32,6 +32,11 @@ class RfWatchViewModel(private val repo: RfWatchRepository) : ViewModel() {
     val followers = repo.followers
     val homeStatus = repo.homeStatus
 
+    /** One-shot request from another screen (car sweep, radar) to open Hunt on a device. */
+    val huntRequest = kotlinx.coroutines.flow.MutableStateFlow<String?>(null)
+
+    fun logCarSweep(lines: List<String>, heard: Int) { viewModelScope.launch { repo.logCarSweep(lines, heard) } }
+
     /** Build an evidence report and hand back the share-sheet intent. */
     fun exportEvidence(context: android.content.Context, deviceId: String?, onReady: (android.content.Intent) -> Unit) {
         viewModelScope.launch { onReady(repo.evidenceIntent(context.applicationContext, deviceId)) }

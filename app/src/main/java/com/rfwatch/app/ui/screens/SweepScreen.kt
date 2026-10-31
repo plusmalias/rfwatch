@@ -80,6 +80,11 @@ fun SweepScreen(vm: RfWatchViewModel, modifier: Modifier = Modifier) {
     val context = LocalContext.current
     val hasCompass = vm.hasCompass
     var target by remember { mutableStateOf<String?>(null) }
+    // Honour a hunt request from another screen (e.g. car sweep "Hunt this one").
+    val requested by vm.huntRequest.collectAsState()
+    LaunchedEffect(requested) {
+        requested?.let { target = it; vm.huntRequest.value = null }
+    }
     var sweeping by remember { mutableStateOf(false) }
     var hunt by remember { mutableStateOf(true) }
     var guided by remember { mutableStateOf(!hasCompass) }

@@ -515,6 +515,18 @@ class RfWatchRepository(
         }
     }
 
+    /** Logs a car sweep's findings (with location) to the event log. */
+    suspend fun logCarSweep(lines: List<String>, heard: Int) {
+        val fix = fixHolder.current
+        database.eventDao().insert(
+            com.rfwatch.app.data.EventEntity(
+                kind = "CAR_SWEEP", timestampMs = System.currentTimeMillis(),
+                detail = "Car sweep: $heard signals heard, ${lines.size} to check. " + lines.joinToString(" | "),
+                lat = fix?.lat, lon = fix?.lon,
+            )
+        )
+    }
+
     /** Evidence report share intent (all alerts, or one device's full history). */
     suspend fun evidenceIntent(context: android.content.Context, deviceId: String?): android.content.Intent {
         withContext(ingestDispatcher) { flushPending() }
