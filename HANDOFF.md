@@ -343,3 +343,10 @@ All compile + tests green (core 96/96, app 3/3, both flavors). New tools live un
 
 Next (anyone): on-device verification of all of the above; retention purge (still never called);
 generic Android malware feed (abuse.ch needs an API key).
+
+### 2026-11-01 — Claude — IN PROGRESS (Codex: please hold edits until my next entry)
+
+Working on: Devices-tab filters (time window, status, sort, multi-category; state in the
+ViewModel), ingest hot-path trims (single rule evaluation per advert, timed room-sweep pruning,
+lazy radio-details string), device list published from the in-memory cache instead of a full
+SQLCipher re-query every flush, and wiring the retention purge. No schema changes.
