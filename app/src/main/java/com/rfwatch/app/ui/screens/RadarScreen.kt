@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Button
@@ -46,6 +47,7 @@ import com.rfwatch.app.ui.theme.ConsolePanel
 import com.rfwatch.app.ui.theme.ConsolePanelRaised
 import com.rfwatch.app.ui.theme.ConsoleMuted
 import com.rfwatch.app.ui.theme.SignalBlue
+import com.rfwatch.app.data.DeviceEntity
 import com.rfwatch.core.df.EstimateStatus
 import kotlin.math.cos
 import kotlin.math.min
@@ -63,65 +65,122 @@ import java.util.Locale
 fun RadarScreen(vm: RfWatchViewModel, modifier: Modifier = Modifier) {
     val heading by vm.heading.collectAsState()
     val contacts by vm.contacts.collectAsState()
+    val devices by vm.devices.collectAsState()
     // Keep discovery order stable. RSSI fluctuates per packet, so sorting on it makes targets jump.
     val list = contacts.values.toList()
     var selectedContactId by remember { mutableStateOf<String?>(null) }
     val facing = heading.deg ?: 0.0
     val priorityCount = list.count { it.classification == "PRIORITY" || it.classification == "TRACKER" }
 
-    Column(modifier.fillMaxSize().padding(12.dp)) {
-        Row(Modifier.fillMaxWidth().padding(bottom = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-            Column(Modifier.weight(1f)) {
-                Text("LIVE SPECTRUM", fontSize = 10.sp, color = RadarCyan, letterSpacing = 1.5.sp)
-                Text("${list.size} signals in view", fontSize = 20.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold)
+    LazyColumn(
+        modifier = modifier.fillMaxSize(),
+        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 12.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        item(key = "radar-header") {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text("LIVE SPECTRUM", fontSize = 10.sp, color = RadarCyan, letterSpacing = 1.5.sp)
+                    Text("${list.size} signals in view", fontSize = 20.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold)
+                }
+                androidx.compose.material3.Surface(
+                    color = if (priorityCount > 0) DangerRed.copy(alpha = 0.12f) else ConsolePanelRaised,
+                    shape = CircleShape,
+                    border = BorderStroke(1.dp, if (priorityCount > 0) DangerRed.copy(alpha = 0.45f) else ConsoleOutline),
+                ) {
+                    Text("$priorityCount WATCH", Modifier.padding(horizontal = 12.dp, vertical = 7.dp), fontSize = 10.sp, color = if (priorityCount > 0) DangerRed else ConsoleMuted)
+                }
             }
-            androidx.compose.material3.Surface(
-                color = if (priorityCount > 0) DangerRed.copy(alpha = 0.12f) else ConsolePanelRaised,
-                shape = CircleShape,
-                border = BorderStroke(1.dp, if (priorityCount > 0) DangerRed.copy(alpha = 0.45f) else ConsoleOutline),
+        }
+        item(key = "radar-scope") {
+            Card(
+                Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = ConsolePanel),
+                border = BorderStroke(1.dp, ConsoleOutline),
             ) {
-                Text("$priorityCount WATCH", Modifier.padding(horizontal = 12.dp, vertical = 7.dp), fontSize = 10.sp, color = if (priorityCount > 0) DangerRed else ConsoleMuted)
+                Column(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp)) {
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                        Text("PROXIMITY SCOPE", fontSize = 10.sp, color = ConsoleMuted, letterSpacing = 1.sp)
+                        Text(
+                            heading.deg?.let { "HEADING ${it.toInt()}°" } ?: "HEADING UNAVAILABLE",
+                            fontSize = 11.sp, color = if (heading.deg == null) WarnAmber else RadarCyan,
+                        )
+                    }
+                    Canvas(Modifier.fillMaxWidth().height(205.dp).padding(vertical = 6.dp)) {
+                        drawRadar(list, facing, selectedContactId)
+                    }
+                    Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                            LegendDot(RadarCyan, "You / BLE")
+                            LegendDot(SignalBlue, "Wi-Fi")
+                            LegendDot(RadarPink, "Tracker")
+                        }
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                            LegendDot(DangerRed, "Axon / law")
+                            LegendDot(WarnAmber, "Camera / IoT")
+                            LegendDot(Color(0xFFB79CFF), "Fleet")
+                        }
+                    }
+                    Text("RSSI-only range is a rough model, not a measurement; walls and transmitter power can shift it greatly.", fontSize = 10.sp, color = Color(0xFF78909A))
+                }
             }
         }
+        item(key = "live-devices-heading") {
+            Row(Modifier.fillMaxWidth().padding(top = 4.dp), horizontalArrangement = Arrangement.SpaceBetween) {
+                Text("LIVE DETECTIONS", fontSize = 10.sp, color = ConsoleMuted, letterSpacing = 1.sp)
+                Text("${list.size} now · tap to select", fontSize = 10.sp, color = ConsoleMuted)
+            }
+        }
+        if (list.isEmpty()) {
+            item(key = "no-live-devices") { EmptyConsoleNotice("No live signals yet", "BLE and Wi-Fi detections appear here as the monitors receive them.") }
+        }
+        items(list, key = { "live-${it.id}" }) { c ->
+            ContactRow(c, vm, selected = selectedContactId == c.id) { selectedContactId = c.id }
+        }
+        item(key = "inventory-heading") {
+            Column(Modifier.padding(top = 10.dp)) {
+                Text("DEVICE INVENTORY", fontSize = 10.sp, color = RadarCyan, letterSpacing = 1.3.sp)
+                Text("${devices.size} saved records", fontSize = 18.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold)
+                Text("Previously heard devices and their latest signal details", fontSize = 11.sp, color = ConsoleMuted)
+            }
+        }
+        if (devices.isEmpty()) {
+            item(key = "empty-inventory") { EmptyConsoleNotice("Inventory is empty", "Records will collect as BLE and Wi-Fi monitoring runs.") }
+        }
+        items(devices, key = { "saved-${it.id}" }) { device ->
+            InventoryRow(device)
+        }
+    }
+}
 
-        Card(
-            Modifier.fillMaxWidth().padding(bottom = 10.dp),
-            colors = CardDefaults.cardColors(containerColor = ConsolePanel),
-            border = BorderStroke(1.dp, ConsoleOutline),
-        ) {
-            Column(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp)) {
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                    Text("PROXIMITY SCOPE", fontSize = 10.sp, color = ConsoleMuted, letterSpacing = 1.sp)
-                    Text(
-                        heading.deg?.let { "HEADING ${it.toInt()}°" } ?: "HEADING UNAVAILABLE",
-                        fontSize = 11.sp, color = if (heading.deg == null) WarnAmber else RadarCyan,
-                    )
-                }
-                Canvas(Modifier.fillMaxWidth().height(205.dp).padding(vertical = 6.dp)) {
-                    drawRadar(list, facing, selectedContactId)
-                }
-                Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        LegendDot(RadarCyan, "You / BLE")
-                        LegendDot(SignalBlue, "Wi-Fi")
-                        LegendDot(RadarPink, "Tracker")
-                    }
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        LegendDot(DangerRed, "Axon / law")
-                        LegendDot(WarnAmber, "Camera / IoT")
-                        LegendDot(Color(0xFFB79CFF), "Fleet")
-                    }
-                }
-                Text("RSSI-only range is a rough model, not a measurement; walls and transmitter power can shift it greatly.", fontSize = 10.sp, color = Color(0xFF78909A))
-            }
+@Composable
+private fun EmptyConsoleNotice(title: String, detail: String) {
+    Card(
+        Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = ConsolePanel),
+        border = BorderStroke(1.dp, ConsoleOutline),
+    ) {
+        Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text(title, fontSize = 13.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold)
+            Text(detail, fontSize = 11.sp, color = ConsoleMuted)
         }
-        Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-            Text("DETECTED DEVICES", fontSize = 10.sp, color = ConsoleMuted, letterSpacing = 1.sp)
-            Text("Tap to select", fontSize = 10.sp, color = ConsoleMuted)
-        }
-        LazyColumn(Modifier.fillMaxWidth().weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            items(list, key = { it.id }) { c ->
-                ContactRow(c, vm, selected = selectedContactId == c.id) { selectedContactId = c.id }
+    }
+}
+
+@Composable
+private fun InventoryRow(device: DeviceEntity) {
+    val tint = deviceCategoryColor(device.category, device.classification)
+    Card(
+        Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = ConsolePanel),
+        border = BorderStroke(1.dp, ConsoleOutline),
+    ) {
+        Row(Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+            Box(Modifier.padding(end = 10.dp).size(9.dp).clip(CircleShape).background(tint))
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text(device.displayName ?: device.lastMac ?: device.id, fontSize = 13.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold, maxLines = 1)
+                Text("${device.brand ?: "Brand unknown"} · ${device.category ?: if (device.band == "WIFI") "Wi-Fi device" else "Bluetooth device"}", fontSize = 11.sp, color = tint, maxLines = 1)
+                Text("${device.band} · ${device.lastRssi} dBm · ~${formatRssiDistance(rssiDistanceEstimateMeters(device.lastRssi))} m RSSI estimate", fontSize = 10.sp, color = ConsoleMuted)
             }
         }
     }

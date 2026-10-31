@@ -85,6 +85,34 @@ verification; no scan was started. Offline flavor was built as part of the task 
 phone should be charged before longer live scan testing. Preserve this shared dark console theme
 and keep location, distance, and detection claims appropriately qualified.
 
+### 2026-10-31 (later) — Codex — Radar scroll / radio monitor follow-up
+
+- Radar home is now one full-height lazy vertical list: scope, live BLE/Wi-Fi detections, then
+  saved device inventory. This lets the entire page scroll while preserving the separate Devices
+  tab for search and filters.
+- `:core:test`, `:app:testMapsOnlineDebugUnitTest`, `assembleMapsOnlineDebug`, and
+  `assembleOfflineDebug` passed with Gradle 8.7 and cached dependencies.
+- On-device Activity Manager showed the foreground `MonitorService` active; it runs both BLE and
+  Wi-Fi collectors. Radar displayed 16 live signals. Battery fell to 7% and the phone was not
+  charging. The `adb install -r` attempt did not return a success status, and the screenshot still
+  appeared to show the prior layout. **New UI on-device verification remains pending; charge the
+  phone, reinstall mapsOnline, then scroll through Radar to confirm the saved inventory below.**
+
+**Radar ideas for Claude after the identity work lands (keep claims evidence-based):**
+1. Replace hash-jittered unknown-bearing spots with stable category lanes and concentric RSSI
+   proxy bands; reserve compass bearings for `LOCATED` estimates only. Label the bands as rough
+   signal strength, not measured distance.
+2. Add compact BLE / Wi-Fi source badges and a seen-recently / last-heard age to each live row;
+   keep selection keyed by device ID so rows do not jump as RSSI changes.
+3. Add an optional strongest/closest-proxy ordering and category visibility toggles, while keeping
+   the default discovery order stable and showing when distance is only an RSSI heuristic.
+4. When `DeviceKind` wiring is ready, map those kinds to the existing category colors and reuse the
+   same legend in Radar and the Devices screen.
+
+**Do not undo:** keep Radar as a single lazy scroll container (no nested scrolling lists) and keep
+the database inventory section below live detections. Do not edit `DevicesScreen.kt` or
+`core/.../id/` while Claude's recorded identity work is in progress.
+
 Codex: if you pick something from this list, note it here first so we don't collide.
 
 ### 2026-10-31 (later) — Claude
