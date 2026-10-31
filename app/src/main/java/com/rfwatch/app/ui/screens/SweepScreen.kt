@@ -8,6 +8,7 @@ import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -49,6 +50,10 @@ import com.rfwatch.core.model.Band
 import kotlinx.coroutines.delay
 import com.rfwatch.app.ui.theme.RadarCyan
 import com.rfwatch.app.ui.theme.RadarPink
+import com.rfwatch.app.ui.theme.ConsoleOutline
+import com.rfwatch.app.ui.theme.ConsolePanel
+import com.rfwatch.app.ui.theme.ConsolePanelRaised
+import com.rfwatch.app.ui.theme.ConsoleMuted
 import com.rfwatch.core.df.HuntTone
 import com.rfwatch.core.df.SweepResult
 import kotlin.math.cos
@@ -98,7 +103,8 @@ fun SweepScreen(vm: RfWatchViewModel, modifier: Modifier = Modifier) {
     }
 
     Column(modifier.fillMaxSize().padding(12.dp)) {
-        Text("Find a device", fontSize = 18.sp)
+        Text("DIRECTION FINDING", fontSize = 10.sp, color = RadarCyan, letterSpacing = 1.5.sp)
+        Text("Find a device", fontSize = 21.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold)
         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             FilterChip(selected = hunt, enabled = !sweeping, onClick = { hunt = true }, label = { Text("Hunt (hot/cold)") })
             FilterChip(selected = !hunt && guided, enabled = !sweeping, onClick = { hunt = false; guided = true }, label = { Text("Sweep: steps") })
@@ -125,11 +131,15 @@ fun SweepScreen(vm: RfWatchViewModel, modifier: Modifier = Modifier) {
         )
 
         if (target == null) {
-            Text("Pick a target (Bluetooth works best — Wi-Fi is only scanned every ~30 s):", fontSize = 13.sp, modifier = Modifier.padding(top = 8.dp))
+            Text("SELECT TARGET  ·  BLE updates faster than Wi-Fi", fontSize = 10.sp, color = ConsoleMuted, letterSpacing = 0.5.sp, modifier = Modifier.padding(top = 8.dp, bottom = 4.dp))
             val candidates = contacts.values.sortedWith(compareBy<LiveContact> { it.band != Band.BLE }.thenByDescending { it.lastRssi })
             LazyColumn {
                 items(candidates, key = { it.id }) { c ->
-                    Card(Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
+                    Card(
+                        Modifier.fillMaxWidth().padding(vertical = 3.dp),
+                        colors = androidx.compose.material3.CardDefaults.cardColors(containerColor = ConsolePanel),
+                        border = BorderStroke(1.dp, ConsoleOutline),
+                    ) {
                         Row(
                             Modifier.fillMaxWidth().padding(10.dp),
                             horizontalArrangement = Arrangement.SpaceBetween,
@@ -148,9 +158,10 @@ fun SweepScreen(vm: RfWatchViewModel, modifier: Modifier = Modifier) {
                 }
             }
         } else {
+            Text("ACTIVE TARGET", fontSize = 10.sp, color = ConsoleMuted, letterSpacing = 1.sp, modifier = Modifier.padding(top = 8.dp))
             Text(
                 "Target: ${targetContact?.label ?: target} · ${targetContact?.band ?: ""} · now ${targetContact?.lastRssi ?: "?"} dBm",
-                fontSize = 13.sp, modifier = Modifier.padding(top = 8.dp),
+                fontSize = 14.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Medium,
             )
             if (targetContact?.band == Band.WIFI) {
                 Text("Wi-Fi targets update only every ~30 s — expect too few samples. Prefer a Bluetooth device.", fontSize = 11.sp, color = WarnAmber)

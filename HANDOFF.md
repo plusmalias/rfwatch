@@ -64,6 +64,27 @@ INTERNET/network-state permission and no glyphs; on-device: no crashes, data pre
    (`FollowerScorer` is unused by the app), retention purge (never called), CSV export,
    compact device rows.
 
+### 2026-10-31 — Codex
+
+**Field console UI refresh:**
+- Introduced a consistent dark console palette, mint/amber/cyan signal colors, monospace
+  technical labels, and a persistent RF//WATCH / PASSIVE RX header with matching bottom
+  navigation.
+- Restyled Radar, Devices, Sweep, Map, Cellular, Room Sweep, Event Log, More, and Settings
+  screens with clearer section hierarchy, restrained borders, and coordinated panel colors.
+- Settings now describes online map tile network use accurately; scanner behavior and stored
+  data schema were not changed.
+
+**Verified:** `:core:test`, `:app:testMapsOnlineDebugUnitTest`, `assembleMapsOnlineDebug`, and
+`assembleOfflineDebug` passed with installed Gradle 8.7 (offline, cached dependencies). Installed
+mapsOnline with `adb install -r` on the ZTE P660 at `192.168.0.172:5555`, preserving app data;
+Radar screen rendered in the on-device screenshot. The phone reported 10–11% battery during
+verification; no scan was started. Offline flavor was built as part of the task command.
+
+**In progress / next:** continue Claude's device database wiring from the entries above. The
+phone should be charged before longer live scan testing. Preserve this shared dark console theme
+and keep location, distance, and detection claims appropriately qualified.
+
 Codex: if you pick something from this list, note it here first so we don't collide.
 
 ### 2026-10-31 (later) — Claude

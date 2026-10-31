@@ -32,7 +32,9 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -59,6 +61,12 @@ import com.rfwatch.app.ui.screens.RoomSweepScreen
 import com.rfwatch.app.ui.screens.SettingsScreen
 import com.rfwatch.app.ui.screens.SweepScreen
 import com.rfwatch.app.ui.theme.RfWatchTheme
+import com.rfwatch.app.ui.theme.ConsoleBackground
+import com.rfwatch.app.ui.theme.ConsoleMuted
+import com.rfwatch.app.ui.theme.ConsoleOutline
+import com.rfwatch.app.ui.theme.ConsolePanel
+import com.rfwatch.app.ui.theme.ConsoleText
+import com.rfwatch.app.ui.theme.OkGreen
 
 private enum class Tab(val label: String) {
     RADAR("Radar"), DEVICES("Devices"), SWEEP("Sweep"), MAP("Map"), MORE("More"),
@@ -100,8 +108,13 @@ class MainActivity : ComponentActivity() {
                 }
 
                 Scaffold(
+                    containerColor = ConsoleBackground,
                     bottomBar = {
-                        NavigationBar {
+                        NavigationBar(
+                            containerColor = ConsolePanel,
+                            contentColor = ConsoleText,
+                            tonalElevation = 0.dp,
+                        ) {
                             val items = listOf(
                                 Tab.RADAR to Icons.Filled.LocationOn,
                                 Tab.DEVICES to Icons.Filled.List,
@@ -115,12 +128,46 @@ class MainActivity : ComponentActivity() {
                                     onClick = { tab = t },
                                     icon = { Icon(icon, contentDescription = t.label) },
                                     label = { Text(t.label, maxLines = 1) },
+                                    colors = NavigationBarItemDefaults.colors(
+                                        selectedIconColor = OkGreen,
+                                        selectedTextColor = OkGreen,
+                                        indicatorColor = OkGreen.copy(alpha = 0.14f),
+                                        unselectedIconColor = ConsoleMuted,
+                                        unselectedTextColor = ConsoleMuted,
+                                    ),
                                 )
                             }
                         }
                     }
                 ) { padding ->
                     Column(Modifier.fillMaxSize().padding(padding)) {
+                        Surface(
+                            color = ConsoleBackground,
+                            border = androidx.compose.foundation.BorderStroke(1.dp, ConsoleOutline.copy(alpha = 0.7f)),
+                        ) {
+                            Row(
+                                Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 9.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                            ) {
+                                Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
+                                    Text("RF//WATCH", style = MaterialTheme.typography.labelSmall, color = OkGreen)
+                                    Text("FIELD CONSOLE", style = MaterialTheme.typography.labelSmall, color = ConsoleMuted)
+                                }
+                                Surface(
+                                    color = OkGreen.copy(alpha = 0.1f),
+                                    shape = androidx.compose.foundation.shape.RoundedCornerShape(50),
+                                    border = androidx.compose.foundation.BorderStroke(1.dp, OkGreen.copy(alpha = 0.35f)),
+                                ) {
+                                    Text(
+                                        "●  PASSIVE RX",
+                                        Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = OkGreen,
+                                    )
+                                }
+                            }
+                        }
                         if (!locationEnabled) {
                             LocationOffNotice {
                                 startActivity(Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS))

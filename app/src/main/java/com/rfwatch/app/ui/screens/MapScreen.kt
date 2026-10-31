@@ -41,6 +41,10 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.rfwatch.app.BuildConfig
 import com.rfwatch.app.data.DeviceEntity
 import com.rfwatch.app.ui.RfWatchViewModel
+import com.rfwatch.app.ui.theme.ConsoleOutline
+import com.rfwatch.app.ui.theme.ConsolePanel
+import com.rfwatch.app.ui.theme.ConsolePanelRaised
+import com.rfwatch.app.ui.theme.ConsoleMuted
 import com.rfwatch.core.df.DriveByEstimator
 import com.rfwatch.core.df.EmitterEstimate
 import com.rfwatch.core.df.EstimateStatus
@@ -339,7 +343,8 @@ private fun OnlineDeviceMap(
     Column(modifier.fillMaxSize().padding(horizontal = 10.dp, vertical = 8.dp)) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
             Column(Modifier.weight(1f)) {
-                Text("LIVE DEVICE MAP", fontSize = 17.sp)
+                Text("LIVE DEVICE MAP", fontSize = 10.sp, color = MaterialTheme.colorScheme.primary, letterSpacing = 1.2.sp)
+                Text("${mapped.size} located records", fontSize = 16.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold)
                 Text(
                     "${mapped.size} mapped · $locatedCount located · $movingCount moving · ${mapped.size - locatedCount - movingCount} heard-only",
                     fontSize = 11.sp, color = Color(0xFF9CA3AF),
@@ -363,11 +368,11 @@ private fun OnlineDeviceMap(
         Box(Modifier.fillMaxWidth().weight(1f)) {
             AndroidView(factory = { mapView }, modifier = Modifier.fillMaxSize())
             if (mapError) {
-                Card(Modifier.align(Alignment.Center).padding(20.dp)) {
+                Card(Modifier.align(Alignment.Center).padding(20.dp), colors = CardDefaults.cardColors(containerColor = ConsolePanel), border = androidx.compose.foundation.BorderStroke(1.dp, ConsoleOutline)) {
                     Text("Map tiles unavailable. Check internet and retry by reopening Map.", Modifier.padding(12.dp), fontSize = 12.sp)
                 }
             } else if (mapped.isEmpty()) {
-                Card(Modifier.align(Alignment.TopCenter).padding(8.dp)) {
+                Card(Modifier.align(Alignment.TopCenter).padding(8.dp), colors = CardDefaults.cardColors(containerColor = ConsolePanel.copy(alpha = 0.94f)), border = androidx.compose.foundation.BorderStroke(1.dp, ConsoleOutline)) {
                     Text("Waiting for GPS-tagged detections", Modifier.padding(horizontal = 10.dp, vertical = 7.dp), fontSize = 11.sp)
                 }
             }
@@ -379,7 +384,7 @@ private fun OnlineDeviceMap(
         }
         Text("Online map tiles reveal the visible area requested; radio records stay on-device.", Modifier.padding(top = 4.dp), fontSize = 9.sp, color = Color(0xFF9CA3AF))
         selected?.let { item ->
-            Card(Modifier.fillMaxWidth().padding(top = 5.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
+            Card(Modifier.fillMaxWidth().padding(top = 5.dp), colors = CardDefaults.cardColors(containerColor = ConsolePanel), border = androidx.compose.foundation.BorderStroke(1.dp, ConsoleOutline)) {
                 Column(Modifier.padding(9.dp)) {
                     Text(item.entity.displayName ?: item.entity.id, fontSize = 13.sp)
                     Text("${item.motionLabel} · ${item.locationBasis}", fontSize = 10.sp, color = Color(0xFF9CA3AF))
@@ -410,7 +415,8 @@ private fun fitMapToDevices(map: MapLibreMap?, devices: List<MappedDevice>, user
 private fun OfflineDeviceMap(devices: List<DeviceEntity>, modifier: Modifier) {
     val mapped = devices.filter { it.observedLat != null && it.observedLon != null }
     Column(modifier.fillMaxSize().padding(12.dp)) {
-        Text("Device map", fontSize = 18.sp)
+        Text("DEVICE MAP", fontSize = 10.sp, color = MaterialTheme.colorScheme.primary, letterSpacing = 1.2.sp)
+        Text("Offline location view", fontSize = 18.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold)
         Text("Street basemap is disabled in the offline build. Build the mapsOnline variant for the interactive OpenStreetMap layer.", fontSize = 12.sp, color = Color(0xFF9CA3AF))
         if (mapped.isEmpty()) {
             Text("No GPS-tagged detections yet. Enable phone Location while scanning.", Modifier.padding(top = 10.dp), fontSize = 13.sp)

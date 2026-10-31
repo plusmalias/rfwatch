@@ -41,6 +41,11 @@ import com.rfwatch.app.ui.theme.DangerRed
 import com.rfwatch.app.ui.theme.RadarCyan
 import com.rfwatch.app.ui.theme.RadarPink
 import com.rfwatch.app.ui.theme.WarnAmber
+import com.rfwatch.app.ui.theme.ConsoleOutline
+import com.rfwatch.app.ui.theme.ConsolePanel
+import com.rfwatch.app.ui.theme.ConsolePanelRaised
+import com.rfwatch.app.ui.theme.ConsoleMuted
+import com.rfwatch.app.ui.theme.SignalBlue
 import com.rfwatch.core.df.EstimateStatus
 import kotlin.math.cos
 import kotlin.math.min
@@ -67,21 +72,26 @@ fun RadarScreen(vm: RfWatchViewModel, modifier: Modifier = Modifier) {
     Column(modifier.fillMaxSize().padding(12.dp)) {
         Row(Modifier.fillMaxWidth().padding(bottom = 8.dp), verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
-                Text("RFWATCH  /  LIVE RADAR", fontSize = 12.sp, color = RadarCyan)
-                Text("${list.size} signals in view", fontSize = 20.sp)
+                Text("LIVE SPECTRUM", fontSize = 10.sp, color = RadarCyan, letterSpacing = 1.5.sp)
+                Text("${list.size} signals in view", fontSize = 20.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold)
             }
-            androidx.compose.material3.Surface(color = Color(0xFF38252D), shape = CircleShape) {
-                Text("$priorityCount WATCH", Modifier.padding(horizontal = 12.dp, vertical = 7.dp), fontSize = 11.sp, color = RadarPink)
+            androidx.compose.material3.Surface(
+                color = if (priorityCount > 0) DangerRed.copy(alpha = 0.12f) else ConsolePanelRaised,
+                shape = CircleShape,
+                border = BorderStroke(1.dp, if (priorityCount > 0) DangerRed.copy(alpha = 0.45f) else ConsoleOutline),
+            ) {
+                Text("$priorityCount WATCH", Modifier.padding(horizontal = 12.dp, vertical = 7.dp), fontSize = 10.sp, color = if (priorityCount > 0) DangerRed else ConsoleMuted)
             }
         }
 
         Card(
             Modifier.fillMaxWidth().padding(bottom = 10.dp),
-            colors = CardDefaults.cardColors(containerColor = Color(0xFF0A2028)),
+            colors = CardDefaults.cardColors(containerColor = ConsolePanel),
+            border = BorderStroke(1.dp, ConsoleOutline),
         ) {
             Column(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp)) {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                    Text("SCOPE", fontSize = 11.sp, color = Color(0xFF86A5B0))
+                    Text("PROXIMITY SCOPE", fontSize = 10.sp, color = ConsoleMuted, letterSpacing = 1.sp)
                     Text(
                         heading.deg?.let { "HEADING ${it.toInt()}°" } ?: "HEADING UNAVAILABLE",
                         fontSize = 11.sp, color = if (heading.deg == null) WarnAmber else RadarCyan,
@@ -93,7 +103,7 @@ fun RadarScreen(vm: RfWatchViewModel, modifier: Modifier = Modifier) {
                 Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                         LegendDot(RadarCyan, "You / BLE")
-                        LegendDot(Color(0xFF59B7FF), "Wi-Fi")
+                        LegendDot(SignalBlue, "Wi-Fi")
                         LegendDot(RadarPink, "Tracker")
                     }
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
@@ -106,8 +116,8 @@ fun RadarScreen(vm: RfWatchViewModel, modifier: Modifier = Modifier) {
             }
         }
         Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-            Text("DETECTED DEVICES", fontSize = 12.sp, color = Color(0xFF9BB0B8))
-            Text("Tap a row to select", fontSize = 11.sp, color = Color(0xFF78909A))
+            Text("DETECTED DEVICES", fontSize = 10.sp, color = ConsoleMuted, letterSpacing = 1.sp)
+            Text("Tap to select", fontSize = 10.sp, color = ConsoleMuted)
         }
         LazyColumn(Modifier.fillMaxWidth().weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             items(list, key = { it.id }) { c ->
@@ -205,9 +215,9 @@ private fun ContactRow(c: LiveContact, vm: RfWatchViewModel, selected: Boolean, 
     Card(
         Modifier.fillMaxWidth().clickable(onClick = onSelect),
         colors = CardDefaults.cardColors(
-            containerColor = if (selected) Color(0xFF164354) else Color(0xFF14262E),
+            containerColor = if (selected) Color(0xFF102A2A) else ConsolePanel,
         ),
-        border = BorderStroke(1.dp, if (selected) RadarCyan else colorFor(c).copy(alpha = 0.45f)),
+        border = BorderStroke(1.dp, if (selected) RadarCyan.copy(alpha = 0.75f) else ConsoleOutline),
     ) {
         Row(
             Modifier.fillMaxWidth().padding(10.dp),
@@ -233,7 +243,7 @@ private fun ContactRow(c: LiveContact, vm: RfWatchViewModel, selected: Boolean, 
                     est?.status == EstimateStatus.INSUFFICIENT -> "Need GPS-tagged readings while moving · ${c.lastRssi} dBm"
                     else -> "${c.classification} · ${c.lastRssi} dBm · ~${formatRssiDistance(rssiDistanceEstimateMeters(c.lastRssi))} m RSSI proxy"
                 }
-                Text(detail, fontSize = 12.sp, color = Color(0xFF9CA3AF))
+                Text(detail, fontSize = 12.sp, color = ConsoleMuted)
                 if (est?.status == EstimateStatus.LOCATED && est.lat != null && est.lon != null) {
                     val uncertainty = est.ellipse?.semiMajorM?.let { " · ±${it.toInt()} m" } ?: ""
                     Text(

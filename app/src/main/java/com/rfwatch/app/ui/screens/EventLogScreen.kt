@@ -27,6 +27,8 @@ import androidx.compose.ui.unit.sp
 import com.rfwatch.app.ui.RfWatchViewModel
 import com.rfwatch.app.ui.theme.DangerRed
 import com.rfwatch.app.ui.theme.WarnAmber
+import com.rfwatch.app.ui.theme.ConsoleOutline
+import com.rfwatch.app.ui.theme.ConsolePanel
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -41,12 +43,15 @@ fun EventLogScreen(vm: RfWatchViewModel, modifier: Modifier = Modifier) {
 
     Column(modifier.fillMaxSize().padding(12.dp)) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-            Text("Event log", fontSize = 18.sp)
+            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text("ACTIVITY / ALERTS", fontSize = 10.sp, color = WarnAmber, letterSpacing = 1.2.sp)
+                Text("Event log", fontSize = 20.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold)
+            }
             Button(onClick = { exportJson(context, events, alerts) }) { Text("Export JSON") }
         }
         LazyColumn(verticalArrangement = Arrangement.spacedBy(4.dp)) {
             items(alerts, key = { "a${it.rowId}" }) { a ->
-                Card(Modifier.fillMaxWidth()) {
+                Card(Modifier.fillMaxWidth(), colors = androidx.compose.material3.CardDefaults.cardColors(containerColor = ConsolePanel), border = androidx.compose.foundation.BorderStroke(1.dp, ConsoleOutline)) {
                     Column(Modifier.padding(8.dp)) {
                         val color = when (a.type) {
                             "AXON_SIGNATURE", "LAW_ENFORCEMENT_SIGNATURE", "PRIORITY_NEARBY" -> DangerRed
@@ -60,7 +65,7 @@ fun EventLogScreen(vm: RfWatchViewModel, modifier: Modifier = Modifier) {
                 }
             }
             items(events, key = { "e${it.rowId}" }) { e ->
-                Card(Modifier.fillMaxWidth()) {
+                Card(Modifier.fillMaxWidth(), colors = androidx.compose.material3.CardDefaults.cardColors(containerColor = ConsolePanel), border = androidx.compose.foundation.BorderStroke(1.dp, ConsoleOutline)) {
                     Column(Modifier.padding(8.dp)) {
                         Text(e.kind, fontSize = 13.sp)
                         Text("${fmt.format(Date(e.timestampMs))} · ${e.detail}", fontSize = 11.sp, color = Color(0xFF9CA3AF))

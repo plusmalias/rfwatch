@@ -14,6 +14,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.material3.Text
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.FilterChip
@@ -36,6 +37,10 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import com.rfwatch.app.ui.RfWatchViewModel
+import com.rfwatch.app.ui.theme.ConsoleOutline
+import com.rfwatch.app.ui.theme.ConsolePanel
+import com.rfwatch.app.ui.theme.ConsolePanelRaised
+import com.rfwatch.app.ui.theme.ConsoleMuted
 import java.util.Date
 import java.util.Locale
 
@@ -70,7 +75,10 @@ fun DevicesScreen(vm: RfWatchViewModel, modifier: Modifier = Modifier, onRoom: (
     }
     Column(modifier.fillMaxSize().padding(12.dp)) {
         Row(Modifier.fillMaxWidth().padding(bottom = 8.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-            Text("Devices (${visibleDevices.size}/${devices.size})", fontSize = 18.sp)
+            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text("SIGNAL INVENTORY", fontSize = 10.sp, color = ConsoleMuted, letterSpacing = 1.2.sp)
+                Text("${visibleDevices.size} / ${devices.size} devices", fontSize = 18.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold)
+            }
             Button(onClick = onRoom) { Text("Room sweep") }
         }
         OutlinedTextField(
@@ -117,11 +125,12 @@ private fun DeviceCard(d: com.rfwatch.app.data.DeviceEntity, selected: Boolean, 
     Card(
         Modifier.fillMaxWidth().clickable(onClick = onClick),
         colors = CardDefaults.cardColors(
-            containerColor = if (selected) androidx.compose.material3.MaterialTheme.colorScheme.secondaryContainer else androidx.compose.material3.MaterialTheme.colorScheme.surfaceVariant,
+            containerColor = if (selected) Color(0xFF102A2A) else ConsolePanel,
         ),
+        border = BorderStroke(1.dp, if (selected) com.rfwatch.app.ui.theme.RadarCyan.copy(alpha = 0.7f) else ConsoleOutline),
     ) {
                     Column(Modifier.padding(10.dp)) {
-                        Text((if (selected) "Selected · " else "") + (d.displayName ?: d.id), fontSize = 14.sp)
+                        Text((if (selected) "● SELECTED  /  " else "") + (d.displayName ?: d.id), fontSize = 14.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold)
                         Text(
                             "${d.brand ?: "Brand unknown"} · ${d.category ?: if (d.band == "WIFI") "Wi-Fi device" else "Bluetooth device"}",
                             fontSize = 12.sp, color = deviceCategoryColor(d.category, d.classification),

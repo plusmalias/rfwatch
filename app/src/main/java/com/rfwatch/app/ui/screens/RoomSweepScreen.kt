@@ -23,6 +23,9 @@ import androidx.compose.ui.unit.sp
 import com.rfwatch.app.ui.RfWatchViewModel
 import com.rfwatch.app.ui.theme.DangerRed
 import com.rfwatch.app.ui.theme.WarnAmber
+import com.rfwatch.app.ui.theme.ConsoleOutline
+import com.rfwatch.app.ui.theme.ConsolePanel
+import com.rfwatch.app.ui.theme.ConsoleMuted
 import com.rfwatch.core.rules.Threat
 import com.rfwatch.core.df.EmitterEstimate
 import com.rfwatch.core.df.EstimateStatus
@@ -34,7 +37,8 @@ fun RoomSweepScreen(vm: RfWatchViewModel, modifier: Modifier = Modifier) {
     val findings by vm.room.collectAsState()
     val estimates = remember { mutableStateMapOf<String, EmitterEstimate>() }
     Column(modifier.fillMaxSize().padding(12.dp)) {
-        Text("Room sweep", fontSize = 18.sp)
+        Text("ENVIRONMENT CHECK", fontSize = 10.sp, color = WarnAmber, letterSpacing = 1.3.sp)
+        Text("Room sweep", fontSize = 20.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold)
         Text(
             "Checks advertised BLE names and Wi-Fi identifiers for camera/IoT signatures. " +
                 "Candidates are not proof; wired, powered-off, and non-broadcasting cameras are invisible to radio scans.",
@@ -45,7 +49,7 @@ fun RoomSweepScreen(vm: RfWatchViewModel, modifier: Modifier = Modifier) {
         }
         LazyColumn {
             items(findings, key = { "${it.key}:${it.reason}" }) { f ->
-                Card(Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
+                Card(Modifier.fillMaxWidth().padding(vertical = 4.dp), colors = androidx.compose.material3.CardDefaults.cardColors(containerColor = ConsolePanel), border = androidx.compose.foundation.BorderStroke(1.dp, ConsoleOutline)) {
                     Column(Modifier.padding(10.dp)) {
                         Text(
                             f.reason.name.replace('_', ' '),

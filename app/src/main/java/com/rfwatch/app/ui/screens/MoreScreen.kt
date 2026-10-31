@@ -18,6 +18,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.rfwatch.app.ui.theme.OkGreen
 
 @Composable
 fun MoreScreen(
@@ -31,7 +32,8 @@ fun MoreScreen(
         modifier = modifier.padding(horizontal = 16.dp, vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        Text("More", style = MaterialTheme.typography.headlineSmall)
+        Text("TOOLS", style = MaterialTheme.typography.labelSmall, color = OkGreen)
+        Text("Field utilities", style = MaterialTheme.typography.headlineSmall)
         Text(
             "Cellular checks, room sweep, history and settings.",
             style = MaterialTheme.typography.bodyMedium,

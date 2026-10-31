@@ -20,6 +20,9 @@ import com.rfwatch.app.ui.RfWatchViewModel
 import com.rfwatch.app.ui.theme.DangerRed
 import com.rfwatch.app.ui.theme.OkGreen
 import com.rfwatch.app.ui.theme.WarnAmber
+import com.rfwatch.app.ui.theme.ConsoleOutline
+import com.rfwatch.app.ui.theme.ConsolePanel
+import com.rfwatch.app.ui.theme.ConsoleMuted
 import com.rfwatch.core.cs.cell.CellThreatLevel
 
 /**
@@ -32,7 +35,8 @@ fun CellScreen(vm: RfWatchViewModel, modifier: Modifier = Modifier) {
     val assessment by vm.cell.collectAsState()
 
     Column(modifier.fillMaxSize().padding(12.dp)) {
-        Text("Cell / IMSI-catcher monitor", fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
+        Text("CELLULAR SECURITY", fontSize = 10.sp, color = OkGreen, letterSpacing = 1.3.sp)
+        Text("Serving cell monitor", fontSize = 20.sp, fontWeight = FontWeight.SemiBold)
         Text(
             "Heuristic only. A non-rooted phone cannot read the baseband, so this watches " +
                 "the serving cell, its neighbours, radio type and signal. Roaming, a new " +
@@ -53,7 +57,7 @@ fun CellScreen(vm: RfWatchViewModel, modifier: Modifier = Modifier) {
             CellThreatLevel.LOW -> "LOW" to WarnAmber
             CellThreatLevel.NONE -> if (a.learning) "LEARNING" to Color(0xFF9CA3AF) else "CLEAR" to OkGreen
         }
-        Card(Modifier.fillMaxWidth().padding(bottom = 8.dp)) {
+        Card(Modifier.fillMaxWidth().padding(bottom = 8.dp), colors = androidx.compose.material3.CardDefaults.cardColors(containerColor = ConsolePanel), border = androidx.compose.foundation.BorderStroke(1.dp, ConsoleOutline)) {
             Column(Modifier.padding(12.dp)) {
                 Text(label, fontSize = 22.sp, fontWeight = FontWeight.Bold, color = color)
                 Text(a.servingSummary, fontSize = 12.sp, color = Color(0xFF9CA3AF))

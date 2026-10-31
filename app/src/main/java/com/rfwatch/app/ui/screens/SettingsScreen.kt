@@ -26,6 +26,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.rfwatch.app.RfWatchApp
+import com.rfwatch.app.BuildConfig
+import com.rfwatch.app.ui.theme.OkGreen
+import com.rfwatch.app.ui.theme.ConsoleMuted
 import com.rfwatch.core.data.RetentionPolicy
 import kotlinx.coroutines.launch
 
@@ -46,7 +49,8 @@ fun SettingsScreen(modifier: Modifier = Modifier) {
     val scope = rememberCoroutineScope()
 
     Column(modifier.fillMaxSize().padding(16.dp)) {
-        Text("Settings", fontSize = 20.sp)
+        Text("PREFERENCES", fontSize = 10.sp, color = OkGreen, letterSpacing = 1.3.sp)
+        Text("Settings", fontSize = 21.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold)
 
         Text("Data retention: ${retentionDays.toInt()} days", fontSize = 14.sp, modifier = Modifier.padding(top = 16.dp))
         Text("Observations and alerts older than this are purged automatically.", fontSize = 12.sp, color = Color(0xFF9CA3AF))
@@ -74,8 +78,8 @@ fun SettingsScreen(modifier: Modifier = Modifier) {
 
         Text(
             "Encrypted at rest with SQLCipher; the key is held in the Android Keystore. " +
-                "No INTERNET permission in this build.",
-            fontSize = 11.sp, color = Color(0xFF6B7280), modifier = Modifier.padding(top = 24.dp),
+                if (BuildConfig.FLAVOR == "mapsOnline") "Online map tiles use the network; scan records stay on-device." else "This offline build has no network permission.",
+            fontSize = 11.sp, color = ConsoleMuted, modifier = Modifier.padding(top = 24.dp),
         )
     }
 
