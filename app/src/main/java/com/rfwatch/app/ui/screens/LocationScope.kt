@@ -160,8 +160,8 @@ internal fun LocationScopePanel(
             }
             Text(
                 "Dots are where each device most likely is, from where its signal was strongest as you moved " +
-                    "(green ring = drive-by fit). Shaded circle = uncertainty. Walk around for better positions; " +
-                    "tap a dot or row for its own chart.",
+                    "(needs 25 m+ of walking/driving; green ring = drive-by fit). Circle = uncertainty. " +
+                    "Tap a dot or row for its own chart.",
                 fontSize = 10.sp, color = Color(0xFF78909A),
             )
             if (unplaced.isNotEmpty()) {
@@ -230,7 +230,9 @@ private fun DrawScope.drawLocationScope(placed: List<Placed>, rangeM: Double, se
         val py = cy - (p.north * scale).toFloat()
         val color = deviceCategoryColor(p.contact.category, p.contact.classification)
         val selected = p.contact.id == selectedId
-        drawCircle(color.copy(alpha = if (selected) 0.22f else 0.10f), (p.radiusM * scale).toFloat().coerceIn(6f, maxR), Offset(px, py))
+        val r = (p.radiusM * scale).toFloat().coerceIn(6f, maxR * 0.6f)
+        if (selected) drawCircle(color.copy(alpha = 0.20f), r, Offset(px, py))
+        drawCircle(color.copy(alpha = if (selected) 0.8f else 0.25f), r, Offset(px, py), style = Stroke(if (selected) 2f else 1f))
         if (p.driveBy) drawCircle(OkGreen, 11f, Offset(px, py), style = Stroke(2.5f))
         if (selected) drawCircle(Color.White, 14f, Offset(px, py), style = Stroke(2.5f))
         drawCircle(color, if (selected) 8f else 6f, Offset(px, py))
@@ -238,7 +240,8 @@ private fun DrawScope.drawLocationScope(placed: List<Placed>, rangeM: Double, se
 }
 
 private fun niceRange(m: Double): Double {
-    val steps = listOf(10.0, 20.0, 30.0, 50.0, 75.0, 100.0, 150.0, 200.0, 300.0, 500.0, 1000.0, 2000.0)
+    // Never zoom tighter than 20 m: phone GPS and RSSI cannot support finer placement.
+    val steps = listOf(20.0, 30.0, 50.0, 75.0, 100.0, 150.0, 200.0, 300.0, 500.0, 1000.0, 2000.0)
     return steps.firstOrNull { it >= m } ?: steps.last()
 }
 

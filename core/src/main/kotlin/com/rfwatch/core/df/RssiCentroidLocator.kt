@@ -11,7 +11,7 @@ import kotlin.math.sqrt
  * A device position from RSSI-weighted GPS sightings.
  *
  * @param directional true only when the sightings were spread over at least
- *        [RssiCentroidLocator.MIN_SPREAD_M]; otherwise every sighting came from (almost) one spot
+ *        [RssiCentroidLocator.MIN_SPREAD_M] and well beyond GPS jitter; otherwise every sighting came from (almost) one spot
  *        and the estimate says nothing about direction — only "near where you were".
  * @param radiusM 1-sigma-ish uncertainty radius in metres (sample scatter + GPS accuracy + a
  *        floor from the RSSI distance proxy of the strongest reading).
@@ -36,7 +36,9 @@ data class CentroidEstimate(
 object RssiCentroidLocator {
 
     const val MIN_SAMPLES = 3
-    const val MIN_SPREAD_M = 8.0
+    const val MIN_SPREAD_M = 25.0
+    /** Movement must also exceed this multiple of the typical GPS error, or it is just jitter. */
+    const val SPREAD_OVER_ACCURACY = 3.0
     const val WINDOW_DB = 12.0
 
     fun estimate(observations: List<RadioObservation>): CentroidEstimate? {
@@ -57,7 +59,8 @@ object RssiCentroidLocator {
 
         val allEnu = geo.map { frame.toEnu(it.fix!!.lat, it.fix.lon) }
         val spread = hypot(allEnu.maxOf { it.east } - allEnu.minOf { it.east }, allEnu.maxOf { it.north } - allEnu.minOf { it.north })
-        val directional = spread >= MIN_SPREAD_M
+        val typicalAccuracy = geo.map { it.fix!!.accuracyM }.sorted()[geo.size / 2]
+        val directional = spread >= MIN_SPREAD_M && spread >= SPREAD_OVER_ACCURACY * typicalAccuracy
         // Without spread the device could be anywhere around the spot at roughly the RSSI range.
         val rangeFloor = rssiRangeM(maxRssi)
         val radius = if (directional) max(scatter + gpsAcc, rangeFloor * 0.5) else max(rangeFloor, gpsAcc)

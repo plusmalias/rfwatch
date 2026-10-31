@@ -44,4 +44,14 @@ class RssiCentroidLocatorTest {
     @Test fun tooFewSamplesGivesNothing() {
         assertNull(RssiCentroidLocator.estimate(listOf(obs(0.0, 0.0, -60), obs(5.0, 0.0, -65))))
     }
+
+    @Test fun indoorGpsJitterIsNotMistakenForMovement() {
+        // Sitting still indoors: fixes wander ±6 m with 8 m reported accuracy.
+        val jitter = listOf(0.0 to 0.0, 6.0 to -4.0, -5.0 to 5.0, 3.0 to 6.0, -6.0 to -3.0, 5.0 to 2.0, -2.0 to -6.0)
+        val samples = jitter.mapIndexed { i, (e, n) ->
+            val (lat, lon) = frame.toLatLon(e, n)
+            RadioObservation("d", Band.BLE, -65 - i % 4, 0, fix = GpsFix(lat, lon, 8.0, 0))
+        }
+        assertFalse(RssiCentroidLocator.estimate(samples)!!.directional)
+    }
 }
