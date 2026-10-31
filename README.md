@@ -140,9 +140,11 @@ Requires a JDK 17 and the Android SDK (`local.properties` with `sdk.dir`, or `AN
 
 ## Verification status (be aware)
 
-- **`:core`** — complete, with the full unit-test suite your spec listed (cosine fit, LM
-  fit, mobility, follower scoring incl. exclusions, tracker hex fixtures, ENU, heading
-  fallback, rules, baselines, retention, phrasing).
+- **`:core`** — complete and **verified: `./gradlew :core:test` → BUILD SUCCESSFUL, 39/39
+  passing** (cosine sweep fit, LM localiser <50 m + error ellipse + RTT, mobility/trend,
+  tracker hex-fixture parsers + identity linking, follower scoring incl. exclusions,
+  own-device learning, baselines, room sweep, ENU/geo, heading fusion, rule packs,
+  retention purge, alert phrasing, and the IMSI-catcher/stingray heuristics).
 - **`:app`** — complete and wired, but it was authored on a machine **without a JDK or
   Android SDK** (toolchain downloads were network-throttled), so it has **not yet been
   compiled here**. Run `./gradlew assembleOfflineDebug test` on a toolchain'd machine; expect
