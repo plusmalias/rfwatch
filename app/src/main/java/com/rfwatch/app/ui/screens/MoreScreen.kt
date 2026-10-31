@@ -27,6 +27,8 @@ fun MoreScreen(
     onRoom: () -> Unit,
     onLog: () -> Unit,
     onSettings: () -> Unit,
+    /** Extra protective tools: (title, description, open). */
+    tools: List<Triple<String, String, () -> Unit>> = emptyList(),
 ) {
     Column(
         modifier = modifier.padding(horizontal = 16.dp, vertical = 12.dp),
@@ -39,6 +41,7 @@ fun MoreScreen(
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
+        tools.forEach { (title, description, open) -> MoreAction(title, description, Icons.Filled.Search, open) }
         MoreAction("Cellular checks", "Review cell changes and heuristic alerts.", Icons.Filled.CellTower, onCell)
         MoreAction("Room sweep", "Review nearby Wi-Fi devices and findings.", Icons.Filled.Search, onRoom)
         MoreAction("Event log", "Browse saved observations and alerts.", Icons.Filled.List, onLog)

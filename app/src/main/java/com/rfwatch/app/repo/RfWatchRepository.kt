@@ -482,6 +482,24 @@ class RfWatchRepository(
         _positions.value = next
     }
 
+    /** Logs a finished skimmer check (all results, verbose) and alerts on HIGH findings. */
+    suspend fun logSkimmerCheck(results: List<com.rfwatch.core.cs.SkimmerAssessment>, devicesSeen: Int) {
+        val now = System.currentTimeMillis()
+        val fix = fixHolder.current
+        val high = results.filter { it.level == com.rfwatch.core.cs.SkimmerLevel.HIGH }
+        val summary = "Skimmer check: $devicesSeen Classic Bluetooth devices, ${high.size} high, " +
+            "${results.count { it.level == com.rfwatch.core.cs.SkimmerLevel.MEDIUM }} medium. " +
+            results.filter { it.level != com.rfwatch.core.cs.SkimmerLevel.LOW }.joinToString(" | ") {
+                "${it.level} ${it.score}/100 ${it.address} \"${it.name ?: "(no name)"}\": ${it.reasons.joinToString("; ")}"
+            }
+        database.eventDao().insert(com.rfwatch.app.data.EventEntity(kind = "SKIMMER_CHECK", timestampMs = now, detail = summary, lat = fix?.lat, lon = fix?.lon))
+        high.forEach { a ->
+            val detail = "${a.address} \"${a.name ?: "(no name)"}\" scored ${a.score}/100 — ${a.reasons.joinToString("; ")}"
+            alertManager.raise(AlertType.SKIMMER_SUSPECTED, titleFor(AlertType.SKIMMER_SUSPECTED), detail, null, a.score / 100.0)
+            database.alertDao().insert(com.rfwatch.app.data.AlertEntity(type = AlertType.SKIMMER_SUSPECTED.name, timestampMs = now, deviceId = a.address, message = detail))
+        }
+    }
+
     /** Evidence report share intent (all alerts, or one device's full history). */
     suspend fun evidenceIntent(context: android.content.Context, deviceId: String?): android.content.Intent {
         withContext(ingestDispatcher) { flushPending() }
@@ -1136,6 +1154,7 @@ class RfWatchRepository(
         AlertType.ATTACK_TOOL -> "Hacking tool nearby"
         AlertType.BLE_SPAM -> "Bluetooth spam attack nearby"
         AlertType.EVIL_TWIN -> "Possible fake Wi-Fi (evil twin)"
+        AlertType.SKIMMER_SUSPECTED -> "Possible card skimmer nearby"
     }
 
     companion object {

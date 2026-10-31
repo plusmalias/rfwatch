@@ -70,7 +70,7 @@ import com.rfwatch.app.ui.theme.OkGreen
 
 private enum class Tab(val label: String) {
     RADAR("Radar"), DEVICES("Devices"), SWEEP("Sweep"), MAP("Map"), MORE("More"),
-    CELL("Cell"), ROOM("Room"), LOG("Log"), SETTINGS("Settings")
+    CELL("Cell"), ROOM("Room"), LOG("Log"), SETTINGS("Settings"), SKIMMER("Skimmer")
 }
 
 class MainActivity : ComponentActivity() {
@@ -185,12 +185,16 @@ class MainActivity : ComponentActivity() {
                                 Tab.MAP -> MapScreen(vm, contentModifier)
                                 Tab.LOG -> EventLogScreen(vm, contentModifier)
                                 Tab.SETTINGS -> SettingsScreen(contentModifier)
+                                Tab.SKIMMER -> com.rfwatch.app.ui.screens.SkimmerScreen(contentModifier)
                                 Tab.MORE -> MoreScreen(
                                     modifier = contentModifier,
                                     onCell = { tab = Tab.CELL },
                                     onRoom = { tab = Tab.ROOM },
                                     onLog = { tab = Tab.LOG },
                                     onSettings = { tab = Tab.SETTINGS },
+                                    tools = listOf(
+                                        Triple("Skimmer check", "Fuel pump / ATM card-skimmer Bluetooth check with full evidence.") { tab = Tab.SKIMMER },
+                                    ),
                                 )
                             }
                         }
