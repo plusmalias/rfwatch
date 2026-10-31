@@ -39,8 +39,17 @@ interface ObservationDao {
     @Query("SELECT COUNT(*) FROM observations WHERE sessionId = :sessionId")
     suspend fun countForSession(sessionId: Long): Int
     @Query("DELETE FROM observations WHERE timestampMs < :cutoff") suspend fun purgeOlderThan(cutoff: Long): Int
+    /** Devices with enough GPS-tagged hearings since [since], spread over at least [minSpanMs] — follower candidates. */
+    @Query(
+        "SELECT deviceId, COUNT(*) AS hits, MIN(timestampMs) AS firstMs, MAX(timestampMs) AS lastMs FROM observations " +
+            "WHERE lat IS NOT NULL AND lon IS NOT NULL AND timestampMs >= :since GROUP BY deviceId " +
+            "HAVING hits >= :minHits AND (lastMs - firstMs) >= :minSpanMs ORDER BY hits DESC LIMIT :limit"
+    )
+    suspend fun followerCandidates(since: Long, minHits: Int, minSpanMs: Long, limit: Int): List<FollowerCandidateRow>
     @Query("DELETE FROM observations WHERE sessionId = :sessionId") suspend fun deleteForSession(sessionId: Long): Int
 }
+
+data class FollowerCandidateRow(val deviceId: String, val hits: Int, val firstMs: Long, val lastMs: Long)
 
 @Dao
 interface AlertDao {

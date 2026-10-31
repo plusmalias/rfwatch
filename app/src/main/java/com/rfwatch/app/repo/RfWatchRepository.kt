@@ -284,6 +284,47 @@ class RfWatchRepository(
         FollowerScorer.score(deviceId, sightings, userTrack, exclusion)
     }
 
+    private val _followers = MutableStateFlow<Map<String, FollowerScore>>(emptyMap())
+    /** Devices currently judged to be travelling with the user (background check). */
+    val followers: StateFlow<Map<String, FollowerScore>> = _followers.asStateFlow()
+    private val lastFollowerAlertMs = HashMap<String, Long>()
+
+    /**
+     * Background follower check (AirGuard-style): only when the user has actually travelled,
+     * score devices heard at several GPS-tagged places over the window with [FollowerScorer]
+     * and alert on new followers. Own / trusted / stationary devices are excluded by the scorer.
+     */
+    private suspend fun checkFollowers(nowMs: Long) {
+        val since = nowMs - FOLLOWER_WINDOW_MS
+        val track = database.observationDao().recentGeoTrack(FOLLOWER_USER_TRACK_LIMIT)
+            .filter { it.timestampMs >= since && it.lat != null && it.lon != null && (it.gpsAccuracyM ?: 100.0) <= MAX_FIX_ACCURACY_M }
+            .asReversed()
+            .map { UserPoint(it.lat!!, it.lon!!, it.timestampMs) }
+        val reduced = reduceUserTrack(track)
+        val travelled = reduced.zipWithNext().sumOf { (a, b) -> haversineM(a.lat, a.lon, b.lat, b.lon) }
+        if (travelled < FollowerScorer.MIN_USER_TRAVEL_M) { _followers.value = emptyMap(); return }
+        val candidates = database.observationDao().followerCandidates(since, FOLLOWER_MIN_HITS, FollowerScorer.MIN_SPAN_MS, FOLLOWER_CANDIDATE_LIMIT)
+        val found = HashMap<String, FollowerScore>()
+        for (row in candidates) {
+            val score = analyzeFollower(row.deviceId)
+            if (!score.isFollower) continue
+            found[row.deviceId] = score
+            if (nowMs - (lastFollowerAlertMs[row.deviceId] ?: 0L) < FOLLOWER_ALERT_COOLDOWN_MS) continue
+            lastFollowerAlertMs[row.deviceId] = nowMs
+            val device = deviceCache[row.deviceId]
+            val law = device?.kind == com.rfwatch.core.id.DeviceKind.LAW_ENFORCEMENT.name
+            val type = if (law) AlertType.LAW_VEHICLE_FOLLOWING else AlertType.POSSIBLE_FOLLOWER
+            val what = listOfNotNull(device?.displayName, device?.brand, device?.model ?: device?.category).distinct().joinToString(" · ").ifBlank { row.deviceId }
+            val detail = "$what — heard at ${score.distinctLocations} places ${"%.1f".format(score.maxSeparationM / 1000)} km apart over " +
+                "${score.spanMs / 60_000} min while you travelled ${"%.1f".format(score.userTravelM / 1000)} km. If it's yours, mark it Mine."
+            alertManager.raise(type, titleFor(type), detail, null, score.score)
+            database.alertDao().insert(com.rfwatch.app.data.AlertEntity(type = type.name, timestampMs = nowMs, deviceId = row.deviceId, message = detail, confidence = score.score))
+            val last = score.timeline.lastOrNull()
+            database.eventDao().insert(com.rfwatch.app.data.EventEntity(kind = "FOLLOWER", timestampMs = nowMs, deviceId = row.deviceId, detail = detail, lat = last?.lat, lon = last?.lon))
+        }
+        _followers.value = found
+    }
+
     private val _drones = MutableStateFlow<Map<String, DroneTrack>>(emptyMap())
     /** Drones heard recently (Remote ID position / pilot position when broadcast). */
     val drones: StateFlow<Map<String, DroneTrack>> = _drones.asStateFlow()
@@ -396,6 +437,12 @@ class RfWatchRepository(
             while (isActive) {
                 delay(CONTACT_PUBLISH_INTERVAL_MS)
                 publishContacts()
+            }
+        }
+        scope.launch {
+            while (isActive) {
+                delay(FOLLOWER_CHECK_INTERVAL_MS)
+                runCatching { checkFollowers(System.currentTimeMillis()) }
             }
         }
         scope.launch {
@@ -903,6 +950,11 @@ class RfWatchRepository(
         private const val LAW_TICK_MS = 5_000L
         private const val POSITION_DEVICE_LIMIT = 80
         private const val DRONE_TTL_MS = 5 * 60_000L
+        private const val FOLLOWER_CHECK_INTERVAL_MS = 2 * 60_000L
+        private const val FOLLOWER_WINDOW_MS = 3 * 60 * 60_000L
+        private const val FOLLOWER_MIN_HITS = 3
+        private const val FOLLOWER_CANDIDATE_LIMIT = 40
+        private const val FOLLOWER_ALERT_COOLDOWN_MS = 30 * 60_000L
         private const val DRONE_ALERT_COOLDOWN_MS = 10 * 60_000L
         private const val POSITION_SAMPLE_LIMIT = 120
         private const val LOCATE_SAMPLE_LIMIT = 400

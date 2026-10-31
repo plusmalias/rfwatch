@@ -82,6 +82,7 @@ fun RadarScreen(vm: RfWatchViewModel, modifier: Modifier = Modifier) {
     val filtered = list.filter { it.matchesRadarFilter(radarFilter) }
     val positions by vm.positions.collectAsState()
     val drones by vm.drones.collectAsState()
+    val followers by vm.followers.collectAsState()
     val userLocation by vm.userLocation.collectAsState()
     val selectedContact = selectedContactId?.let { contacts[it] }
     val latestIds by androidx.compose.runtime.rememberUpdatedState(filtered.map { it.id })
@@ -127,6 +128,29 @@ fun RadarScreen(vm: RfWatchViewModel, modifier: Modifier = Modifier) {
         law?.let { encounter ->
             if (encounter.active || System.currentTimeMillis() - encounter.lastSeenMs < LAW_BANNER_KEEP_MS) {
                 item(key = "law-banner") { LawBanner(encounter) }
+            }
+        }
+        if (followers.isNotEmpty()) {
+            item(key = "followers") {
+                Card(
+                    Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(containerColor = WarnAmber.copy(alpha = 0.10f)),
+                    border = BorderStroke(1.dp, WarnAmber.copy(alpha = 0.6f)),
+                ) {
+                    Column(Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text("TRAVELLING WITH YOU (${followers.size})", fontSize = 12.sp, color = WarnAmber, letterSpacing = 1.sp)
+                        followers.values.sortedByDescending { it.score }.forEach { f ->
+                            val c = contacts[f.deviceId]
+                            Text(
+                                "• ${c?.label ?: f.deviceId} · ${c?.kind?.label ?: ""} — ${f.distinctLocations} places, " +
+                                    "${"%.1f".format(f.maxSeparationM / 1000)} km apart, ${f.spanMs / 60_000} min",
+                                fontSize = 12.sp,
+                                modifier = Modifier.clickable { selectedContactId = f.deviceId },
+                            )
+                        }
+                        Text("Heard at several separate places while you moved. Your own phone/watch/earbuds will show here — mark them Mine in Devices.", fontSize = 10.sp, color = ConsoleMuted)
+                    }
+                }
             }
         }
         item(key = "radar-filter") { RadarFilterChips(list, radarFilter) { radarFilter = it; prefs.edit().putString("radar_filter", it).apply() } }

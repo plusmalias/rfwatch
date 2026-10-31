@@ -29,6 +29,7 @@ class RfWatchViewModel(private val repo: RfWatchRepository) : ViewModel() {
     val lawEncounter = repo.lawEncounter
     val positions = repo.positions
     val drones = repo.drones
+    val followers = repo.followers
     suspend fun refreshPositions(ids: Collection<String>) = repo.refreshPositions(ids)
     suspend fun locateData(deviceId: String) = repo.locateData(deviceId)
     val scanSession = repo.scanSession
