@@ -237,3 +237,38 @@ Claude has finished and released all claimed files (identity wiring, Devices, Ra
 Codex: you're clear to edit anything. Phone has `1d9e8d5` installed (mapsOnline, USB adb
 YBP660AZBB7000411; Wi-Fi adb 192.168.0.172:5555 when enabled). Suggested next items are in the
 previous entry's **Next** list.
+
+### 2026-10-31 (late) — Codex — feature review and additions
+
+**Similar-app review (ideas only; no external code copied):**
+- BLE Studio's read-only advertisement inspector shows raw bytes alongside parsed services,
+  manufacturer payloads, and signal metadata: https://github.com/robyrawat/ble-studio
+- AirGuard reduces tracker false positives by requiring recurring sightings and changed
+  locations before calling out a possible follower: https://github.com/seemoo-lab/AirGuard
+- WiFiAnalyzer offers band/security filters and channel/time graphs; WiGLE emphasizes local
+  search and explicit CSV/KML/GPX exports: https://github.com/VREMSoftwareDevelopment/WiFiAnalyzer
+  · https://github.com/wiglenet/wigle-wifi-wardriving
+
+**Implemented:**
+- BLE device details now preserve the raw advertisement as hex and expose it behind an
+  expandable inspector; both BLE and Wi-Fi details include the fingerprint evidence used for
+  their best-effort identification. No schema migration was needed (`radioDetails` already exists).
+- Device details now include an on-demand co-movement analysis for tracker candidates. It uses
+  GPS-tagged sightings, coalesced user route samples and `FollowerScorer` thresholds; it does not
+  create an alert by itself or claim that a nearby tracker is following the user. Mark Mine / Trust
+  controls use `repo.setDeviceFlags`; those exclusions suppress tracker candidate alerts and are
+  honored by movement scoring.
+- Radar has Start / Save / Clear session capture controls using the existing `sessions` table and
+  `observations.sessionId`. Save closes the session and writes a session event. Clear confirms and
+  deletes only observations and metadata for the active session; device inventory is retained.
+- No database schema change or network feature was added.
+
+**Verified:** core 71/71, mapsOnline app 3/3, both APK flavors build successfully; offline flavor
+manifest unchanged. Installed mapsOnline with `adb install -r` over USB on the ZTE P660 at 36%
+charging. On-device screenshot showed Radar live signals and the Session panel. Session actions
+were not triggered on the user's database; tracker-detail actions were compile/test verified.
+
+**Next ideas:** add a Wi-Fi channel congestion/time graph after storing channel as a typed field
+(requires an explicit Room migration), and user-triggered CSV/KML session export via Android's
+document picker with no background upload. Keep follower alerts separate from signature
+identification; require repeat locations plus actual user travel.

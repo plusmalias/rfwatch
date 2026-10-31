@@ -17,10 +17,13 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Button
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -49,6 +52,7 @@ import com.rfwatch.app.ui.theme.ConsolePanelRaised
 import com.rfwatch.app.ui.theme.ConsoleMuted
 import com.rfwatch.app.ui.theme.SignalBlue
 import com.rfwatch.app.data.DeviceEntity
+import com.rfwatch.app.repo.ScanSessionStatus
 import com.rfwatch.core.df.EstimateStatus
 import kotlin.math.cos
 import kotlin.math.min
@@ -73,6 +77,8 @@ fun RadarScreen(vm: RfWatchViewModel, modifier: Modifier = Modifier) {
     var selectedContactId by remember { mutableStateOf<String?>(null) }
     val facing = heading.deg ?: 0.0
     val priorityCount = list.count { it.classification == "PRIORITY" || it.classification == "TRACKER" }
+    val session by vm.scanSession.collectAsState()
+    var confirmClearSession by remember { mutableStateOf(false) }
 
     LazyColumn(
         modifier = modifier.fillMaxSize(),
@@ -93,6 +99,14 @@ fun RadarScreen(vm: RfWatchViewModel, modifier: Modifier = Modifier) {
                     Text("$priorityCount WATCH", Modifier.padding(horizontal = 12.dp, vertical = 7.dp), fontSize = 10.sp, color = if (priorityCount > 0) DangerRed else ConsoleMuted)
                 }
             }
+        }
+        item(key = "scan-session") {
+            ScanSessionCard(
+                status = session,
+                onStart = vm::startScanSession,
+                onSave = { vm.saveScanSession() },
+                onClear = { confirmClearSession = true },
+            )
         }
         law?.let { encounter ->
             if (encounter.active || System.currentTimeMillis() - encounter.lastSeenMs < LAW_BANNER_KEEP_MS) {
@@ -160,6 +174,63 @@ fun RadarScreen(vm: RfWatchViewModel, modifier: Modifier = Modifier) {
         }
         items(devices, key = { "saved-${it.id}" }) { device ->
             InventoryRow(device)
+        }
+    }
+
+    if (confirmClearSession) {
+        AlertDialog(
+            onDismissRequest = { confirmClearSession = false },
+            title = { Text("Clear this scan session?") },
+            text = {
+                Text("This deletes observations tagged to the current session. Your device inventory and observations from other sessions stay saved.")
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    vm.clearScanSession()
+                    confirmClearSession = false
+                }) { Text("Clear session") }
+            },
+            dismissButton = { TextButton(onClick = { confirmClearSession = false }) { Text("Cancel") } },
+        )
+    }
+}
+
+@Composable
+private fun ScanSessionCard(
+    status: ScanSessionStatus,
+    onStart: () -> Unit,
+    onSave: () -> Unit,
+    onClear: () -> Unit,
+) {
+    Card(
+        Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = ConsolePanel),
+        border = BorderStroke(1.dp, if (status.isActive) RadarCyan.copy(alpha = 0.55f) else ConsoleOutline),
+    ) {
+        Column(Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                Text("SCAN SESSION", fontSize = 10.sp, color = RadarCyan, letterSpacing = 1.1.sp)
+                Text(if (status.isActive) "RECORDING" else "READY", fontSize = 9.sp, color = if (status.isActive) RadarCyan else ConsoleMuted)
+            }
+            Text(
+                if (status.isActive) "${status.observationCount} observations captured · since ${status.startedAtMs?.let { java.text.DateFormat.getTimeInstance(java.text.DateFormat.SHORT).format(java.util.Date(it)) } ?: "now"}"
+                else "Start a capture to group incoming detections into a saved session.",
+                fontSize = 11.sp,
+                color = ConsoleMuted,
+            )
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                if (!status.isActive) {
+                    Button(onClick = onStart) { Text("Start session") }
+                } else {
+                    Button(onClick = onSave) { Text("Save session") }
+                    OutlinedButton(onClick = onClear) { Text("Clear") }
+                }
+            }
+            Text(
+                if (status.isActive) "Save ends capture and keeps its observations. Clear removes only this session's observations; the inventory stays."
+                else "Monitoring continues independently. Session capture is local and can be cleared before saving.",
+                fontSize = 9.sp, color = ConsoleMuted,
+            )
         }
     }
 }

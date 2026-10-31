@@ -29,4 +29,16 @@ class TrackerAlertGateTest {
         assertFalse(gate.shouldAlert("candidate", 2_030_000L, 0.9))
         assertFalse(gate.shouldAlert("candidate", 2_059_000L, 0.9))
     }
+
+    @Test
+    fun `suppressing a trusted candidate restarts persistence evidence`() {
+        val gate = TrackerAlertGate()
+        assertFalse(gate.shouldAlert("own-tag", 1_000_000L, 0.9))
+        assertFalse(gate.shouldAlert("own-tag", 1_030_000L, 0.9))
+        gate.suppress("own-tag")
+
+        assertFalse(gate.shouldAlert("own-tag", 1_060_000L, 0.9))
+        assertFalse(gate.shouldAlert("own-tag", 1_090_000L, 0.9))
+        assertTrue(gate.shouldAlert("own-tag", 1_121_000L, 0.9))
+    }
 }

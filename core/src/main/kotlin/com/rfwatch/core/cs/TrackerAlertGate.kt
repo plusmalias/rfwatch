@@ -37,6 +37,12 @@ class TrackerAlertGate(
         return true
     }
 
+    /** Drops in-progress evidence when the user marks a candidate as theirs or trusted. */
+    @Synchronized
+    fun suppress(deviceId: String) {
+        candidates.remove(deviceId)
+    }
+
     /** Forgets all candidates and cooldowns (used when the user wipes their data). */
     @Synchronized
     fun reset() {

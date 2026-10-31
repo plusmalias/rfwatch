@@ -32,9 +32,14 @@ interface ObservationDao {
     @Query("SELECT * FROM observations WHERE deviceId = :id ORDER BY timestampMs DESC, rowId DESC LIMIT :limit")
     suspend fun recentForDevice(id: String, limit: Int = 60): List<ObservationEntity>
     @Query("SELECT * FROM observations WHERE deviceId = :id AND lat IS NOT NULL ORDER BY timestampMs") suspend fun geoForDevice(id: String): List<ObservationEntity>
-    @Query("SELECT * FROM observations WHERE deviceId = :id AND lat IS NOT NULL ORDER BY timestampMs DESC, rowId DESC LIMIT :limit")
-    suspend fun recentGeoForDevice(id: String, limit: Int): List<ObservationEntity>
+    @Query("SELECT * FROM observations WHERE deviceId = :id AND lat IS NOT NULL AND lon IS NOT NULL ORDER BY timestampMs DESC, rowId DESC LIMIT :limit")
+    suspend fun recentGeoForDevice(id: String, limit: Int = 500): List<ObservationEntity>
+    @Query("SELECT * FROM observations WHERE lat IS NOT NULL AND lon IS NOT NULL ORDER BY timestampMs DESC, rowId DESC LIMIT :limit")
+    suspend fun recentGeoTrack(limit: Int): List<ObservationEntity>
+    @Query("SELECT COUNT(*) FROM observations WHERE sessionId = :sessionId")
+    suspend fun countForSession(sessionId: Long): Int
     @Query("DELETE FROM observations WHERE timestampMs < :cutoff") suspend fun purgeOlderThan(cutoff: Long): Int
+    @Query("DELETE FROM observations WHERE sessionId = :sessionId") suspend fun deleteForSession(sessionId: Long): Int
 }
 
 @Dao
@@ -71,5 +76,7 @@ interface BaselineDao {
 interface SessionDao {
     @Insert suspend fun start(session: SessionEntity): Long
     @Query("UPDATE sessions SET endMs = :endMs WHERE id = :id") suspend fun finish(id: Long, endMs: Long)
+    @Query("SELECT * FROM sessions WHERE endMs IS NULL ORDER BY startMs DESC LIMIT 1") suspend fun active(): SessionEntity?
+    @Query("DELETE FROM sessions WHERE id = :id") suspend fun delete(id: Long)
     @Query("SELECT * FROM sessions ORDER BY startMs DESC LIMIT :limit") suspend fun recent(limit: Int): List<SessionEntity>
 }

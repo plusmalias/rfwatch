@@ -12,12 +12,14 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Button
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.material3.Text
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -30,6 +32,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.height
 import androidx.compose.ui.graphics.Path
@@ -42,6 +45,8 @@ import com.rfwatch.app.ui.theme.ConsolePanel
 import com.rfwatch.app.ui.theme.ConsolePanelRaised
 import com.rfwatch.app.ui.theme.ConsoleMuted
 import com.rfwatch.core.id.DeviceKind
+import com.rfwatch.core.cs.FollowerExclusion
+import com.rfwatch.core.cs.FollowerScore
 import java.util.Date
 import java.util.Locale
 
@@ -120,6 +125,8 @@ fun DevicesScreen(vm: RfWatchViewModel, modifier: Modifier = Modifier, onRoom: (
 @Composable
 private fun DeviceCard(d: com.rfwatch.app.data.DeviceEntity, selected: Boolean, vm: RfWatchViewModel, onClick: () -> Unit) {
     var rssiHistory by remember(d.id) { mutableStateOf(emptyList<Int>()) }
+    var showRawAdvertisement by remember(d.id) { mutableStateOf(false) }
+    var followerScore by remember(d.id) { mutableStateOf<FollowerScore?>(null) }
     LaunchedEffect(d.id, selected) {
         if (selected) {
             while (isActive) {
@@ -164,12 +171,43 @@ private fun DeviceCard(d: com.rfwatch.app.data.DeviceEntity, selected: Boolean, 
                         )
                         if (selected) {
                             Text("Device ID: ${d.lastMac ?: d.id}", fontSize = 11.sp, color = Color(0xFF9CA3AF))
-                            Text(d.radioDetails ?: "Detailed radio identifiers not available yet", fontSize = 10.sp, color = Color(0xFF9CA3AF))
+                            val rawHex = d.radioDetails?.substringAfter("Raw advertisement hex: ")
+                                ?.takeIf { it != d.radioDetails && it.isNotBlank() }
+                            val detailText = d.radioDetails?.substringBefore(" · Raw advertisement hex:")
+                            Text(detailText ?: "Detailed radio identifiers not available yet", fontSize = 10.sp, color = Color(0xFF9CA3AF))
+                            if (rawHex != null) {
+                                TextButton(onClick = { showRawAdvertisement = !showRawAdvertisement }) {
+                                    Text(if (showRawAdvertisement) "Hide raw advertisement" else "Inspect raw advertisement")
+                                }
+                                if (showRawAdvertisement) {
+                                    Text(
+                                        "${rawHex.chunked(2).chunked(16).joinToString("\n") { it.joinToString(" ") }}\nRaw BLE advertising bytes · hex",
+                                        fontFamily = FontFamily.Monospace,
+                                        fontSize = 9.sp,
+                                        color = ConsoleMuted,
+                                    )
+                                }
+                            }
+                            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                OutlinedButton(onClick = { vm.setDeviceFlags(d.id, own = !d.isOwnDevice) }) {
+                                    Text(if (d.isOwnDevice) "Unmark mine" else "Mark mine")
+                                }
+                                OutlinedButton(onClick = { vm.setDeviceFlags(d.id, trusted = !d.isAllowlisted) }) {
+                                    Text(if (d.isAllowlisted) "Untrust" else "Trust")
+                                }
+                            }
+                            Text("Your devices and trusted devices are excluded from tracker co-movement scoring.", fontSize = 9.sp, color = ConsoleMuted)
                             if (rssiHistory.isNotEmpty()) {
                                 val minRssi = rssiHistory.minOrNull() ?: d.lastRssi
                                 val maxRssi = rssiHistory.maxOrNull() ?: d.lastRssi
                                 Text("Recent signal: $minRssi to $maxRssi dBm · ${rssiHistory.size} samples (last 60)", fontSize = 10.sp, color = Color(0xFF9CA3AF))
                                 RssiSparkline(rssiHistory, deviceCategoryColor(d.category, d.classification))
+                            }
+                            if (isTrackerCandidate(d)) {
+                                Button(onClick = { vm.analyzeFollower(d.id) { followerScore = it } }) {
+                                    Text(if (followerScore == null) "Analyze co-movement" else "Recheck movement")
+                                }
+                                followerScore?.let { FollowerEvidence(it) }
                             }
                         } else {
                             Text("Tap for radio identifiers and scan details", fontSize = 10.sp, color = Color(0xFF82939B))
@@ -189,6 +227,31 @@ private fun DeviceCard(d: com.rfwatch.app.data.DeviceEntity, selected: Boolean, 
                             Text("Seen near: GPS fix unavailable", fontSize = 11.sp, color = Color(0xFF9CA3AF))
                         }
                     }
+    }
+}
+
+private fun isTrackerCandidate(d: com.rfwatch.app.data.DeviceEntity): Boolean =
+    d.trackerType != null || d.effectiveKind() == DeviceKind.TRACKER
+
+@Composable
+private fun FollowerEvidence(score: FollowerScore) {
+    val status = when {
+        score.exclusion == FollowerExclusion.OWN_DEVICE -> "Excluded: marked as your device."
+        score.exclusion == FollowerExclusion.ALLOWLISTED -> "Excluded: marked as trusted."
+        score.exclusion == FollowerExclusion.STATIONARY_INFRASTRUCTURE -> "Excluded: classified as stationary infrastructure."
+        score.isFollower -> "Possible co-movement pattern. This is not proof that a tracker is following you."
+        score.distinctLocations == 0 -> "No GPS-tagged sightings yet. Keep location enabled during a walk or drive."
+        else -> "The stored sightings do not meet the co-movement evidence thresholds. This cannot rule out tracking."
+    }
+    Column(Modifier.fillMaxWidth().padding(top = 4.dp), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+        Text(status, fontSize = 11.sp, color = if (score.isFollower) com.rfwatch.app.ui.theme.WarnAmber else ConsoleMuted)
+        Text(
+            "Evidence: ${score.distinctLocations} separated sightings · ${score.maxSeparationM.toInt()} m spread · " +
+                "${score.userTravelM.toInt()} m phone route · ${score.spanMs / 60_000} min · " +
+                "pattern score ${(score.score * 100).toInt()}/100 (heuristic)",
+            fontSize = 9.sp,
+            color = ConsoleMuted,
+        )
     }
 }
 

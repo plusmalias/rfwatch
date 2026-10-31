@@ -21,6 +21,8 @@ data class BleSighting(
     val payloadLength: Int,
     val serviceUuids: List<String>,
     val serviceDataUuids: List<String>,
+    /** Raw advertising bytes as uppercase hex; retained for local, read-only inspection. */
+    val rawAdvertisingHex: String,
 )
 
 /**
@@ -54,6 +56,7 @@ class BleScanner(context: Context) {
                         raw.size,
                         result.scanRecord?.serviceUuids.orEmpty().map { it.uuid.toString().uppercase() }.sorted(),
                         result.scanRecord?.serviceData?.keys.orEmpty().map { it.uuid.toString().uppercase() }.sorted(),
+                        raw.joinToString(separator = "") { "%02X".format(it.toInt() and 0xFF) },
                     )
                 )
             }

@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.rfwatch.app.repo.LiveContact
 import com.rfwatch.app.repo.RfWatchRepository
 import com.rfwatch.app.data.ObservationEntity
+import com.rfwatch.core.cs.FollowerScore
 import com.rfwatch.core.df.EmitterEstimate
 import com.rfwatch.core.df.SweepResult
 import kotlinx.coroutines.flow.SharingStarted
@@ -26,6 +27,7 @@ class RfWatchViewModel(private val repo: RfWatchRepository) : ViewModel() {
     val room = repo.roomFindings
     val cell = repo.cellAssessment
     val lawEncounter = repo.lawEncounter
+    val scanSession = repo.scanSession
 
     val devices = repo.deviceFlow.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
     val alerts = repo.alertFlow.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
@@ -45,6 +47,26 @@ class RfWatchViewModel(private val repo: RfWatchRepository) : ViewModel() {
         repo.recentObservations(deviceId)
 
     suspend fun refreshMapEstimates() = repo.refreshMapEstimates()
+
+    fun startScanSession() {
+        viewModelScope.launch { repo.startScanSession() }
+    }
+
+    fun saveScanSession(onSaved: (Boolean) -> Unit = {}) {
+        viewModelScope.launch { onSaved(repo.saveScanSession()) }
+    }
+
+    fun clearScanSession(onCleared: (Boolean) -> Unit = {}) {
+        viewModelScope.launch { onCleared(repo.clearScanSession()) }
+    }
+
+    fun setDeviceFlags(id: String, own: Boolean? = null, trusted: Boolean? = null) {
+        viewModelScope.launch { repo.setDeviceFlags(id, own, trusted) }
+    }
+
+    fun analyzeFollower(deviceId: String, onResult: (FollowerScore) -> Unit) {
+        viewModelScope.launch { onResult(repo.analyzeFollower(deviceId)) }
+    }
 
     class Factory(private val repo: RfWatchRepository) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")

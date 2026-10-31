@@ -21,12 +21,18 @@ import com.rfwatch.core.cs.TrackerMatch
 import com.rfwatch.core.cs.TrackerParser
 import com.rfwatch.core.cs.TrackerAlertGate
 import com.rfwatch.core.cs.TrackerType
+import com.rfwatch.core.cs.FollowerExclusion
+import com.rfwatch.core.cs.FollowerScore
+import com.rfwatch.core.cs.FollowerScorer
+import com.rfwatch.core.cs.Sighting
+import com.rfwatch.core.cs.UserPoint
 import com.rfwatch.core.df.DriveByEstimator
 import com.rfwatch.core.df.EmitterEstimate
 import com.rfwatch.core.df.EstimateStatus
 import com.rfwatch.core.df.SweepFit
 import com.rfwatch.core.df.SweepResult
 import com.rfwatch.core.geo.angularDiffDeg
+import com.rfwatch.core.geo.haversineM
 import com.rfwatch.core.model.Band
 import com.rfwatch.core.model.GpsFix
 import com.rfwatch.core.model.Heading
@@ -56,6 +62,15 @@ data class SweepLive(val samples: Int, val stepSamples: Int, val lastRssi: Int?,
 
 /** One raw RSSI reading from the hunt target (every advert, unthrottled). */
 data class HuntSample(val rssi: Int, val timestampMs: Long)
+
+/** User-controlled scan capture; observations are tagged only while this session is active. */
+data class ScanSessionStatus(
+    val id: Long? = null,
+    val startedAtMs: Long? = null,
+    val observationCount: Int = 0,
+) {
+    val isActive: Boolean get() = id != null
+}
 
 /** A live contact shown on the radar. Bearing/estimate are null until a DF method runs. */
 data class LiveContact(
@@ -102,6 +117,7 @@ class RfWatchRepository(
     private val dirtyDevices = LinkedHashMap<String, DeviceEntity>()
     private val pendingObservations = ArrayList<ObservationEntity>()
     private val lastObservationMs = HashMap<String, Long>()
+    private var activeSessionId: Long? = null
     // Radar contacts are rebuilt here and published at most every CONTACT_PUBLISH_INTERVAL_MS.
     private val liveContacts = HashMap<String, LiveContact>()
     private var contactsDirty = false
@@ -152,6 +168,9 @@ class RfWatchRepository(
     private val _hunt = MutableStateFlow<HuntSample?>(null)
     val hunt: StateFlow<HuntSample?> = _hunt.asStateFlow()
 
+    private val _scanSession = MutableStateFlow(ScanSessionStatus())
+    val scanSession: StateFlow<ScanSessionStatus> = _scanSession.asStateFlow()
+
     /** Hunt (hot/cold) mode: stream every RSSI reading from [deviceId]; null stops. */
     fun setHuntTarget(deviceId: String?) {
         huntTargetId = deviceId
@@ -167,6 +186,83 @@ class RfWatchRepository(
 
     suspend fun recentObservations(deviceId: String, limit: Int = 60) =
         database.observationDao().recentForDevice(deviceId, limit.coerceIn(1, 60))
+
+    /** Start a named-by-time capture. Repeated taps return the existing active session. */
+    suspend fun startScanSession(): Long = withContext(ingestDispatcher) {
+        loadActiveSession()
+        activeSessionId?.let { return@withContext it }
+        val now = System.currentTimeMillis()
+        val id = database.sessionDao().start(com.rfwatch.app.data.SessionEntity(startMs = now))
+        activeSessionId = id
+        _scanSession.value = ScanSessionStatus(id = id, startedAtMs = now, observationCount = 0)
+        id
+    }
+
+    /** Finish and preserve the tagged observations as a completed session. */
+    suspend fun saveScanSession(): Boolean = withContext(ingestDispatcher) {
+        loadActiveSession()
+        val id = activeSessionId ?: return@withContext false
+        flushPending()
+        val endedAt = System.currentTimeMillis()
+        database.withTransaction {
+            database.sessionDao().finish(id, endedAt)
+            database.eventDao().insert(
+                com.rfwatch.app.data.EventEntity(
+                    kind = "SESSION_SAVED", timestampMs = endedAt,
+                    detail = "Scan session saved · ${_scanSession.value.observationCount} observations",
+                )
+            )
+        }
+        activeSessionId = null
+        _scanSession.value = ScanSessionStatus()
+        true
+    }
+
+    /** Discard only the current session's tagged observations; global device inventory remains. */
+    suspend fun clearScanSession(): Boolean = withContext(ingestDispatcher) {
+        loadActiveSession()
+        val id = activeSessionId ?: return@withContext false
+        flushPending()
+        database.withTransaction {
+            database.observationDao().deleteForSession(id)
+            database.sessionDao().delete(id)
+        }
+        activeSessionId = null
+        _scanSession.value = ScanSessionStatus()
+        true
+    }
+
+    /** Analyze co-movement on demand; no notification is raised from a tracker signature alone. */
+    suspend fun analyzeFollower(deviceId: String): FollowerScore = withContext(ingestDispatcher) {
+        ensureDeviceCache()
+        flushPending()
+        val device = deviceCache[deviceId] ?: database.deviceDao().byId(deviceId)
+        val observations = database.observationDao().recentGeoForDevice(deviceId, FOLLOWER_DEVICE_HISTORY_LIMIT)
+            .asReversed()
+            .filter { it.lat != null && it.lon != null && (it.gpsAccuracyM ?: 100.0) <= MAX_FIX_ACCURACY_M }
+        val sightings = observations.map {
+            Sighting(it.lat!!, it.lon!!, it.timestampMs, it.rssi)
+        }
+        val timeStart = sightings.firstOrNull()?.timestampMs ?: 0L
+        val timeEnd = sightings.lastOrNull()?.timestampMs ?: 0L
+        val rawTrack = if (sightings.isEmpty()) emptyList() else database.observationDao()
+            .recentGeoTrack(FOLLOWER_USER_TRACK_LIMIT)
+            .asReversed()
+            .filter { it.timestampMs in timeStart..timeEnd && (it.gpsAccuracyM ?: 100.0) <= MAX_FIX_ACCURACY_M }
+            .mapNotNull { row ->
+                val lat = row.lat ?: return@mapNotNull null
+                val lon = row.lon ?: return@mapNotNull null
+                UserPoint(lat, lon, row.timestampMs)
+            }
+        val userTrack = reduceUserTrack(rawTrack)
+        val exclusion = when {
+            device?.isAllowlisted == true -> FollowerExclusion.ALLOWLISTED
+            device?.isOwnDevice == true -> FollowerExclusion.OWN_DEVICE
+            device?.mobility == "STATIONARY" -> FollowerExclusion.STATIONARY_INFRASTRUCTURE
+            else -> FollowerExclusion.NONE
+        }
+        FollowerScorer.score(deviceId, sightings, userTrack, exclusion)
+    }
 
     /** Refresh a bounded set of live motion/location fits while the online map is visible. */
     suspend fun refreshMapEstimates() {
@@ -199,6 +295,7 @@ class RfWatchRepository(
 
     private suspend fun runMonitoring(scope: CoroutineScope) {
         ensureDeviceCache()
+        loadActiveSession()
         scope.launch {
             try {
                 while (isActive) {
@@ -250,26 +347,30 @@ class RfWatchRepository(
                 val manufacturerData = adv.manufacturerData.toSortedMap().map { (companyId, bytes) ->
                     "0x${companyId.toString(16).uppercase().padStart(4, '0')}=${bytes.joinToString("") { "%02X".format(it.toInt() and 0xFF) }}"
                 }
+                val fingerprint = com.rfwatch.core.id.BleFingerprinter.fingerprint(adv, sighting.deviceName)
                 val radioDetails = buildList {
                     add("BLE address ${adv.address}")
                     add(addressType)
                     add("Advertised name ${sighting.deviceName ?: "none"}")
+                    add("Identification evidence: ${fingerprint.evidence}")
                     add("Manufacturer data ${manufacturerData.ifEmpty { listOf("none") }.joinToString(", ")}")
                     add("16-bit service IDs ${adv.serviceUuids16.sorted().joinToString(", ") { "0x${it.toString(16).uppercase().padStart(4, '0')}" }.ifEmpty { "none" }}")
                     add("All service UUIDs ${sighting.serviceUuids.joinToString(", ").ifEmpty { "none" }}")
                     add("Service-data UUIDs ${sighting.serviceDataUuids.joinToString(", ").ifEmpty { "none" }}")
                     add("${if (sighting.connectable) "Connectable" else "Not connectable"} · ${if (sighting.legacyAdvertisement) "legacy" else "extended"} advertisement · ${sighting.payloadLength} bytes")
+                    add("Raw advertisement hex: ${sighting.rawAdvertisingHex}")
                 }.joinToString(" · ")
-                val fingerprint = com.rfwatch.core.id.BleFingerprinter.fingerprint(adv, sighting.deviceName)
                 onDevice(adv.address, Band.BLE, sighting.deviceName, adv.rssi, adv.timestampMs, facts, match, radioDetails, fingerprint)
             }
         }
         scope.launch {
             wifiScanner.scans().collect { list ->
                 list.forEach { s ->
+                    val fingerprint = com.rfwatch.core.id.WifiFingerprinter.fingerprint(s.facts.ssid, s.bssid)
                     onDevice(
-                        s.bssid, Band.WIFI, s.facts.ssid, s.facts.rssi, s.timestampMs, s.facts, null, s.radioDetails,
-                        fingerprint = com.rfwatch.core.id.WifiFingerprinter.fingerprint(s.facts.ssid, s.bssid),
+                        s.bssid, Band.WIFI, s.facts.ssid, s.facts.rssi, s.timestampMs, s.facts, null,
+                        radioDetails = "${s.radioDetails} · Identification evidence: ${fingerprint.evidence}",
+                        fingerprint = fingerprint,
                         wifiSecurity = com.rfwatch.core.id.WifiFingerprinter.security(s.capabilities).label,
                         wifiBand = com.rfwatch.core.id.WifiFingerprinter.band(s.frequencyMhz),
                     )
@@ -366,8 +467,11 @@ class RfWatchRepository(
             pendingObservations += ObservationEntity(
                 deviceId = id, band = band.name, rssi = rssi, timestampMs = ts,
                 lat = fix?.lat, lon = fix?.lon, gpsAccuracyM = fix?.accuracyM,
-                headingDeg = _heading.value.deg,
+                headingDeg = _heading.value.deg, sessionId = activeSessionId,
             )
+            if (activeSessionId != null) {
+                _scanSession.value = _scanSession.value.copy(observationCount = _scanSession.value.observationCount + 1)
+            }
         }
 
         // Passive radio candidates on BLE and Wi-Fi. A nameless BLE beacon alone is too common
@@ -414,7 +518,12 @@ class RfWatchRepository(
             ?.let { hit -> handleLawAction(lawTracker.onHit(id, hit.label, hit.threat, rssi, ts), hit.ruleId) }
 
         val trackerAlertConfirmed = match?.let {
-            trackerAlertGate.shouldAlert(id, ts, it.confidence)
+            if (updated.isOwnDevice || updated.isAllowlisted) {
+                trackerAlertGate.suppress(id)
+                false
+            } else {
+                trackerAlertGate.shouldAlert(id, ts, it.confidence)
+            }
         } ?: false
         maybeAlert(
             id, classification, match,
@@ -503,6 +612,20 @@ class RfWatchRepository(
         deviceCacheLoaded = true
     }
 
+    private suspend fun loadActiveSession() {
+        if (activeSessionId != null) return
+        val session = database.sessionDao().active() ?: run {
+            _scanSession.value = ScanSessionStatus()
+            return
+        }
+        activeSessionId = session.id
+        _scanSession.value = ScanSessionStatus(
+            id = session.id,
+            startedAtMs = session.startMs,
+            observationCount = database.observationDao().countForSession(session.id),
+        )
+    }
+
     /** Writes cached device changes and buffered observations in one transaction. */
     private suspend fun flushPending() = writeMutex.withLock {
         if (dirtyDevices.isEmpty() && pendingObservations.isEmpty()) return@withLock
@@ -541,6 +664,8 @@ class RfWatchRepository(
             writeMutex.withLock {
                 deviceCache.clear(); dirtyDevices.clear(); pendingObservations.clear()
                 lastObservationMs.clear(); liveContacts.clear(); contactsDirty = false
+                activeSessionId = null
+                _scanSession.value = ScanSessionStatus()
                 roomMap.clear(); roomLastSeenMs.clear()
                 trackerAlertGate.reset()
                 lawTracker.reset()
@@ -561,6 +686,28 @@ class RfWatchRepository(
         _contacts.update { current ->
             snapshot.mapValues { (id, contact) -> contact.copy(estimate = current[id]?.estimate) }
         }
+    }
+
+    /** Collapse duplicate per-device GPS fixes and ignore sub-100 m jitter before path scoring. */
+    private fun reduceUserTrack(points: List<UserPoint>): List<UserPoint> {
+        val minuteAverages = points.groupBy { it.timestampMs / USER_TRACK_BUCKET_MS }
+            .toSortedMap()
+            .values
+            .map { bucket ->
+                UserPoint(
+                    lat = bucket.map { it.lat }.average(),
+                    lon = bucket.map { it.lon }.average(),
+                    timestampMs = bucket.map { it.timestampMs }.average().toLong(),
+                )
+            }
+        val reduced = ArrayList<UserPoint>()
+        for (point in minuteAverages) {
+            val previous = reduced.lastOrNull()
+            if (previous == null || haversineM(previous.lat, previous.lon, point.lat, point.lon) >= USER_TRACK_MIN_STEP_M) {
+                reduced += point
+            }
+        }
+        return reduced
     }
 
     // ---- Sweep (step 2) ----
@@ -661,5 +808,9 @@ class RfWatchRepository(
         private const val ROOM_FINDING_TTL_MS = 120_000L
         private const val MAP_ESTIMATE_DEVICE_LIMIT = 24
         private const val MAP_ESTIMATE_SAMPLE_LIMIT = 240
+        private const val FOLLOWER_DEVICE_HISTORY_LIMIT = 500
+        private const val FOLLOWER_USER_TRACK_LIMIT = 10_000
+        private const val USER_TRACK_BUCKET_MS = 60_000L
+        private const val USER_TRACK_MIN_STEP_M = 100.0
     }
 }
