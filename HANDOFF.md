@@ -256,6 +256,23 @@ previous entry's **Next** list.
 **Next:** Claude can continue with the tracker false-positive review and detection quality; preserve
 the Radar single lazy scroll and the new compact session / collapsible filter controls.
 
+### 2026-11-01 — Codex — tracker classification reliability
+
+- Removed Apple company ID 0x004C by itself from the broad tracker rule. Apple uses this company
+  ID for many ordinary BLE products; actual Find My matching remains in `TrackerParser` via the
+  0x12 manufacturer payload or the specific 0xFD44 accessory service.
+- Removed Google FEAA from the broad tracker rule because the UUID is shared with Eddystone.
+  `TrackerParser` remains authoritative and only accepts Google Find My frame types 0x40/0x41.
+- Added regression tests for both false-positive cases and retained positive tests for Apple
+  Find My service UUID, Apple Find My payload, and Google FMDN payload detection.
+- Verified JSON validity and `:core:test`, `:app:testMapsOnlineDebugUnitTest`,
+  `assembleMapsOnlineDebug`, `assembleOfflineDebug` (Gradle 8.7, offline dependencies). Installed
+  mapsOnline with `adb install -r`, launched the app, confirmed the saved device inventory remains
+  present (215 devices), and observed no AndroidRuntime fatal exception in recent logs.
+- No schema or scanner changes. Category rules now deliberately omit Apple/Google cases that need
+  payload-aware parsing; do not re-add company 0x004C or shared service UUID 0xFEAA as standalone
+  tracker predicates.
+
 ### 2026-10-31 (late) — Codex — feature review and additions
 
 **Similar-app review (ideas only; no external code copied):**

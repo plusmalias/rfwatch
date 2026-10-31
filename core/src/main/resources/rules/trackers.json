@@ -2,16 +2,15 @@
   "id": "trackers",
   "name": "Item trackers",
   "category": "TRACKER",
-  "source": "Bluetooth SIG 16-bit UUID member registry + vendor company IDs, verified 2026-10-31. These mirror TrackerParser; the rule engine uses them for UI labelling, while TrackerParser does the authoritative payload decode (state, battery, DULT).",
-  "version": 1,
+  "source": "Bluetooth SIG 16-bit UUID member registry, verified 2026-10-31. The rule engine only uses unambiguous accessory service UUIDs for broad UI labelling; TrackerParser is authoritative for manufacturer payloads and shared UUIDs, including Google FMDN versus Eddystone (state, battery, DULT).",
+  "version": 2,
   "rules": [
     {
       "id": "apple_findmy",
       "label": "Apple Find My",
       "threat": "NOTABLE",
-      "companyIds": [76],
       "serviceUuids": [64836],
-      "note": "Company ID 0x004C (Apple); Find My Network accessory service 0xFD44."
+      "note": "Find My Network accessory service 0xFD44. Apple company ID 0x004C alone is intentionally insufficient; ordinary Apple devices use it too."
     },
     {
       "id": "samsung_smarttag",
@@ -33,13 +32,6 @@
       "threat": "NOTABLE",
       "serviceUuids": [65075, 65125],
       "note": "0xFE33, 0xFE65 (SIG → CHIPOLO d.o.o.)."
-    },
-    {
-      "id": "google_fmdn",
-      "label": "Google Find My Device",
-      "threat": "NOTABLE",
-      "serviceUuids": [65194],
-      "note": "FMDN service data 0xFEAA. NB: collides with legacy Eddystone; TrackerParser disambiguates by FMDN frame byte (0x40/0x41)."
     }
   ]
 }

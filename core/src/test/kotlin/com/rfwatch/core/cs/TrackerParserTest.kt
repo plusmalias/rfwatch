@@ -46,6 +46,27 @@ class TrackerParserTest {
     }
 
     @Test
+    fun ordinaryAppleManufacturerPayloadIsNotFindMyTracker() {
+        val adv = BleAdvertisement(
+            manufacturerData = mapOf(TrackerParser.APPLE_COMPANY_ID to byteArrayOf(0x07, 0x01, 0x02)),
+            serviceData16 = emptyMap(), serviceUuids16 = emptySet(),
+            address = "AA:BB:CC:DD:EE:FF", rssi = -55, timestampMs = 0,
+        )
+        assertNull(TrackerParser.parse(adv))
+    }
+
+    @Test
+    fun legacyEddystoneFrameIsNotGoogleFindMyTracker() {
+        val adv = BleAdvertisement(
+            manufacturerData = emptyMap(),
+            serviceData16 = mapOf(0xFEAA to byteArrayOf(0x10, 0x00)),
+            serviceUuids16 = setOf(0xFEAA),
+            address = "AA:BB:CC:DD:EE:FF", rssi = -55, timestampMs = 0,
+        )
+        assertNull(TrackerParser.parse(adv))
+    }
+
+    @Test
     fun ordinaryDeviceIsNotATracker() {
         assertNull(TrackerParser.parse(load("not_a_tracker.hex")))
     }

@@ -49,11 +49,27 @@ class RuleEngineTest {
     }
 
     @Test
-    fun appleCompanyIdIsTracker() {
+    fun appleCompanyIdAloneIsNotTracker() {
         val hits = engine.evaluate(
             DeviceFacts(mac = null, ssid = null, name = null, companyIds = setOf(76))
         )
-        assertTrue(hits.any { it.category == RuleCategory.TRACKER })
+        assertTrue("Apple company ID is shared by ordinary Apple devices: $hits", hits.none { it.category == RuleCategory.TRACKER })
+    }
+
+    @Test
+    fun appleFindMyServiceUuidMatchesTracker() {
+        val hits = engine.evaluate(
+            DeviceFacts(mac = null, ssid = null, name = null, serviceUuids = setOf(0xFD44))
+        )
+        assertTrue(hits.any { it.category == RuleCategory.TRACKER && it.ruleId == "apple_findmy" })
+    }
+
+    @Test
+    fun sharedEddystoneUuidAloneIsNotGoogleTracker() {
+        val hits = engine.evaluate(
+            DeviceFacts(mac = null, ssid = null, name = null, serviceUuids = setOf(0xFEAA))
+        )
+        assertTrue("FEAA is also used by ordinary Eddystone beacons: $hits", hits.none { it.category == RuleCategory.TRACKER })
     }
 
     @Test
