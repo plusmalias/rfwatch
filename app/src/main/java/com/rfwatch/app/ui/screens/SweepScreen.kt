@@ -374,4 +374,4 @@ private fun HuntPanel(vm: RfWatchViewModel, targetId: String, onChange: () -> Un
 
 private const val HUNT_ALPHA = 0.25
 private const val HUNT_TREND_WINDOW_MS = 4_000L
-private const val HUNT_LOST_MS = 8_000L
+private const val HUNT_LOST_MS = 15_000L

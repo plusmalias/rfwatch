@@ -124,7 +124,14 @@ fun RadarScreen(vm: RfWatchViewModel, modifier: Modifier = Modifier) {
             val activeLaw = law?.takeIf { it.active }
             val trackers = list.count { it.kind == com.rfwatch.core.id.DeviceKind.TRACKER || it.trackerType != null }
             val recentDrones = drones.values.count { System.currentTimeMillis() - it.lastSeenMs < 5 * 60_000L }
+            val ble by vm.bleScanState.collectAsState()
             Row(Modifier.fillMaxWidth().horizontalScroll(androidx.compose.foundation.rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                when (ble) {
+                    com.rfwatch.app.scan.BleScanState.BLUETOOTH_OFF -> StatusPill("BLE OFF — turn Bluetooth on", DangerRed)
+                    com.rfwatch.app.scan.BleScanState.FAILED -> StatusPill("BLE ERROR — retrying", WarnAmber)
+                    com.rfwatch.app.scan.BleScanState.STOPPED -> StatusPill("BLE stopped", WarnAmber)
+                    com.rfwatch.app.scan.BleScanState.SCANNING -> Unit
+                }
                 StatusPill(if (activeLaw != null) "POLICE ${activeLaw.signatures.size}" else "No police", if (activeLaw != null) DangerRed else OkGreen)
                 StatusPill(if (followers.isNotEmpty()) "FOLLOWING ${followers.size}" else "No followers", if (followers.isNotEmpty()) WarnAmber else OkGreen)
                 StatusPill(if (recentDrones > 0) "DRONES $recentDrones" else "No drones", if (recentDrones > 0) Color(0xFFE040FB) else OkGreen)

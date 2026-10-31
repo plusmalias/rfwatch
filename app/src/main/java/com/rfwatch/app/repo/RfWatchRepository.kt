@@ -945,6 +945,9 @@ class RfWatchRepository(
         database.eventDao().insert(com.rfwatch.app.data.EventEntity(kind = "EMERGENCY", timestampMs = ts, deviceId = id, detail = detail, lat = fix?.lat, lon = fix?.lon))
     }
 
+    /** Whether BLE scanning is actually running (Bluetooth off / failed are shown on Radar). */
+    val bleScanState get() = bleScanner.state
+
     /** Builds the one-glance status for the home-screen widget and quick-settings tile. */
     fun publishStatus() {
         val now = System.currentTimeMillis()
