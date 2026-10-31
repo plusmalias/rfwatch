@@ -1,0 +1,16 @@
+{
+  "id": "fleet",
+  "name": "Fleet & vehicle telematics",
+  "category": "FLEET",
+  "source": "Vendor names common in Australian fleets. Name-matched to avoid OUI false positives; these devices are mostly cellular and may not advertise over BLE/Wi-Fi unless in pairing mode.",
+  "version": 1,
+  "rules": [
+    {
+      "id": "fleet_telematics_au",
+      "label": "Fleet telematics unit",
+      "threat": "INFO",
+      "nameSubstrings": ["geotab", "samsara", "teletrac", "navman", "eroad", "cartrack", "verizon connect", "procon", "ctrack", "smartrak"],
+      "note": "Telematics/GPS tracking units common in Australian commercial fleets (EROAD, Teletrac Navman, Cartrack, Smartrak, Geotab, Samsara)."
+    }
+  ]
+}

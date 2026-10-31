@@ -1,0 +1,9 @@
+<resources>
+    <string name="app_name">RFWatch</string>
+    <string name="channel_priority_nearby">Priority device nearby</string>
+    <string name="channel_priority_approaching">Priority device approaching</string>
+    <string name="channel_tracker_following">Tracker following</string>
+    <string name="channel_new_at_home">New device at home</string>
+    <string name="channel_sweep_hit">Room sweep hit</string>
+    <string name="channel_monitor">Monitoring active</string>
+</resources>

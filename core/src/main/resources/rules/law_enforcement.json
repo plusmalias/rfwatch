@@ -1,0 +1,32 @@
+{
+  "id": "law_enforcement",
+  "name": "Law-enforcement equipment",
+  "category": "LAW_ENFORCEMENT",
+  "source": "IEEE MA-L registry; vendor documentation. Verify OUIs against the current IEEE registry before relying on them — registrations change and these flag the vendor, not necessarily a specific product.",
+  "version": 1,
+  "rules": [
+    {
+      "id": "axon",
+      "label": "Axon / TASER device",
+      "threat": "PRIORITY",
+      "ouiPrefixes": ["0025df"],
+      "nameSubstrings": ["axon", "taser"],
+      "note": "OUI 00:25:DF is Axon Enterprise's only IEEE MA-L block (registered 2010 as TASER International). Flags body cameras, docks, in-car video and TASERs alike — vendor-level, not model-level."
+    },
+    {
+      "id": "cradlepoint",
+      "label": "Cradlepoint mobile router",
+      "threat": "NOTABLE",
+      "ouiPrefixes": ["003044", "00e01c"],
+      "nameSubstrings": ["cradlepoint", "ibr900", "ibr1700"],
+      "note": "Cradlepoint IBR-series routers are the in-vehicle uplink for Axon Fleet and many agency vehicles. OUI 00:30:44 (and legacy 00:E0:1C) per IEEE."
+    },
+    {
+      "id": "au_agency_radio",
+      "label": "Agency radio / ANPR (AU)",
+      "threat": "NOTABLE",
+      "nameSubstrings": ["motorola solutions", "apx", "tait", "tetra", "mototrbo", "anpr", "plate"],
+      "note": "Australian agencies (AFP and state police) commonly field Motorola APX / MOTOTRBO and Tait radios, plus in-car ANPR. Name-matched only: Motorola Solutions shares IEEE OUIs with Motorola consumer devices, so an OUI match here would false-positive on ordinary phones."
+    }
+  ]
+}

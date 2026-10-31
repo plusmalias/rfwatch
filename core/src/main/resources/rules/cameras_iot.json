@@ -1,0 +1,46 @@
+{
+  "id": "cameras_iot",
+  "name": "Cameras & IoT (room sweep)",
+  "category": "CAMERA_IOT",
+  "source": "IEEE MA-L registry (Netify/IPVM cross-checked) + field-observed default SSIDs. OUIs flag the vendor, not a confirmed camera; SSID patterns are indicative of cheap Wi-Fi spy-cams and may need tuning. Verify against the live IEEE registry.",
+  "version": 1,
+  "rules": [
+    {
+      "id": "hikvision",
+      "label": "Hikvision camera",
+      "threat": "PRIORITY",
+      "ouiPrefixes": ["4419b6", "c056e3", "e4d58b", "c8a702", "085411", "4cbd8f", "bcad28", "a4140c"],
+      "nameSubstrings": ["hikvision", "hik-", "ds-2"],
+      "note": "Hangzhou Hikvision Digital Technology OUIs."
+    },
+    {
+      "id": "dahua",
+      "label": "Dahua camera",
+      "threat": "PRIORITY",
+      "ouiPrefixes": ["4c11bf", "9002a9", "3cef8c", "14a78b", "e03e7d", "80bef7"],
+      "nameSubstrings": ["dahua", "dh-", "ipc-"],
+      "note": "Zhejiang Dahua Technology OUIs."
+    },
+    {
+      "id": "espressif",
+      "label": "Espressif module (ESP32/ESP8266)",
+      "threat": "NOTABLE",
+      "ouiPrefixes": ["08d1f9", "24dcc3", "240ac4", "30aea4", "840d8e", "a4cf12", "7c9ebd", "3c71bf", "ecfabc", "b4e62d", "2462ab"],
+      "note": "Espressif Wi-Fi SoCs are the brains of most cheap no-name IoT cameras and smart plugs."
+    },
+    {
+      "id": "tuya_smartlife",
+      "label": "Tuya / Smart Life device",
+      "threat": "NOTABLE",
+      "ssidPatterns": ["^SmartLife", "^ty_", "^Tuya", "SmartLife-", "^ESP_", "^A9_?"],
+      "note": "Default SoftAP SSIDs for Tuya/Smart Life onboarding and common clone cameras (the 'A9' mini-cam family)."
+    },
+    {
+      "id": "spycam_ssid",
+      "label": "Likely Wi-Fi spy-cam SSID",
+      "threat": "PRIORITY",
+      "ssidPatterns": ["^HD-?[0-9A-Fa-f]{4}", "^ANRAN", "^LY-?WIFI", "^[A-Z]{2,4}CAM", "IPCAM", "^MV[-_]?\\d", "P2P", "^DANALE", "^YG[-_]?\\d", "^SQ\\d", "^CAM-?\\d"],
+      "note": "Patterns matching default SSIDs of common disguised/hidden Wi-Fi cameras. Indicative only — tune per findings."
+    }
+  ]
+}

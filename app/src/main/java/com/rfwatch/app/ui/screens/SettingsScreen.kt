@@ -1,0 +1,92 @@
+package com.rfwatch.app.ui.screens
+
+import android.content.Context
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.Slider
+import androidx.compose.material3.Switch
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.rfwatch.core.data.RetentionPolicy
+
+/**
+ * Settings (step 11): retention window with auto-purge, biometric app-lock preference, and
+ * a wipe-all-data action (guarded by a confirmation).
+ */
+@Composable
+fun SettingsScreen(modifier: Modifier = Modifier) {
+    val context = LocalContext.current
+    val prefs = remember { context.getSharedPreferences("rfwatch_settings", Context.MODE_PRIVATE) }
+
+    var retentionDays by remember {
+        mutableFloatStateOf(prefs.getInt("retention_days", RetentionPolicy.DEFAULT_RETENTION_DAYS).toFloat())
+    }
+    var appLock by remember { mutableStateOf(prefs.getBoolean("app_lock", false)) }
+    var confirmWipe by remember { mutableStateOf(false) }
+
+    Column(modifier.fillMaxSize().padding(16.dp)) {
+        Text("Settings", fontSize = 20.sp)
+
+        Text("Data retention: ${retentionDays.toInt()} days", fontSize = 14.sp, modifier = Modifier.padding(top = 16.dp))
+        Text("Observations and alerts older than this are purged automatically.", fontSize = 12.sp, color = Color(0xFF9CA3AF))
+        Slider(
+            value = retentionDays,
+            onValueChange = { retentionDays = it },
+            onValueChangeFinished = { prefs.edit().putInt("retention_days", retentionDays.toInt()).apply() },
+            valueRange = 1f..90f,
+        )
+
+        Row(Modifier.fillMaxWidth().padding(top = 16.dp), verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text("Biometric app lock", fontSize = 14.sp)
+                Text("Require fingerprint/face to open RFWatch.", fontSize = 12.sp, color = Color(0xFF9CA3AF))
+            }
+            Switch(checked = appLock, onCheckedChange = {
+                appLock = it; prefs.edit().putBoolean("app_lock", it).apply()
+            })
+        }
+
+        Button(
+            onClick = { confirmWipe = true },
+            modifier = Modifier.padding(top = 24.dp),
+        ) { Text("Wipe all data") }
+
+        Text(
+            "Encrypted at rest with SQLCipher; the key is held in the Android Keystore. " +
+                "No INTERNET permission in this build.",
+            fontSize = 11.sp, color = Color(0xFF6B7280), modifier = Modifier.padding(top = 24.dp),
+        )
+    }
+
+    if (confirmWipe) {
+        AlertDialog(
+            onDismissRequest = { confirmWipe = false },
+            title = { Text("Wipe all data?") },
+            text = { Text("This permanently deletes every device, observation, alert and baseline. It cannot be undone.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    context.deleteDatabase("rfwatch.db")
+                    confirmWipe = false
+                }) { Text("Wipe") }
+            },
+            dismissButton = { TextButton(onClick = { confirmWipe = false }) { Text("Cancel") } },
+        )
+    }
+}
