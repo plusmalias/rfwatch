@@ -123,7 +123,11 @@ internal fun LocationScopePanel(
             DroneMark(e.east, e.north, op?.east, op?.north)
         }
     }
-    val rangeM = niceRange(
+    val rangeM = if (placed.isEmpty() && droneMarks.isEmpty() && unplaced.isNotEmpty()) {
+        // Range rings only: zoom to fit them so close signals are distinguishable (no positions are claimed).
+        val far = unplaced.sortedByDescending { it.lastRssi }.take(MAX_RANGE_RINGS).maxOf { rssiDistanceEstimateMeters(it.lastRssi) }
+        listOf(3.0, 5.0, 10.0, 20.0, 30.0, 50.0, 100.0).firstOrNull { it >= far * 1.15 } ?: 100.0
+    } else niceRange(
         (placed.map { hypot(it.east, it.north) + it.radiusM * 0.5 } +
             droneMarks.flatMap { listOfNotNull(hypot(it.east, it.north), it.opEast?.let { e -> hypot(e, it.opNorth ?: 0.0) }) }).maxOrNull() ?: 20.0,
     )
@@ -135,7 +139,7 @@ internal fun LocationScopePanel(
         Column(Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 Text("LOCATION SCOPE · NORTH UP", fontSize = 10.sp, color = ConsoleMuted, letterSpacing = 1.sp)
-                Text(if (user == null) "NO GPS FIX" else "${placed.size} located · ring ${(rangeM / 2).toInt()} m", fontSize = 10.sp, color = RadarCyan)
+                Text(if (user == null) "NO GPS FIX" else "${placed.size} located · ${unplaced.size} by distance", fontSize = 10.sp, color = RadarCyan)
             }
             Canvas(
                 Modifier.fillMaxWidth().height(260.dp).pointerInput(placed, rangeM) {
@@ -150,7 +154,20 @@ internal fun LocationScopePanel(
                         }
                     }
                 },
-            ) { drawLocationScope(placed, rangeM, selectedId, droneMarks) }
+            ) {
+                // Devices without a direction are drawn as dashed range rings: "about this far, direction unknown".
+                val rings = unplaced.sortedByDescending { it.lastRssi }.take(MAX_RANGE_RINGS).map {
+                    rssiDistanceEstimateMeters(it.lastRssi) to deviceCategoryColor(it.category, it.classification)
+                }
+                drawLocationScope(placed, rangeM, selectedId, droneMarks, rings)
+            }
+            if (placed.isEmpty() && unplaced.isNotEmpty()) {
+                Text(
+                    "No directions yet — you haven't moved enough. Dashed rings show how far the ${minOf(unplaced.size, MAX_RANGE_RINGS)} strongest " +
+                        "signals are (direction unknown). Walk 25 m or more — a lap of the house, yard or street — and dots appear where each signal was strongest.",
+                    fontSize = 11.sp, color = com.rfwatch.app.ui.theme.WarnAmber,
+                )
+            }
             if (drones.isNotEmpty()) {
                 Text(
                     "DRONES: " + drones.joinToString { (it.info.serial ?: "unidentified") + " (${it.source})" } +
@@ -195,7 +212,12 @@ private fun DistanceBar(c: LiveContact, selected: Boolean, onClick: () -> Unit) 
 
 private data class DroneMark(val east: Double, val north: Double, val opEast: Double?, val opNorth: Double?)
 
-private fun DrawScope.drawLocationScope(placed: List<Placed>, rangeM: Double, selectedId: String?, drones: List<DroneMark> = emptyList()) {
+private const val MAX_RANGE_RINGS = 8
+
+private fun DrawScope.drawLocationScope(
+    placed: List<Placed>, rangeM: Double, selectedId: String?, drones: List<DroneMark> = emptyList(),
+    rangeRings: List<Pair<Double, Color>> = emptyList(),
+) {
     val cx = size.width / 2f; val cy = size.height / 2f
     val maxR = min(cx, cy) * 0.92f
     val scale = maxR / rangeM.toFloat()
@@ -205,8 +227,13 @@ private fun DrawScope.drawLocationScope(placed: List<Placed>, rangeM: Double, se
     drawLine(grid, Offset(cx - maxR, cy), Offset(cx + maxR, cy), strokeWidth = 1f)
     val paint = android.graphics.Paint().apply { isAntiAlias = true; textSize = 24f; color = android.graphics.Color.argb(170, 145, 164, 176); textAlign = android.graphics.Paint.Align.CENTER }
     drawContext.canvas.nativeCanvas.drawText("N", cx, cy - maxR + 22f, paint)
-    drawContext.canvas.nativeCanvas.drawText("${(rangeM / 2).toInt()} m", cx + maxR / 2f + 4f, cy - 6f, paint)
-    drawContext.canvas.nativeCanvas.drawText("${rangeM.toInt()} m", cx + maxR - 30f, cy - 6f, paint)
+    fun metres(v: Double) = if (v < 10 && v % 1.0 != 0.0) "%.1f m".format(v) else "${v.toInt()} m"
+    drawContext.canvas.nativeCanvas.drawText(metres(rangeM / 2), cx + maxR / 2f + 4f, cy - 6f, paint)
+    drawContext.canvas.nativeCanvas.drawText(metres(rangeM), cx + maxR - 30f, cy - 6f, paint)
+    val dash = androidx.compose.ui.graphics.PathEffect.dashPathEffect(floatArrayOf(12f, 10f))
+    rangeRings.forEach { (meters, color) ->
+        drawCircle(color.copy(alpha = 0.55f), (meters * scale).toFloat().coerceIn(10f, maxR), Offset(cx, cy), style = Stroke(2f, pathEffect = dash))
+    }
     // You.
     drawCircle(RadarCyan, 7f, Offset(cx, cy))
     drawCircle(RadarCyan, 13f, Offset(cx, cy), style = Stroke(2f))
