@@ -1,32 +1,51 @@
 package com.rfwatch.app
 
 import android.Manifest
+import android.content.Context
+import android.content.Intent
+import android.location.LocationManager
 import android.os.Build
 import android.os.Bundle
+import android.provider.Settings
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CellTower
 import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.LocationOn
-import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.MoreHoriz
 import androidx.compose.material.icons.filled.Place
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.rfwatch.app.monitor.MonitorService
 import com.rfwatch.app.ui.RfWatchViewModel
@@ -34,6 +53,7 @@ import com.rfwatch.app.ui.screens.CellScreen
 import com.rfwatch.app.ui.screens.DevicesScreen
 import com.rfwatch.app.ui.screens.EventLogScreen
 import com.rfwatch.app.ui.screens.MapScreen
+import com.rfwatch.app.ui.screens.MoreScreen
 import com.rfwatch.app.ui.screens.RadarScreen
 import com.rfwatch.app.ui.screens.RoomSweepScreen
 import com.rfwatch.app.ui.screens.SettingsScreen
@@ -41,8 +61,8 @@ import com.rfwatch.app.ui.screens.SweepScreen
 import com.rfwatch.app.ui.theme.RfWatchTheme
 
 private enum class Tab(val label: String) {
-    RADAR("Radar"), DEVICES("Devices"), SWEEP("Sweep"), CELL("Cell"),
-    ROOM("Room"), MAP("Map"), LOG("Log"), SETTINGS("Settings")
+    RADAR("Radar"), DEVICES("Devices"), SWEEP("Sweep"), MAP("Map"), MORE("More"),
+    CELL("Cell"), ROOM("Room"), LOG("Log"), SETTINGS("Settings")
 }
 
 class MainActivity : ComponentActivity() {
@@ -62,11 +82,22 @@ class MainActivity : ComponentActivity() {
                     if (grants.values.any { it }) MonitorService.start(this)
                 }
 
-                androidx.compose.runtime.LaunchedEffect(Unit) {
+                LaunchedEffect(Unit) {
                     permLauncher.launch(requiredPermissions())
                 }
 
                 var tab by remember { mutableStateOf(Tab.RADAR) }
+                var locationEnabled by remember { mutableStateOf(isLocationEnabled()) }
+                val lifecycleOwner = LocalLifecycleOwner.current
+                DisposableEffect(lifecycleOwner) {
+                    val observer = LifecycleEventObserver { _, event ->
+                        if (event == Lifecycle.Event.ON_RESUME) {
+                            locationEnabled = isLocationEnabled()
+                        }
+                    }
+                    lifecycleOwner.lifecycle.addObserver(observer)
+                    onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+                }
 
                 Scaffold(
                     bottomBar = {
@@ -75,35 +106,62 @@ class MainActivity : ComponentActivity() {
                                 Tab.RADAR to Icons.Filled.LocationOn,
                                 Tab.DEVICES to Icons.Filled.List,
                                 Tab.SWEEP to Icons.Filled.Search,
-                                Tab.CELL to Icons.Filled.CellTower,
                                 Tab.MAP to Icons.Filled.Place,
-                                Tab.LOG to Icons.Filled.Menu,
-                                Tab.SETTINGS to Icons.Filled.Settings,
+                                Tab.MORE to Icons.Filled.MoreHoriz,
                             )
                             items.forEach { (t, icon) ->
                                 NavigationBarItem(
                                     selected = tab == t,
                                     onClick = { tab = t },
                                     icon = { Icon(icon, contentDescription = t.label) },
-                                    label = { Text(t.label) },
+                                    label = { Text(t.label, maxLines = 1) },
                                 )
                             }
                         }
                     }
                 ) { padding ->
-                    val m = Modifier.padding(padding)
-                    when (tab) {
-                        Tab.RADAR -> RadarScreen(vm, m)
-                        Tab.DEVICES -> DevicesScreen(vm, m, onRoom = { tab = Tab.ROOM })
-                        Tab.SWEEP -> SweepScreen(vm, m)
-                        Tab.CELL -> CellScreen(vm, m)
-                        Tab.ROOM -> RoomSweepScreen(vm, m)
-                        Tab.MAP -> MapScreen(vm, m)
-                        Tab.LOG -> EventLogScreen(vm, m)
-                        Tab.SETTINGS -> SettingsScreen(m)
+                    Column(Modifier.fillMaxSize().padding(padding)) {
+                        if (!locationEnabled) {
+                            LocationOffNotice {
+                                startActivity(Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS))
+                            }
+                        }
+                        Box(Modifier.fillMaxWidth().weight(1f)) {
+                            val contentModifier = Modifier.fillMaxSize()
+                            when (tab) {
+                                Tab.RADAR -> RadarScreen(vm, contentModifier)
+                                Tab.DEVICES -> DevicesScreen(vm, contentModifier, onRoom = { tab = Tab.ROOM })
+                                Tab.SWEEP -> SweepScreen(vm, contentModifier)
+                                Tab.CELL -> CellScreen(vm, contentModifier)
+                                Tab.ROOM -> RoomSweepScreen(vm, contentModifier)
+                                Tab.MAP -> MapScreen(vm, contentModifier)
+                                Tab.LOG -> EventLogScreen(vm, contentModifier)
+                                Tab.SETTINGS -> SettingsScreen(contentModifier)
+                                Tab.MORE -> MoreScreen(
+                                    modifier = contentModifier,
+                                    onCell = { tab = Tab.CELL },
+                                    onRoom = { tab = Tab.ROOM },
+                                    onLog = { tab = Tab.LOG },
+                                    onSettings = { tab = Tab.SETTINGS },
+                                )
+                            }
+                        }
                     }
                 }
             }
+        }
+    }
+
+    private fun isLocationEnabled(): Boolean {
+        val manager = getSystemService(Context.LOCATION_SERVICE) as? LocationManager ?: return false
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            manager.isLocationEnabled
+        } else {
+            Settings.Secure.getInt(
+                contentResolver,
+                Settings.Secure.LOCATION_MODE,
+                Settings.Secure.LOCATION_MODE_OFF,
+            ) != Settings.Secure.LOCATION_MODE_OFF
         }
     }
 
@@ -119,4 +177,27 @@ class MainActivity : ComponentActivity() {
             add(Manifest.permission.POST_NOTIFICATIONS)
         }
     }.toTypedArray()
+}
+
+@androidx.compose.runtime.Composable
+private fun LocationOffNotice(onEnable: () -> Unit) {
+    Card(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer),
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(12.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(Modifier.weight(1f)) {
+                Text("Location is off", style = MaterialTheme.typography.titleSmall)
+                Text(
+                    "Android may withhold fresh Wi-Fi scan results. Turn on Location to wardrive.",
+                    style = MaterialTheme.typography.bodySmall,
+                )
+            }
+            Button(onClick = onEnable) { Text("Enable") }
+        }
+    }
 }

@@ -25,6 +25,18 @@ class RuleEngineTest {
     }
 
     @Test
+    fun axonCompanyIdMatchesBleLiveSignature() {
+        val hits = engine.evaluate(DeviceFacts(mac = "C2:11:22:33:44:55", ssid = null, name = null, companyIds = setOf(0xFC81)))
+        assertTrue("expected Axon BLE manufacturer hit, got $hits", hits.any { it.ruleId == "axon" })
+    }
+
+    @Test
+    fun axonSsidMatchesWifiSignature() {
+        val hits = engine.evaluate(DeviceFacts(mac = "02:11:22:33:44:55", ssid = "AXON-CAMERA-1234", name = null))
+        assertTrue("expected Axon SSID hit, got $hits", hits.any { it.ruleId == "axon" })
+    }
+
+    @Test
     fun hikvisionOuiIsCamera() {
         val hits = engine.evaluate(DeviceFacts(mac = "44:19:B6:00:00:01", ssid = null, name = null))
         assertTrue(hits.any { it.category == RuleCategory.CAMERA_IOT && it.threat == Threat.PRIORITY })

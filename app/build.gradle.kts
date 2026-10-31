@@ -29,7 +29,6 @@ android {
         }
         create("mapsOnline") {
             dimension = "net"
-            applicationIdSuffix = ".online"
             versionNameSuffix = "-online"
         }
     }
@@ -107,6 +106,7 @@ dependencies {
 
     // Offline-first vector maps. MapLibre renders user-imported MBTiles with no network.
     implementation("org.maplibre.gl:android-sdk:11.5.2")
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
 
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.jetbrains.kotlin:kotlin-test:1.9.24")

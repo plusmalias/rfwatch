@@ -1,28 +1,38 @@
 package com.rfwatch.app.ui.screens
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.rfwatch.app.repo.LiveContact
@@ -35,6 +45,7 @@ import com.rfwatch.core.df.EstimateStatus
 import kotlin.math.cos
 import kotlin.math.min
 import kotlin.math.sin
+import java.util.Locale
 
 /**
  * Radar v2 (step 5). Heading-up: the display rotates with the device, so the top of the
@@ -47,39 +58,100 @@ import kotlin.math.sin
 fun RadarScreen(vm: RfWatchViewModel, modifier: Modifier = Modifier) {
     val heading by vm.heading.collectAsState()
     val contacts by vm.contacts.collectAsState()
-    val list = contacts.values.sortedByDescending { it.lastRssi }
+    // Keep discovery order stable. RSSI fluctuates per packet, so sorting on it makes targets jump.
+    val list = contacts.values.toList()
+    var selectedContactId by remember { mutableStateOf<String?>(null) }
     val facing = heading.deg ?: 0.0
+    val priorityCount = list.count { it.classification == "PRIORITY" || it.classification == "TRACKER" }
 
     Column(modifier.fillMaxSize().padding(12.dp)) {
-        Text(
-            "Heading ${heading.deg?.let { "${it.toInt()}°" } ?: "—"} · ${heading.source}",
-            fontSize = 13.sp,
-        )
-        Canvas(
-            Modifier.fillMaxWidth().aspectRatio(1f).padding(8.dp)
-        ) {
-            drawRadar(list, facing)
+        Row(Modifier.fillMaxWidth().padding(bottom = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text("RFWATCH  /  LIVE RADAR", fontSize = 12.sp, color = RadarCyan)
+                Text("${list.size} signals in view", fontSize = 20.sp)
+            }
+            androidx.compose.material3.Surface(color = Color(0xFF38252D), shape = CircleShape) {
+                Text("$priorityCount WATCH", Modifier.padding(horizontal = 12.dp, vertical = 7.dp), fontSize = 11.sp, color = RadarPink)
+            }
         }
-        Text("Contacts (${list.size})", fontSize = 14.sp, modifier = Modifier.padding(top = 8.dp))
-        LazyColumn(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            items(list, key = { it.id }) { c -> ContactRow(c, vm) }
+
+        Card(
+            Modifier.fillMaxWidth().padding(bottom = 10.dp),
+            colors = CardDefaults.cardColors(containerColor = Color(0xFF0A2028)),
+        ) {
+            Column(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp)) {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                    Text("SCOPE", fontSize = 11.sp, color = Color(0xFF86A5B0))
+                    Text(
+                        heading.deg?.let { "HEADING ${it.toInt()}°" } ?: "HEADING UNAVAILABLE",
+                        fontSize = 11.sp, color = if (heading.deg == null) WarnAmber else RadarCyan,
+                    )
+                }
+                Canvas(Modifier.fillMaxWidth().height(205.dp).padding(vertical = 6.dp)) {
+                    drawRadar(list, facing, selectedContactId)
+                }
+                Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        LegendDot(RadarCyan, "You / BLE")
+                        LegendDot(Color(0xFF59B7FF), "Wi-Fi")
+                        LegendDot(RadarPink, "Tracker")
+                    }
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        LegendDot(DangerRed, "Axon / law")
+                        LegendDot(WarnAmber, "Camera / IoT")
+                        LegendDot(Color(0xFFB79CFF), "Fleet")
+                    }
+                }
+                Text("RSSI-only range is a rough model, not a measurement; walls and transmitter power can shift it greatly.", fontSize = 10.sp, color = Color(0xFF78909A))
+            }
+        }
+        Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), horizontalArrangement = Arrangement.SpaceBetween) {
+            Text("DETECTED DEVICES", fontSize = 12.sp, color = Color(0xFF9BB0B8))
+            Text("Tap a row to select", fontSize = 11.sp, color = Color(0xFF78909A))
+        }
+        LazyColumn(Modifier.fillMaxWidth().weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            items(list, key = { it.id }) { c ->
+                ContactRow(c, vm, selected = selectedContactId == c.id) { selectedContactId = c.id }
+            }
         }
     }
 }
 
-private fun DrawScope.drawRadar(contacts: List<LiveContact>, facingDeg: Double) {
+@Composable
+private fun LegendDot(color: Color, label: String) {
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+        androidx.compose.foundation.Canvas(Modifier.size(7.dp)) {
+            drawCircle(color)
+        }
+        Text(label, fontSize = 9.sp, color = Color(0xFF9BB0B8), maxLines = 1)
+    }
+}
+
+private fun DrawScope.drawRadar(contacts: List<LiveContact>, facingDeg: Double, selectedId: String?) {
     val cx = size.width / 2f
     val cy = size.height / 2f
     val maxR = min(cx, cy) * 0.92f
-    val grid = Color(0xFF123240)
+    val grid = Color(0xFF1C4852)
 
     // Range rings.
     for (i in 1..3) {
-        drawCircle(grid, radius = maxR * i / 3f, center = Offset(cx, cy), style = Stroke(1.5f))
+        drawCircle(grid.copy(alpha = if (i == 3) 0.9f else 0.55f), radius = maxR * i / 3f, center = Offset(cx, cy), style = Stroke(if (i == 3) 2f else 1.2f))
     }
-    // Cross-hair; "up" is where the device points (heading-up).
-    drawLine(grid, Offset(cx, cy - maxR), Offset(cx, cy + maxR), strokeWidth = 1f)
-    drawLine(grid, Offset(cx - maxR, cy), Offset(cx + maxR, cy), strokeWidth = 1f)
+    // Light compass spokes and perimeter ticks keep the scope legible without implying a distance scale.
+    for (i in 0 until 8) {
+        val a = Math.toRadians(i * 45.0)
+        drawLine(grid.copy(alpha = 0.55f), Offset(cx, cy), Offset(cx + (maxR * cos(a)).toFloat(), cy + (maxR * sin(a)).toFloat()), strokeWidth = 1f)
+    }
+    for (i in 0 until 36) {
+        val a = Math.toRadians(i * 10.0)
+        val inner = maxR * if (i % 3 == 0) 0.92f else 0.96f
+        drawLine(
+            grid.copy(alpha = 0.8f),
+            Offset(cx + (inner * cos(a)).toFloat(), cy + (inner * sin(a)).toFloat()),
+            Offset(cx + (maxR * cos(a)).toFloat(), cy + (maxR * sin(a)).toFloat()),
+            strokeWidth = if (i % 3 == 0) 1.5f else 1f,
+        )
+    }
     // Own-position marker.
     drawCircle(RadarCyan, radius = 5f, center = Offset(cx, cy))
 
@@ -99,13 +171,15 @@ private fun DrawScope.drawRadar(contacts: List<LiveContact>, facingDeg: Double) 
                 Math.toDegrees(Math.atan2(it.semiMajorM, (est.distanceFromUserM ?: maxDist).coerceAtLeast(1.0)))
             } ?: 15.0
             drawWedge(cx, cy, r, est.bearingFromUserDeg!! - facingDeg, halfWedge, color.copy(alpha = 0.18f))
-            drawCircle(color, radius = 9f, center = Offset(px, py))
+            if (c.id == selectedId) drawCircle(RadarCyan, radius = 15f, center = Offset(px, py), style = Stroke(2f))
+            drawCircle(color, radius = 7f, center = Offset(px, py))
         } else {
             // Bearing unknown → grey outer ring, spread by hash so they don't overlap.
             val a = Math.toRadians((c.id.hashCode().and(0xFFFF)) % 360.0)
             val px = cx + (maxR * sin(a)).toFloat()
             val py = cy - (maxR * cos(a)).toFloat()
-            drawCircle(Color(0xFF6B7280), radius = 6f, center = Offset(px, py))
+            if (c.id == selectedId) drawCircle(RadarCyan, radius = 11f, center = Offset(px, py), style = Stroke(2f))
+            drawCircle(colorFor(c).copy(alpha = 0.85f), radius = if (c.id == selectedId) 6f else 4.5f, center = Offset(px, py))
         }
     }
 }
@@ -124,31 +198,49 @@ private fun DrawScope.drawWedge(cx: Float, cy: Float, r: Float, centerDeg: Doubl
     drawPath(path, color)
 }
 
-private fun colorFor(c: LiveContact): Color = when (c.classification) {
-    "TRACKER" -> RadarPink
-    "PRIORITY" -> DangerRed
-    "NOTABLE" -> WarnAmber
-    else -> RadarCyan
-}
+private fun colorFor(c: LiveContact): Color = deviceCategoryColor(c.category, c.classification)
 
 @Composable
-private fun ContactRow(c: LiveContact, vm: RfWatchViewModel) {
-    Card(Modifier.fillMaxWidth()) {
+private fun ContactRow(c: LiveContact, vm: RfWatchViewModel, selected: Boolean, onSelect: () -> Unit) {
+    Card(
+        Modifier.fillMaxWidth().clickable(onClick = onSelect),
+        colors = CardDefaults.cardColors(
+            containerColor = if (selected) Color(0xFF164354) else Color(0xFF14262E),
+        ),
+        border = BorderStroke(1.dp, if (selected) RadarCyan else colorFor(c).copy(alpha = 0.45f)),
+    ) {
         Row(
             Modifier.fillMaxWidth().padding(10.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
+            Box(
+                Modifier.padding(end = 10.dp).size(10.dp).clip(CircleShape)
+                    .background(colorFor(c)),
+            )
             Column(Modifier.weight(1f)) {
                 Text(c.label, fontSize = 14.sp)
+                if (selected) Text("Selected · tap Locate to estimate", fontSize = 11.sp, color = RadarCyan)
+                Text(
+                    "${c.brand ?: "Unknown brand"} · ${c.category ?: c.band.name}",
+                    fontSize = 11.sp, color = colorFor(c), maxLines = 1,
+                )
                 val est = c.estimate
                 val detail = when {
                     est?.status == EstimateStatus.LOCATED ->
                         "${est.bearingFromUserDeg?.toInt() ?: "?"}° · ${est.distanceFromUserM?.toInt() ?: "?"} m · conf ${"%.2f".format(est.confidence)}"
                     est?.status == EstimateStatus.MOBILE -> "MOBILE · ${est.trend}"
-                    else -> "${c.classification} · ${c.lastRssi} dBm"
+                    est?.status == EstimateStatus.INSUFFICIENT -> "Need GPS-tagged readings while moving · ${c.lastRssi} dBm"
+                    else -> "${c.classification} · ${c.lastRssi} dBm · ~${formatRssiDistance(rssiDistanceEstimateMeters(c.lastRssi))} m RSSI proxy"
                 }
                 Text(detail, fontSize = 12.sp, color = Color(0xFF9CA3AF))
+                if (est?.status == EstimateStatus.LOCATED && est.lat != null && est.lon != null) {
+                    val uncertainty = est.ellipse?.semiMajorM?.let { " · ±${it.toInt()} m" } ?: ""
+                    Text(
+                        "Estimated device position ${String.format(Locale.US, "%.5f, %.5f", est.lat, est.lon)}$uncertainty",
+                        fontSize = 11.sp, color = Color(0xFF9CA3AF),
+                    )
+                }
             }
             Button(onClick = { vm.estimate(c.id) {} }) { Text("Locate") }
         }

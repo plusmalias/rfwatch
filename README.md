@@ -104,8 +104,9 @@ in the UI:
 
 ## Privacy & data protection
 
-- **No INTERNET permission in the default (`offline`) flavor.** A separate `mapsOnline`
-  flavor adds INTERNET purely for OSM tiles and is never the default.
+- **No INTERNET permission in the default (`offline`) flavor.** The `mapsOnline` flavor
+  uses MapLibre with interactive OpenStreetMap tiles; tile requests reveal the visible map
+  area to the tile service. Device scan records remain local and are not sent to OSM.
 - Database **encrypted at rest with SQLCipher**; the key is a random passphrase wrapped by
   an **Android Keystore** AES-GCM key (hardware-backed where available).
 - **Retention** (default 30 days) with automatic purge; **Wipe-all-data** button.
@@ -145,19 +146,18 @@ Requires a JDK 17 and the Android SDK (`local.properties` with `sdk.dir`, or `AN
   tracker hex-fixture parsers + identity linking, follower scoring incl. exclusions,
   own-device learning, baselines, room sweep, ENU/geo, heading fusion, rule packs,
   retention purge, alert phrasing, and the IMSI-catcher/stingray heuristics).
-- **`:app`** — complete and wired, but it was authored on a machine **without a JDK or
-  Android SDK** (toolchain downloads were network-throttled), so it has **not yet been
-  compiled here**. Run `./gradlew assembleOfflineDebug test` on a toolchain'd machine; expect
-  to fix a small number of compile nits that a first build surfaces.
-- **Map base layer** is the one deliberate stub: the session **overlays** (located emitters,
-  2σ ellipses) render offline via Compose canvas; the MapLibre **MBTiles base layer** is a
-  documented drop-in (dependency already declared).
+- **`:app`** — offline and mapsOnline debug variants compile and unit tests pass. The
+  mapsOnline MapLibre view uses an OpenStreetMap raster basemap with attribution, clustered
+  category-colored radio markers, a separate current-phone marker, and tap-to-inspect details.
+  Map tiles are requested only for the area currently viewed; no offline tile prefetch occurs.
 
 ---
 
-## Offline map tiles (AU)
+## Map modes
 
-The default build renders no network tiles. For the base layer, import an MBTiles file —
-e.g. an Australia extract generated with `tilemaker`/`planetiler` from OpenStreetMap, or a
-state extract — and point the map at it. Use the `mapsOnline` flavor only if you want live
-OSM tiles.
+The `offline` flavor has no network permission and shows GPS-tagged signal-hearing points
+without a street basemap. The `mapsOnline` flavor adds Internet access only to load the
+currently viewed OpenStreetMap tiles. It keeps radio/device data on the phone. The map
+distinguishes estimated fixed-source locations from the phone GPS location where a signal
+was heard; mobile candidates are only flagged when the drive-by estimator has enough
+GPS-tagged observations. See the [OpenStreetMap tile policy](https://operations.osmfoundation.org/policies/tiles/).

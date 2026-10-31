@@ -8,6 +8,9 @@ enum class AlertType {
     NEW_AT_HOME,
     SWEEP_HIT,
     IMSI_CATCHER,
+    AXON_SIGNATURE,
+    LAW_ENFORCEMENT_SIGNATURE,
+    CAMERA_IOT_SIGNATURE,
 }
 
 /**
@@ -37,10 +40,13 @@ object AlertPhrasing {
         val base = when (type) {
             AlertType.PRIORITY_NEARBY -> "Priority device nearby"
             AlertType.PRIORITY_APPROACHING -> "Priority device approaching"
-            AlertType.TRACKER_FOLLOWING -> "Possible tracker following you"
+            AlertType.TRACKER_FOLLOWING -> "Persistent item-tracker-like signal detected; this does not show that it is following you"
             AlertType.NEW_AT_HOME -> "New device detected at home"
             AlertType.SWEEP_HIT -> "Surveillance device found"
             AlertType.IMSI_CATCHER -> "Possible IMSI catcher nearby"
+            AlertType.AXON_SIGNATURE -> "Possible Axon device signature nearby"
+            AlertType.LAW_ENFORCEMENT_SIGNATURE -> "Possible law-enforcement radio signature nearby"
+            AlertType.CAMERA_IOT_SIGNATURE -> "Possible camera / IoT radio signature nearby"
         }
         val speakDirection = relativeBearingDeg != null && confidence > MIN_SPOKEN_CONFIDENCE
         return if (speakDirection) "$base, ${relativeSector(relativeBearingDeg!!)}" else base

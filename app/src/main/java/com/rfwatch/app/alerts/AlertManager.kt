@@ -60,13 +60,13 @@ class AlertManager(private val context: Context) : TextToSpeech.OnInitListener {
             .setSmallIcon(android.R.drawable.ic_dialog_alert)
             .setContentTitle(title)
             .setContentText(text)
-            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setPriority(if (type == AlertType.TRACKER_FOLLOWING) NotificationCompat.PRIORITY_LOW else NotificationCompat.PRIORITY_HIGH)
             .setCategory(NotificationCompat.CATEGORY_ALARM)
             .setAutoCancel(true)
             .build()
         nm.notify(type.ordinal + 1000, n)
 
-        vibrate(type)
+        if (type != AlertType.TRACKER_FOLLOWING) vibrate(type)
         if (speak && ttsReady) {
             tts.speak(phrase, TextToSpeech.QUEUE_ADD, null, "rfwatch-${type.name}")
         }
@@ -81,6 +81,9 @@ class AlertManager(private val context: Context) : TextToSpeech.OnInitListener {
             AlertType.NEW_AT_HOME -> longArrayOf(0, 250, 500, 250)
             AlertType.SWEEP_HIT -> longArrayOf(0, 80, 60, 80, 60, 80)
             AlertType.IMSI_CATCHER -> longArrayOf(0, 500, 150, 150, 150, 500)
+            AlertType.AXON_SIGNATURE -> longArrayOf(0, 250, 150, 250)
+            AlertType.LAW_ENFORCEMENT_SIGNATURE -> longArrayOf(0, 350, 180, 350)
+            AlertType.CAMERA_IOT_SIGNATURE -> longArrayOf(0, 120, 100, 120)
         }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             vibrator.vibrate(VibrationEffect.createWaveform(pattern, -1))
@@ -89,7 +92,7 @@ class AlertManager(private val context: Context) : TextToSpeech.OnInitListener {
         }
     }
 
-    private fun channelId(type: AlertType) = "ch_" + type.name.lowercase()
+    private fun channelId(type: AlertType) = if (type == AlertType.TRACKER_FOLLOWING) "ch_tracker_candidate_v2" else "ch_" + type.name.lowercase()
 
     private fun createChannels() {
         val channels = listOf(
@@ -99,11 +102,15 @@ class AlertManager(private val context: Context) : TextToSpeech.OnInitListener {
             AlertType.NEW_AT_HOME to "New device at home",
             AlertType.SWEEP_HIT to "Room sweep hit",
             AlertType.IMSI_CATCHER to "IMSI catcher / fake tower",
+            AlertType.AXON_SIGNATURE to "Possible Axon device signature",
+            AlertType.LAW_ENFORCEMENT_SIGNATURE to "Possible law-enforcement radio signature",
+            AlertType.CAMERA_IOT_SIGNATURE to "Possible camera / IoT radio signature",
         ).map { (type, name) ->
             NotificationChannel(channelId(type), name, NotificationManager.IMPORTANCE_HIGH).apply {
                 enableVibration(true)
             }
-        } + NotificationChannel(MONITOR_CHANNEL, "Monitoring active", NotificationManager.IMPORTANCE_LOW)
+        } + NotificationChannel("ch_tracker_candidate_v2", "Persistent item-tracker-like signal", NotificationManager.IMPORTANCE_LOW) +
+            NotificationChannel(MONITOR_CHANNEL, "Monitoring active", NotificationManager.IMPORTANCE_LOW)
         channels.forEach { nm.createNotificationChannel(it) }
     }
 

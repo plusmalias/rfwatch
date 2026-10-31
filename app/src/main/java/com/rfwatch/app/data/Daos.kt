@@ -10,8 +10,11 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface DeviceDao {
     @Upsert suspend fun upsert(device: DeviceEntity)
-    @Query("SELECT * FROM devices ORDER BY lastSeenMs DESC") fun observeAll(): Flow<List<DeviceEntity>>
+    // Keep rows in discovery order: lastSeenMs changes on every scan and makes a live list jump under taps.
+    @Query("SELECT * FROM devices ORDER BY firstSeenMs DESC, id ASC") fun observeAll(): Flow<List<DeviceEntity>>
     @Query("SELECT * FROM devices WHERE id = :id") suspend fun byId(id: String): DeviceEntity?
+    @Query("SELECT * FROM devices WHERE observedLat IS NOT NULL AND observedLon IS NOT NULL ORDER BY lastSeenMs DESC LIMIT :limit")
+    suspend fun recentMapped(limit: Int): List<DeviceEntity>
     @Query("UPDATE devices SET isAllowlisted = :allow WHERE id = :id") suspend fun setAllowlisted(id: String, allow: Boolean)
     @Query("UPDATE devices SET isOwnDevice = :own, ownDeviceConfirmed = :confirmed WHERE id = :id")
     suspend fun setOwnDevice(id: String, own: Boolean, confirmed: Boolean)
@@ -23,7 +26,11 @@ interface DeviceDao {
 interface ObservationDao {
     @Insert(onConflict = OnConflictStrategy.IGNORE) suspend fun insert(obs: ObservationEntity): Long
     @Query("SELECT * FROM observations WHERE deviceId = :id ORDER BY timestampMs") suspend fun forDevice(id: String): List<ObservationEntity>
+    @Query("SELECT * FROM observations WHERE deviceId = :id ORDER BY timestampMs DESC, rowId DESC LIMIT :limit")
+    suspend fun recentForDevice(id: String, limit: Int = 60): List<ObservationEntity>
     @Query("SELECT * FROM observations WHERE deviceId = :id AND lat IS NOT NULL ORDER BY timestampMs") suspend fun geoForDevice(id: String): List<ObservationEntity>
+    @Query("SELECT * FROM observations WHERE deviceId = :id AND lat IS NOT NULL ORDER BY timestampMs DESC, rowId DESC LIMIT :limit")
+    suspend fun recentGeoForDevice(id: String, limit: Int): List<ObservationEntity>
     @Query("DELETE FROM observations WHERE timestampMs < :cutoff") suspend fun purgeOlderThan(cutoff: Long): Int
 }
 

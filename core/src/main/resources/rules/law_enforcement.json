@@ -2,7 +2,7 @@
   "id": "law_enforcement",
   "name": "Law-enforcement equipment",
   "category": "LAW_ENFORCEMENT",
-  "source": "IEEE MA-L registry; vendor documentation. Verify OUIs against the current IEEE registry before relying on them — registrations change and these flag the vendor, not necessarily a specific product.",
+  "source": "IEEE MA-L registry, Bluetooth SIG Assigned Numbers, and vendor documentation. These are vendor/device signatures, not proof of police presence or a particular camera model.",
   "version": 1,
   "rules": [
     {
@@ -10,8 +10,10 @@
       "label": "Axon / TASER device",
       "threat": "PRIORITY",
       "ouiPrefixes": ["0025df"],
+      "ssidPatterns": ["axon", "taser"],
+      "companyIds": [64641],
       "nameSubstrings": ["axon", "taser"],
-      "note": "OUI 00:25:DF is Axon Enterprise's only IEEE MA-L block (registered 2010 as TASER International). Flags body cameras, docks, in-car video and TASERs alike — vendor-level, not model-level."
+      "note": "Matches the Axon BLE company identifier 0xFC81, Axon/TASER in a BLE name or Wi-Fi SSID, or OUI 00:25:DF. The company ID is vendor-level; an Axon signature does not prove this is a body camera or that police are nearby. BLE visibility depends on the camera's pairing/beacon settings; SSIDs can be hidden, randomized, or absent."
     },
     {
       "id": "cradlepoint",

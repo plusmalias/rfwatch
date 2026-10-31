@@ -13,7 +13,15 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 
 /** A single BLE sighting: the neutral advertisement plus the raw [ScanResult]. */
-data class BleSighting(val advertisement: BleAdvertisement, val deviceName: String?)
+data class BleSighting(
+    val advertisement: BleAdvertisement,
+    val deviceName: String?,
+    val connectable: Boolean,
+    val legacyAdvertisement: Boolean,
+    val payloadLength: Int,
+    val serviceUuids: List<String>,
+    val serviceDataUuids: List<String>,
+)
 
 /**
  * Low-latency BLE advertisement scanner. Each result's raw advertising bytes are parsed by
@@ -37,7 +45,17 @@ class BleScanner(context: Context) {
                     rssi = result.rssi,
                     timestampMs = System.currentTimeMillis(),
                 )
-                trySend(BleSighting(adv, result.scanRecord?.deviceName))
+                trySend(
+                    BleSighting(
+                        adv,
+                        result.scanRecord?.deviceName,
+                        result.isConnectable,
+                        result.isLegacy,
+                        raw.size,
+                        result.scanRecord?.serviceUuids.orEmpty().map { it.uuid.toString().uppercase() }.sorted(),
+                        result.scanRecord?.serviceData?.keys.orEmpty().map { it.uuid.toString().uppercase() }.sorted(),
+                    )
+                )
             }
 
             override fun onBatchScanResults(results: MutableList<ScanResult>) {

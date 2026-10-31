@@ -38,7 +38,16 @@ class RoomSweepAndBaselineTest {
             listOf(DeviceFacts(mac = "44:19:B6:aa:bb:cc", ssid = "Lobby", name = null, rssi = -60)),
             engine,
         )
-        assertTrue(findings.any { it.reason == SweepReason.CAMERA_IOT_OUI && it.huntable })
+        assertTrue(findings.any { it.reason == SweepReason.CAMERA_IOT_SIGNATURE && it.huntable })
+    }
+
+    @Test
+    fun bleAdvertisedCameraNameIsFlaggedAsCandidate() {
+        val findings = RoomSweep.analyze(
+            listOf(DeviceFacts(mac = "DA:11:22:33:44:55", ssid = null, name = "Reolink Camera", rssi = -63)),
+            engine,
+        )
+        assertTrue(findings.any { it.reason == SweepReason.CAMERA_IOT_SIGNATURE })
     }
 
     @Test

@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.rfwatch.app.repo.LiveContact
 import com.rfwatch.app.repo.RfWatchRepository
+import com.rfwatch.app.data.ObservationEntity
 import com.rfwatch.core.df.EmitterEstimate
 import com.rfwatch.core.df.SweepResult
 import kotlinx.coroutines.flow.SharingStarted
@@ -15,6 +16,7 @@ import kotlinx.coroutines.launch
 class RfWatchViewModel(private val repo: RfWatchRepository) : ViewModel() {
 
     val heading = repo.heading
+    val userLocation = repo.userLocation
     val contacts = repo.contacts
     val sweep = repo.sweep
     val room = repo.roomFindings
@@ -32,6 +34,11 @@ class RfWatchViewModel(private val repo: RfWatchRepository) : ViewModel() {
     }
 
     fun contactList(): List<LiveContact> = contacts.value.values.sortedByDescending { it.lastRssi }
+
+    suspend fun recentObservations(deviceId: String): List<ObservationEntity> =
+        repo.recentObservations(deviceId)
+
+    suspend fun refreshMapEstimates() = repo.refreshMapEstimates()
 
     class Factory(private val repo: RfWatchRepository) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")

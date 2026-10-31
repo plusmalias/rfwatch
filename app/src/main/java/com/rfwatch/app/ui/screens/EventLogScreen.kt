@@ -25,6 +25,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.rfwatch.app.ui.RfWatchViewModel
+import com.rfwatch.app.ui.theme.DangerRed
+import com.rfwatch.app.ui.theme.WarnAmber
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -46,7 +48,13 @@ fun EventLogScreen(vm: RfWatchViewModel, modifier: Modifier = Modifier) {
             items(alerts, key = { "a${it.rowId}" }) { a ->
                 Card(Modifier.fillMaxWidth()) {
                     Column(Modifier.padding(8.dp)) {
-                        Text("⚠ ${a.type}", fontSize = 13.sp)
+                        val color = when (a.type) {
+                            "AXON_SIGNATURE", "LAW_ENFORCEMENT_SIGNATURE", "PRIORITY_NEARBY" -> DangerRed
+                            "TRACKER_FOLLOWING" -> com.rfwatch.app.ui.theme.RadarPink
+                            "IMSI_CATCHER", "CAMERA_IOT_SIGNATURE" -> WarnAmber
+                            else -> Color(0xFF9CA3AF)
+                        }
+                        Text("⚠ ${a.type}", fontSize = 13.sp, color = color)
                         Text("${fmt.format(Date(a.timestampMs))} · ${a.message}", fontSize = 11.sp, color = Color(0xFF9CA3AF))
                     }
                 }

@@ -30,14 +30,15 @@ class CellScanner(context: Context) {
         return infos.mapNotNull { it.toObservation(nowMs) }
     }
 
-    private fun CellInfo.toObservation(nowMs: Long): CellObservation? = when (this) {
+    private fun CellInfo.toObservation(nowMs: Long): CellObservation? {
+        return when (this) {
         is CellInfoLte -> {
             val id = cellIdentity
             val ss = cellSignalStrength
             CellObservation(
                 radio = RadioType.LTE,
-                mcc = mccOf(id.mccString, @Suppress("DEPRECATION") id.mcc),
-                mnc = mncOf(id.mncString, @Suppress("DEPRECATION") id.mnc),
+                mcc = mccOf(@Suppress("DEPRECATION") id.mcc) { id.mccString },
+                mnc = mncOf(@Suppress("DEPRECATION") id.mnc) { id.mncString },
                 areaCode = id.tac.nullIfUnavailable(),
                 cellId = id.ci.toLong().nullIfUnavailable(),
                 pci = id.pci.nullIfUnavailable(),
@@ -52,8 +53,8 @@ class CellScanner(context: Context) {
             val id = cellIdentity
             CellObservation(
                 radio = RadioType.GSM,
-                mcc = mccOf(id.mccString, @Suppress("DEPRECATION") id.mcc),
-                mnc = mncOf(id.mncString, @Suppress("DEPRECATION") id.mnc),
+                mcc = mccOf(@Suppress("DEPRECATION") id.mcc) { id.mccString },
+                mnc = mncOf(@Suppress("DEPRECATION") id.mnc) { id.mncString },
                 areaCode = id.lac.nullIfUnavailable(),
                 cellId = id.cid.toLong().nullIfUnavailable(),
                 pci = null,
@@ -68,8 +69,8 @@ class CellScanner(context: Context) {
             val id = cellIdentity
             CellObservation(
                 radio = RadioType.WCDMA,
-                mcc = mccOf(id.mccString, @Suppress("DEPRECATION") id.mcc),
-                mnc = mncOf(id.mncString, @Suppress("DEPRECATION") id.mnc),
+                mcc = mccOf(@Suppress("DEPRECATION") id.mcc) { id.mccString },
+                mnc = mncOf(@Suppress("DEPRECATION") id.mnc) { id.mncString },
                 areaCode = id.lac.nullIfUnavailable(),
                 cellId = id.cid.toLong().nullIfUnavailable(),
                 pci = id.psc.nullIfUnavailable(),
@@ -99,13 +100,18 @@ class CellScanner(context: Context) {
                 )
             } else null
         }
+        }
     }
 
-    private fun mccOf(str: String?, legacy: Int): Int? =
-        str?.toIntOrNull() ?: legacy.nullIfUnavailable()
+    private inline fun mccOf(legacy: Int, modern: () -> String?): Int? {
+        val value = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) modern()?.toIntOrNull() else null
+        return value ?: legacy.nullIfUnavailable()
+    }
 
-    private fun mncOf(str: String?, legacy: Int): Int? =
-        str?.toIntOrNull() ?: legacy.nullIfUnavailable()
+    private inline fun mncOf(legacy: Int, modern: () -> String?): Int? {
+        val value = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) modern()?.toIntOrNull() else null
+        return value ?: legacy.nullIfUnavailable()
+    }
 
     // CellInfo reports Integer.MAX_VALUE / Long.MAX_VALUE for unknown fields.
     private fun Int.nullIfUnavailable(): Int? = if (this == Int.MAX_VALUE) null else this

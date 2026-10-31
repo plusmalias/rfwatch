@@ -19,6 +19,7 @@ import com.rfwatch.app.sensors.LocationProvider
 import com.rfwatch.core.alerts.AlertType
 import com.rfwatch.core.cs.TrackerMatch
 import com.rfwatch.core.cs.TrackerParser
+import com.rfwatch.core.cs.TrackerAlertGate
 import com.rfwatch.core.cs.TrackerType
 import com.rfwatch.core.df.DriveByEstimator
 import com.rfwatch.core.df.EmitterEstimate
@@ -51,6 +52,8 @@ data class LiveContact(
     val lastRssi: Int = -100,
     val estimate: EmitterEstimate? = null,
     val lastSeenMs: Long = 0,
+    val brand: String? = null,
+    val category: String? = null,
 )
 
 /**
@@ -72,10 +75,14 @@ class RfWatchRepository(
     private val locationProvider: LocationProvider,
 ) {
     private val stingray = StingrayDetector()
+    private val trackerAlertGate = TrackerAlertGate()
     private val fixHolder = LocationFixHolder()
 
     private val _heading = MutableStateFlow(Heading(null, HeadingSource.NONE, SensorAccuracy.UNRELIABLE))
     val heading: StateFlow<Heading> = _heading.asStateFlow()
+
+    private val _userLocation = MutableStateFlow<GpsFix?>(null)
+    val userLocation: StateFlow<GpsFix?> = _userLocation.asStateFlow()
 
     private val _contacts = MutableStateFlow<Map<String, LiveContact>>(emptyMap())
     val contacts: StateFlow<Map<String, LiveContact>> = _contacts.asStateFlow()
@@ -83,8 +90,9 @@ class RfWatchRepository(
     private val _sweep = MutableStateFlow<SweepResult?>(null)
     val sweep: StateFlow<SweepResult?> = _sweep.asStateFlow()
 
-    // Room-sweep findings, keyed by device, updated as Wi-Fi devices are seen.
+    // Live room-sweep candidates, keyed by radio address and finding reason.
     private val roomMap = HashMap<String, com.rfwatch.core.cs.SweepFinding>()
+    private val roomLastSeenMs = HashMap<String, Long>()
     private val _room = MutableStateFlow<List<com.rfwatch.core.cs.SweepFinding>>(emptyList())
     val roomFindings: StateFlow<List<com.rfwatch.core.cs.SweepFinding>> = _room.asStateFlow()
 
@@ -99,10 +107,32 @@ class RfWatchRepository(
     val alertFlow get() = database.alertDao().recent()
     val eventFlow get() = database.eventDao().recent()
 
+    suspend fun recentObservations(deviceId: String, limit: Int = 60) =
+        database.observationDao().recentForDevice(deviceId, limit.coerceIn(1, 60))
+
+    /** Refresh a bounded set of live motion/location fits while the online map is visible. */
+    suspend fun refreshMapEstimates() {
+        val candidates = database.deviceDao().recentMapped(MAP_ESTIMATE_DEVICE_LIMIT)
+        for (device in candidates) {
+            val observations = database.observationDao()
+                .recentGeoForDevice(device.id, MAP_ESTIMATE_SAMPLE_LIMIT)
+                .map { it.toRadioObservation() }
+            if (observations.count { it.fix != null } < com.rfwatch.core.df.DriveByEstimator.MIN_SAMPLES) continue
+            val previous = _contacts.value[device.id] ?: continue
+            val estimate = DriveByEstimator.estimate(
+                observations, fixHolder.current, System.currentTimeMillis(), previous.estimate,
+            )
+            _contacts.value = _contacts.value.toMutableMap().apply {
+                put(device.id, previous.copy(estimate = estimate))
+            }
+        }
+    }
+
     fun startMonitoring(scope: CoroutineScope) {
         scope.launch {
             locationProvider.fixes().collect { fix ->
                 fixHolder.update(fix)
+                _userLocation.value = fix
                 headingProvider.updateFix(fix)
             }
         }
@@ -121,14 +151,30 @@ class RfWatchRepository(
                     serviceUuids = adv.serviceUuids16,
                     rssi = adv.rssi,
                 )
-                onDevice(adv.address, Band.BLE, sighting.deviceName, adv.rssi, adv.timestampMs, facts, match)
+                val addressType = runCatching {
+                    val firstOctet = adv.address.substringBefore(':').toInt(16)
+                    if ((firstOctet and 0x02) != 0) "Locally administered address (may be private/rotating)" else "Globally administered address"
+                }.getOrDefault("Address type unavailable")
+                val manufacturerData = adv.manufacturerData.toSortedMap().map { (companyId, bytes) ->
+                    "0x${companyId.toString(16).uppercase().padStart(4, '0')}=${bytes.joinToString("") { "%02X".format(it.toInt() and 0xFF) }}"
+                }
+                val radioDetails = buildList {
+                    add("BLE address ${adv.address}")
+                    add(addressType)
+                    add("Advertised name ${sighting.deviceName ?: "none"}")
+                    add("Manufacturer data ${manufacturerData.ifEmpty { listOf("none") }.joinToString(", ")}")
+                    add("16-bit service IDs ${adv.serviceUuids16.sorted().joinToString(", ") { "0x${it.toString(16).uppercase().padStart(4, '0')}" }.ifEmpty { "none" }}")
+                    add("All service UUIDs ${sighting.serviceUuids.joinToString(", ").ifEmpty { "none" }}")
+                    add("Service-data UUIDs ${sighting.serviceDataUuids.joinToString(", ").ifEmpty { "none" }}")
+                    add("${if (sighting.connectable) "Connectable" else "Not connectable"} · ${if (sighting.legacyAdvertisement) "legacy" else "extended"} advertisement · ${sighting.payloadLength} bytes")
+                }.joinToString(" · ")
+                onDevice(adv.address, Band.BLE, sighting.deviceName, adv.rssi, adv.timestampMs, facts, match, radioDetails)
             }
         }
         scope.launch {
             wifiScanner.scans().collect { list ->
-                val now = System.currentTimeMillis()
                 list.forEach { s ->
-                    onDevice(s.bssid, Band.WIFI, s.facts.ssid, s.facts.rssi, now, s.facts, null)
+                    onDevice(s.bssid, Band.WIFI, s.facts.ssid, s.facts.rssi, s.timestampMs, s.facts, null, s.radioDetails)
                 }
             }
         }
@@ -171,9 +217,10 @@ class RfWatchRepository(
 
     private suspend fun onDevice(
         id: String, band: Band, name: String?, rssi: Int, ts: Long,
-        facts: DeviceFacts, match: TrackerMatch?,
+        facts: DeviceFacts, match: TrackerMatch?, radioDetails: String? = null,
     ) {
         val hits = ruleEngine.evaluate(facts)
+        val identity = DeviceIdentityClassifier.classify(band, facts, match, hits)
         val topThreat = hits.maxByOrNull { it.threat.ordinal }?.threat ?: Threat.INFO
         val classification = when {
             match != null -> "TRACKER"
@@ -182,12 +229,26 @@ class RfWatchRepository(
             else -> "UNKNOWN"
         }
 
-        val fix = fixHolder.current
+        val fix = fixHolder.current?.takeIf {
+            val age = System.currentTimeMillis() - it.timestampMs
+            age in 0..MAX_FIX_AGE_MS && it.accuracyM <= MAX_FIX_ACCURACY_M
+        }
+        val previous = database.deviceDao().byId(id)
         database.deviceDao().upsert(
             DeviceEntity(
                 id = id, band = band.name, displayName = name, lastMac = id,
-                firstSeenMs = ts, lastSeenMs = ts, lastRssi = rssi,
+                firstSeenMs = previous?.firstSeenMs ?: ts, lastSeenMs = ts, lastRssi = rssi,
                 classification = classification, trackerType = match?.type?.name,
+                isAllowlisted = previous?.isAllowlisted ?: false,
+                isOwnDevice = previous?.isOwnDevice ?: false,
+                ownDeviceConfirmed = previous?.ownDeviceConfirmed ?: false,
+                brand = identity.brand ?: previous?.brand,
+                category = identity.category,
+                observedLat = fix?.lat ?: previous?.observedLat,
+                observedLon = fix?.lon ?: previous?.observedLon,
+                observedAccuracyM = fix?.accuracyM ?: previous?.observedAccuracyM,
+                observedAtMs = fix?.timestampMs ?: previous?.observedAtMs,
+                radioDetails = radioDetails ?: previous?.radioDetails,
             )
         )
         database.observationDao().insert(
@@ -198,13 +259,19 @@ class RfWatchRepository(
             )
         )
 
-        // Room-sweep findings (Wi-Fi: cameras/IoT, hidden SSIDs, strong source-less signals).
-        if (band == Band.WIFI) {
-            val findings = com.rfwatch.core.cs.RoomSweep.analyze(listOf(facts), ruleEngine)
-            if (findings.isNotEmpty()) {
-                findings.forEach { roomMap[it.key + ":" + it.reason.name] = it }
-                _room.value = roomMap.values.sortedByDescending { it.threat.ordinal }
-            }
+        // Passive radio candidates on BLE and Wi-Fi. A nameless BLE beacon alone is too common
+        // to treat as a hidden-camera finding, so BLE contributes only explicit camera/IoT rules.
+        val findings = com.rfwatch.core.cs.RoomSweep.analyze(listOf(facts), ruleEngine)
+            .filter { band == Band.WIFI || it.reason == com.rfwatch.core.cs.SweepReason.CAMERA_IOT_SIGNATURE }
+        findings.forEach {
+            val findingKey = it.key + ":" + it.reason.name
+            roomMap[findingKey] = it
+            roomLastSeenMs[findingKey] = ts
+        }
+        val stale = roomLastSeenMs.filterValues { ts - it > ROOM_FINDING_TTL_MS }.keys
+        stale.forEach { roomLastSeenMs.remove(it); roomMap.remove(it) }
+        if (findings.isNotEmpty() || stale.isNotEmpty()) {
+            _room.value = roomMap.values.sortedByDescending { it.threat.ordinal }
         }
 
         // Live sweep capture.
@@ -220,31 +287,55 @@ class RfWatchRepository(
             put(id, (prev ?: LiveContact(id, band, name ?: id, classification)).copy(
                 label = name ?: id, classification = classification,
                 trackerType = match?.type, lastRssi = rssi, lastSeenMs = ts,
+                brand = identity.brand ?: prev?.brand,
+                category = identity.category,
             ))
         }
 
-        maybeAlert(id, classification, match, rssi)
+        val trackerAlertConfirmed = match?.let {
+            trackerAlertGate.shouldAlert(id, ts, it.confidence)
+        } ?: false
+        maybeAlert(
+            id, classification, match,
+            trackerAlertConfirmed = trackerAlertConfirmed,
+            axonSignature = hits.any { it.ruleId == "axon" },
+            lawEnforcementSignature = hits.any { it.category == com.rfwatch.core.rules.RuleCategory.LAW_ENFORCEMENT },
+            cameraSignature = hits.any { it.category == com.rfwatch.core.rules.RuleCategory.CAMERA_IOT },
+        )
     }
 
     private val lastAlertMs = HashMap<String, Long>()
 
-    private suspend fun maybeAlert(id: String, classification: String, match: TrackerMatch?, rssi: Int) {
+    private suspend fun maybeAlert(
+        id: String,
+        classification: String,
+        match: TrackerMatch?,
+        trackerAlertConfirmed: Boolean,
+        axonSignature: Boolean,
+        lawEnforcementSignature: Boolean,
+        cameraSignature: Boolean,
+    ) {
         val now = System.currentTimeMillis()
         if ((now - (lastAlertMs[id] ?: 0)) < ALERT_DEBOUNCE_MS) return
         val relBearing = relativeBearingFor(id)
         val type = when {
-            match != null -> AlertType.TRACKER_FOLLOWING
+            axonSignature -> AlertType.AXON_SIGNATURE
+            lawEnforcementSignature -> AlertType.LAW_ENFORCEMENT_SIGNATURE
+            cameraSignature -> AlertType.CAMERA_IOT_SIGNATURE
+            match != null && trackerAlertConfirmed -> AlertType.TRACKER_FOLLOWING
             classification == "PRIORITY" -> AlertType.PRIORITY_NEARBY
             else -> return
         }
         val contact = _contacts.value[id]
         val confidence = contact?.estimate?.confidence ?: 0.0
-        alertManager.raise(type, titleFor(type), contact?.label, relBearing, confidence)
+        alertManager.raise(type, titleFor(type), contact?.label, relBearing, confidence, speak = type != AlertType.TRACKER_FOLLOWING)
         lastAlertMs[id] = now
         database.alertDao().insert(
             com.rfwatch.app.data.AlertEntity(
                 type = type.name, timestampMs = now, deviceId = id,
-                message = titleFor(type), bearingDeg = relBearing, confidence = confidence,
+                message = if (type == AlertType.TRACKER_FOLLOWING) {
+                    "Persistent item-tracker-like BLE signature; this does not establish that it is following you."
+                } else titleFor(type), bearingDeg = relBearing, confidence = confidence,
             )
         )
     }
@@ -310,16 +401,24 @@ class RfWatchRepository(
     )
 
     private fun titleFor(type: AlertType) = when (type) {
-        AlertType.TRACKER_FOLLOWING -> "Possible tracker"
+        AlertType.TRACKER_FOLLOWING -> "Possible item-tracker signal nearby"
         AlertType.PRIORITY_NEARBY -> "Priority device nearby"
         AlertType.PRIORITY_APPROACHING -> "Priority device approaching"
         AlertType.NEW_AT_HOME -> "New device at home"
         AlertType.SWEEP_HIT -> "Surveillance device"
         AlertType.IMSI_CATCHER -> "Possible IMSI catcher"
+        AlertType.AXON_SIGNATURE -> "Possible Axon device signature nearby"
+        AlertType.LAW_ENFORCEMENT_SIGNATURE -> "Possible law-enforcement radio signature nearby"
+        AlertType.CAMERA_IOT_SIGNATURE -> "Possible camera / IoT radio signature nearby"
     }
 
     companion object {
         private const val ALERT_DEBOUNCE_MS = 60_000L
         private const val CELL_SCAN_INTERVAL_MS = 6_000L
+        private const val MAX_FIX_AGE_MS = 120_000L
+        private const val MAX_FIX_ACCURACY_M = 100.0
+        private const val ROOM_FINDING_TTL_MS = 120_000L
+        private const val MAP_ESTIMATE_DEVICE_LIMIT = 24
+        private const val MAP_ESTIMATE_SAMPLE_LIMIT = 240
     }
 }

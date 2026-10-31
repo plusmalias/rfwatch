@@ -5,7 +5,7 @@ import com.rfwatch.core.rules.RuleEngine
 import com.rfwatch.core.rules.Threat
 
 enum class SweepReason {
-    CAMERA_IOT_OUI,      // matched a surveillance/IoT vendor rule
+    CAMERA_IOT_SIGNATURE,// matched a surveillance/IoT name or vendor rule
     HIDDEN_SSID,         // AP broadcasting no SSID
     STRONG_SOURCELESS,   // very strong signal with no identifiable source
 }
@@ -41,7 +41,7 @@ object RoomSweep {
             engine.evaluate(d)
                 .filter { it.category == com.rfwatch.core.rules.RuleCategory.CAMERA_IOT }
                 .forEach {
-                    out.add(SweepFinding(key, SweepReason.CAMERA_IOT_OUI, it.threat,
+                    out.add(SweepFinding(key, SweepReason.CAMERA_IOT_SIGNATURE, it.threat,
                         "${it.label} (${it.matchedOn})", d.rssi))
                 }
 

@@ -41,6 +41,13 @@
       "threat": "PRIORITY",
       "ssidPatterns": ["^HD-?[0-9A-Fa-f]{4}", "^ANRAN", "^LY-?WIFI", "^[A-Z]{2,4}CAM", "IPCAM", "^MV[-_]?\\d", "P2P", "^DANALE", "^YG[-_]?\\d", "^SQ\\d", "^CAM-?\\d"],
       "note": "Patterns matching default SSIDs of common disguised/hidden Wi-Fi cameras. Indicative only — tune per findings."
+    },
+    {
+      "id": "camera_ble_name",
+      "label": "Camera / video device advertised name",
+      "threat": "NOTABLE",
+      "nameSubstrings": ["camera", "cctv", "ipcam", "ipc-", "hikvision", "dahua", "reolink", "axis", "wyze", "arlo", "ring", "blink", "eufy", "tapo", "nest cam"],
+      "note": "Name-based BLE/Wi-Fi-device hint only. Advertised names can be absent or spoofed, and brands also make non-camera devices. Not confirmation of a camera."
     }
   ]
 }

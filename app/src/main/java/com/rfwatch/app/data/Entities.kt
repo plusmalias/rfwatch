@@ -25,6 +25,17 @@ data class DeviceEntity(
     val isAllowlisted: Boolean = false,
     val isOwnDevice: Boolean = false,
     val ownDeviceConfirmed: Boolean = false,
+    /** Best-effort vendor attribution from advertised identifiers; null means unknown. */
+    val brand: String? = null,
+    /** Coarse radio/device category, not a claim about the device's owner or purpose. */
+    val category: String? = null,
+    /** Phone GPS at the time this device was last observed (not the device's own position). */
+    val observedLat: Double? = null,
+    val observedLon: Double? = null,
+    val observedAccuracyM: Double? = null,
+    val observedAtMs: Long? = null,
+    /** Raw, locally available radio identifiers/advertising metadata; not a decoded model. */
+    val radioDetails: String? = null,
 )
 
 /** One RSSI observation, GPS- and heading-tagged where available. */
