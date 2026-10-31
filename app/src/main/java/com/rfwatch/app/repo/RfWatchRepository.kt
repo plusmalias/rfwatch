@@ -768,6 +768,11 @@ class RfWatchRepository(
         )
         contactsDirty = true
 
+        // Possible ambulance / fire equipment: gentle alert, once per device per cooldown.
+        hits.filter { it.category == com.rfwatch.core.rules.RuleCategory.EMERGENCY_SERVICES }
+            .maxByOrNull { it.threat.ordinal }
+            ?.let { hit -> onEmergencyHit(id, hit, rssi, ts, updated) }
+
         // Possible law-enforcement equipment: grouped into encounters with a live notification.
         hits.filter { it.category == com.rfwatch.core.rules.RuleCategory.LAW_ENFORCEMENT }
             .maxByOrNull { it.threat.ordinal }
@@ -830,6 +835,22 @@ class RfWatchRepository(
         )
     }
 
+    @Volatile private var lastEmergencyHitMs = 0L
+    private val lastEmergencyAlertMs = HashMap<String, Long>()
+
+    private suspend fun onEmergencyHit(id: String, hit: com.rfwatch.core.rules.RuleHit, rssi: Int, ts: Long, device: DeviceEntity) {
+        lastEmergencyHitMs = ts
+        if (hit.threat == Threat.INFO || device.isOwnDevice || device.isAllowlisted) return
+        if (!alertManager.emergencyAlertsEnabled()) return
+        if (ts - (lastEmergencyAlertMs[id] ?: 0L) < EMERGENCY_ALERT_COOLDOWN_MS) return
+        lastEmergencyAlertMs[id] = ts
+        val detail = "${hit.label} · ${device.displayName ?: id} · $rssi dBm (${hit.matchedOn})"
+        alertManager.raise(AlertType.EMERGENCY_VEHICLE, titleFor(AlertType.EMERGENCY_VEHICLE), detail, null, 0.0)
+        database.alertDao().insert(com.rfwatch.app.data.AlertEntity(type = AlertType.EMERGENCY_VEHICLE.name, timestampMs = ts, deviceId = id, message = detail))
+        val fix = fixHolder.current
+        database.eventDao().insert(com.rfwatch.app.data.EventEntity(kind = "EMERGENCY", timestampMs = ts, deviceId = id, detail = detail, lat = fix?.lat, lon = fix?.lon))
+    }
+
     private suspend fun handleLawAction(action: com.rfwatch.core.alerts.LawAction, ruleId: String? = null) {
         if (action == com.rfwatch.core.alerts.LawAction.NONE) return
         val encounter = lawTracker.snapshot() ?: return
@@ -838,7 +859,7 @@ class RfWatchRepository(
         val fix = fixHolder.current
         when (action) {
             com.rfwatch.core.alerts.LawAction.ALERT -> {
-                alertManager.lawEncounter(encounter, loud = true)
+                alertManager.lawEncounter(encounter, loud = true, emergencyNearby = now - lastEmergencyHitMs < EMERGENCY_CONTEXT_MS)
                 val strongest = encounter.strongest
                 database.alertDao().insert(
                     com.rfwatch.app.data.AlertEntity(
@@ -849,7 +870,7 @@ class RfWatchRepository(
                     )
                 )
             }
-            com.rfwatch.core.alerts.LawAction.UPDATE -> alertManager.lawEncounter(encounter, loud = false)
+            com.rfwatch.core.alerts.LawAction.UPDATE -> alertManager.lawEncounter(encounter, loud = false, emergencyNearby = now - lastEmergencyHitMs < EMERGENCY_CONTEXT_MS)
             com.rfwatch.core.alerts.LawAction.ENDED -> {
                 alertManager.lawEncounterEnded(encounter)
                 database.eventDao().insert(
@@ -1065,11 +1086,14 @@ class RfWatchRepository(
         AlertType.DRONE_NEARBY -> "Drone detected nearby"
         AlertType.POSSIBLE_FOLLOWER -> "Device travelling with you"
         AlertType.LAW_VEHICLE_FOLLOWING -> "Possible police equipment travelling with you"
+        AlertType.EMERGENCY_VEHICLE -> "Ambulance / fire equipment nearby"
     }
 
     companion object {
         private const val ALERT_DEBOUNCE_MS = 60_000L
         private const val CAMERA_ALERT_MIN_RSSI = -75
+        private const val EMERGENCY_ALERT_COOLDOWN_MS = 30 * 60_000L
+        private const val EMERGENCY_CONTEXT_MS = 3 * 60_000L
         private const val CAMERA_ALERT_COOLDOWN_MS = 6 * 60 * 60_000L
         const val MIN_SWEEP_SAMPLES = 6
         private const val FLUSH_INTERVAL_MS = 3_000L

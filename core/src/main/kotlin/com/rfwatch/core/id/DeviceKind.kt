@@ -9,6 +9,7 @@ enum class DeviceKind(val label: String) {
     TRACKER("Tracker"),
     DRONE("Drone"),
     LAW_ENFORCEMENT("Axon / law"),
+    EMERGENCY("Ambulance / fire"),
     CAMERA_IOT("Camera / IoT"),
     FLEET("GPS tracker / fleet"),
     VEHICLE("Vehicle"),

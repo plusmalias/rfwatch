@@ -9,7 +9,7 @@ import kotlinx.serialization.json.Json
  */
 object RulePacks {
 
-    val BUILTIN_IDS = listOf("law_enforcement", "trackers", "cameras_iot", "fleet")
+    val BUILTIN_IDS = listOf("law_enforcement", "trackers", "cameras_iot", "fleet", "emergency_services")
 
     private val json = Json {
         ignoreUnknownKeys = true

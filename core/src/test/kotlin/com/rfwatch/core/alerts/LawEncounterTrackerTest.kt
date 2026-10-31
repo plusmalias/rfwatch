@@ -68,4 +68,15 @@ class LawEncounterTrackerTest {
         assertTrue(cam(DeviceFacts("02:11:22:33:44:55", "MV12345678", null)).orEmpty().startsWith("spycam"))
         assertEquals("spycam_app_ssid", cam(DeviceFacts("02:11:22:33:44:55", "YCC365-ab12", null)))
     }
+
+    @Test fun emergencyServicesPackMatchesEmsAndFireGear() {
+        val engine = RuleEngine(RulePacks.loadBuiltin())
+        fun ems(f: DeviceFacts) = engine.evaluate(f).firstOrNull { it.packId == "emergency_services" }?.ruleId
+        assertEquals("ems_defib_monitor", ems(DeviceFacts(null, null, null, serviceUuids = setOf(0xFE22)))) // ZOLL
+        assertEquals("ems_defib_monitor", ems(DeviceFacts("40:BD:9E:11:22:33", null, null))) // Physio-Control
+        assertEquals("ems_stryker", ems(DeviceFacts(null, null, null, companyIds = setOf(0x0A5F))))
+        assertEquals("fire_scba", ems(DeviceFacts(null, null, null, companyIds = setOf(0x01A4)))) // MSA
+        assertEquals("fire_apparatus", ems(DeviceFacts("80:84:A9:11:22:33", null, null))) // Oshkosh / Pierce
+        assertEquals(null, ems(DeviceFacts("00:08:BE:11:22:33", null, null))) // 'MSA Group' optics, not MSA Safety
+    }
 }

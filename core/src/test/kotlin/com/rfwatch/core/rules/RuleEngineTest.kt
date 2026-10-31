@@ -11,8 +11,8 @@ class RuleEngineTest {
     @Test
     fun loadsAllFourBuiltinPacks() {
         val packs = RulePacks.loadBuiltin()
-        assertEquals(4, packs.size)
-        assertEquals(setOf("law_enforcement", "trackers", "cameras_iot", "fleet"),
+        assertEquals(5, packs.size)
+        assertEquals(setOf("law_enforcement", "trackers", "cameras_iot", "fleet", "emergency_services"),
             packs.map { it.id }.toSet())
     }
 

@@ -52,6 +52,7 @@ fun SettingsScreen(modifier: Modifier = Modifier) {
     var confirmWipe by remember { mutableStateOf(false) }
     var lawAlerts by remember { mutableStateOf(prefs.getBoolean(AlertManager.PREF_LAW_ALERTS, true)) }
     var lawSpeak by remember { mutableStateOf(prefs.getBoolean(AlertManager.PREF_LAW_SPEAK, true)) }
+    var emergencyAlerts by remember { mutableStateOf(prefs.getBoolean(AlertManager.PREF_EMERGENCY_ALERTS, true)) }
     var flashScreen by remember { mutableStateOf(prefs.getBoolean(AlertManager.PREF_FLASH_SCREEN, true)) }
     var flashTorch by remember { mutableStateOf(prefs.getBoolean(AlertManager.PREF_FLASH_TORCH, false)) }
     val scope = rememberCoroutineScope()
@@ -117,6 +118,13 @@ fun SettingsScreen(modifier: Modifier = Modifier) {
         }
         homeMessage?.let { Text(it, fontSize = 12.sp, color = OkGreen) }
 
+        Row(Modifier.fillMaxWidth().padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text("Ambulance / fire alerts", fontSize = 14.sp)
+                Text("Alert when ambulance or fire-crew equipment is heard (defibrillators, stretchers, breathing apparatus, fire apparatus).", fontSize = 12.sp, color = Color(0xFF9CA3AF))
+            }
+            Switch(checked = emergencyAlerts, onCheckedChange = { emergencyAlerts = it; prefs.edit().putBoolean(AlertManager.PREF_EMERGENCY_ALERTS, it).apply() })
+        }
         Row(Modifier.fillMaxWidth().padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
                 Text("Flash screen on alerts", fontSize = 14.sp)

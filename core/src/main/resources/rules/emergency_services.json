@@ -1,0 +1,63 @@
+{
+  "id": "emergency_services",
+  "name": "Ambulance & fire equipment",
+  "category": "EMERGENCY_SERVICES",
+  "source": "Identifiers checked 2026-10-31 against the bundled IEEE OUI registry and Bluetooth SIG assigned numbers (company IDs, member UUIDs); names are vendor/model strings. The same equipment is used in hospitals, clinics, industry and training — a hit means 'possible ambulance / fire crew', not proof.",
+  "version": 1,
+  "rules": [
+    {
+      "id": "ems_defib_monitor",
+      "label": "Ambulance defibrillator / patient monitor",
+      "threat": "NOTABLE",
+      "ouiPrefixes": ["40bd9e", "00095c", "000db8"],
+      "serviceUuids": [65058, 65059],
+      "nameSubstrings": ["zoll", "x series", "r series", "lifepak", "lp15", "lp35", "heartstart", "mrx", "tempus", "corpuls", "defigard"],
+      "note": "ZOLL Medical member UUIDs 0xFE22 / 0xFE23 (X Series monitors, AEDs), Physio-Control OUI 40:BD:9E (LIFEPAK), Philips Medical Systems Cardiac & Monitoring 00:09:5C (HeartStart / MRx), Schiller 00:0D:B8. ZOLL LifeVest (patient-worn, 00:22:52) deliberately excluded."
+    },
+    {
+      "id": "ems_stryker",
+      "label": "Stryker ambulance equipment (stretcher / LUCAS / LIFEPAK)",
+      "threat": "NOTABLE",
+      "ouiPrefixes": ["000dd1"],
+      "companyIds": [2655],
+      "serviceUuids": [64622],
+      "nameSubstrings": ["stryker", "power-pro", "power-load", "lucas"],
+      "note": "Stryker SIG company 0x0A5F, member UUID 0xFC6E and OUI 00:0D:D1 — powered ambulance stretchers/loaders, LUCAS chest-compression devices and LIFEPAK. Also hospital beds and equipment."
+    },
+    {
+      "id": "ems_ventilator",
+      "label": "Transport ventilator",
+      "threat": "INFO",
+      "ouiPrefixes": ["489153"],
+      "nameSubstrings": ["weinmann", "medumat", "hamilton-t1", "oxylog"],
+      "note": "Weinmann (MEDUMAT) OUI 48:91:53; Hamilton T1 and Dräger Oxylog by name. Common in ambulances and retrieval aircraft."
+    },
+    {
+      "id": "fire_scba",
+      "label": "Firefighter breathing apparatus / gas detector",
+      "threat": "NOTABLE",
+      "ouiPrefixes": ["00212b", "cc418e", "00105d", "0030e6", "f0e5c3"],
+      "companyIds": [420, 1212],
+      "serviceUuids": [64730],
+      "nameSubstrings": ["msa g1", "msa lunar", "lunar", "altair", "scott sight", "pak-tracker", "scott air-pak", "draeger pss", "dräger pss", "x-am", "fps 7000", "drager"],
+      "note": "MSA (SIG company 0x01A4 MSA Innovation; OUIs 00:21:2B MSA Auer, CC:41:8E) — G1 SCBA, LUNAR, ALTAIR gas detectors; Dräger (company 0x04BC, member UUID 0xFCDA, OUIs 00:10:5D, 00:30:E6, F0:E5:C3) — PSS SCBA, X-am gas detectors (Dräger also makes hospital equipment); 3M Scott by name. 'MSA Group' optical-transceiver OUIs are a different organisation and excluded."
+    },
+    {
+      "id": "fire_apparatus",
+      "label": "Fire apparatus / specialty emergency vehicle",
+      "threat": "NOTABLE",
+      "ouiPrefixes": ["8084a9"],
+      "nameSubstrings": ["pierce", "rosenbauer", "e-one", "spartan er", "magirus", "varley", "isuzu fire", "mills tui"],
+      "note": "Oshkosh Corporation OUI 80:84:A9 (owner of Pierce fire apparatus; also JLG and defence vehicles); Rosenbauer, E-ONE, Spartan, Magirus, Varley (AU) and Mills-Tui (AU) by name."
+    },
+    {
+      "id": "thermal_camera",
+      "label": "Thermal imaging camera",
+      "threat": "INFO",
+      "ouiPrefixes": ["001bd8", "00407f"],
+      "companyIds": [2793],
+      "nameSubstrings": ["flir", "k55", "k65", "bullard", "seek thermal", "msa evolution"],
+      "note": "FLIR Systems (SIG company 0x0AE9; OUIs 00:1B:D8, 00:40:7F) — K-series firefighting thermal cameras; also used by trades and hunters."
+    }
+  ]
+}

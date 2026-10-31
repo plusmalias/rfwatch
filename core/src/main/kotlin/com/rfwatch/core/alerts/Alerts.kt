@@ -14,6 +14,7 @@ enum class AlertType {
     DRONE_NEARBY,
     POSSIBLE_FOLLOWER,
     LAW_VEHICLE_FOLLOWING,
+    EMERGENCY_VEHICLE,
 }
 
 /**
@@ -53,6 +54,7 @@ object AlertPhrasing {
             AlertType.DRONE_NEARBY -> "Drone detected nearby"
             AlertType.POSSIBLE_FOLLOWER -> "A device has been travelling with you"
             AlertType.LAW_VEHICLE_FOLLOWING -> "Possible police equipment travelling with you"
+            AlertType.EMERGENCY_VEHICLE -> "Possible ambulance or fire equipment nearby"
         }
         val speakDirection = relativeBearingDeg != null && confidence > MIN_SPOKEN_CONFIDENCE
         return if (speakDirection) "$base, ${relativeSector(relativeBearingDeg!!)}" else base

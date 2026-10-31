@@ -94,6 +94,7 @@ class AlertManager(private val context: Context) : TextToSpeech.OnInitListener {
         AlertType.DRONE_NEARBY -> 0xFFE040FB
         AlertType.CAMERA_IOT_SIGNATURE, AlertType.NEW_AT_HOME, AlertType.SWEEP_HIT -> 0xFFFFB020
         AlertType.TRACKER_FOLLOWING -> 0xFFF277A6
+        AlertType.EMERGENCY_VEHICLE -> 0xFF3B82F6
     }
 
     /** Screen flash (if the app is open) and optional camera-torch strobe for a loud alert. */
@@ -130,11 +131,12 @@ class AlertManager(private val context: Context) : TextToSpeech.OnInitListener {
      * heads-up, vibration and (if enabled) speech; otherwise the same notification is refreshed
      * silently. Disabled entirely by the "Police equipment alerts" setting.
      */
-    fun lawEncounter(encounter: LawEncounter, loud: Boolean) {
+    fun lawEncounter(encounter: LawEncounter, loud: Boolean, emergencyNearby: Boolean = false) {
         if (!prefs.getBoolean(PREF_LAW_ALERTS, true)) return
         val strongest = encounter.strongest ?: return
         val count = encounter.signatures.size
-        val title = "Possible police equipment nearby"
+        // Police, ambulance and fire share routers, light bars and radios; say so when EMS/fire gear is also heard.
+        val title = if (emergencyNearby && !encounter.hasPriority) "Possible police / ambulance / fire vehicle nearby" else "Possible police equipment nearby"
         val text = "${strongest.label} · ${strengthWords(strongest.lastRssi)} (${strongest.lastRssi} dBm)" +
             if (count > 1) " · $count signatures" else ""
         val now = System.currentTimeMillis()
@@ -184,6 +186,8 @@ class AlertManager(private val context: Context) : TextToSpeech.OnInitListener {
         nm.notify(LAW_NOTIFICATION_ID, n)
     }
 
+    fun emergencyAlertsEnabled(): Boolean = prefs.getBoolean(PREF_EMERGENCY_ALERTS, true)
+
     private fun strengthWords(rssi: Int) = when {
         rssi >= -60 -> "very close"
         rssi >= -75 -> "nearby"
@@ -212,6 +216,7 @@ class AlertManager(private val context: Context) : TextToSpeech.OnInitListener {
             AlertType.DRONE_NEARBY -> longArrayOf(0, 90, 70, 90, 70, 90, 70, 300)
             AlertType.POSSIBLE_FOLLOWER -> longArrayOf(0, 600, 250, 600)
             AlertType.LAW_VEHICLE_FOLLOWING -> longArrayOf(0, 600, 150, 300, 150, 600)
+            AlertType.EMERGENCY_VEHICLE -> longArrayOf(0, 200, 120, 200, 120, 200)
         }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             vibrator.vibrate(VibrationEffect.createWaveform(pattern, -1))
@@ -236,6 +241,7 @@ class AlertManager(private val context: Context) : TextToSpeech.OnInitListener {
             AlertType.DRONE_NEARBY to "Drone nearby (Remote ID / DroneID)",
             AlertType.POSSIBLE_FOLLOWER to "Device travelling with you",
             AlertType.LAW_VEHICLE_FOLLOWING to "Police equipment travelling with you",
+            AlertType.EMERGENCY_VEHICLE to "Ambulance / fire equipment nearby",
         ).map { (type, name) ->
             NotificationChannel(channelId(type), name, NotificationManager.IMPORTANCE_HIGH).apply {
                 enableVibration(true)
@@ -260,6 +266,7 @@ class AlertManager(private val context: Context) : TextToSpeech.OnInitListener {
         const val PREF_LAW_SPEAK = "law_speak"
         const val PREF_FLASH_SCREEN = "flash_screen"
         const val PREF_FLASH_TORCH = "flash_torch"
+        const val PREF_EMERGENCY_ALERTS = "emergency_alerts"
         private const val LAW_NOTIFICATION_ID = 4242
     }
 }

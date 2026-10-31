@@ -13,6 +13,7 @@ internal fun deviceCategoryColor(category: String?, classification: String = "UN
     return when {
         "tracker" in label -> RadarPink
         "axon" in label || "law-enforcement" in label -> DangerRed
+        "emergency services" in label || "ambulance" in label -> Color(0xFF3B82F6)
         "camera" in label || "iot" in label -> WarnAmber
         "fleet" in label || "vehicle" in label -> Color(0xFFB79CFF)
         "wi-fi" in label || "wifi" in label -> Color(0xFF59B7FF)
