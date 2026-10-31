@@ -72,29 +72,19 @@ fun DevicesScreen(vm: RfWatchViewModel, modifier: Modifier = Modifier, onRoom: (
         val n = nav ?: return@LaunchedEffect
         if (n.dest != com.rfwatch.app.ui.DeviceDest.DETAILS) return@LaunchedEffect
         selectedId = n.deviceId
-        vm.consumeNav(n)
-        listState.scrollToItem(0) // the selected card is pinned as the first row
+        // Consume after scrolling: clearing the request re-keys (cancels) this effect.
+        try { androidx.compose.runtime.withFrameNanos { }; listState.scrollToItem(0) } // selected card is pinned first
+        finally { vm.consumeNav(n) }
     }
     val selected = selectedId?.let { id -> devices.firstOrNull { it.id == id } }
     Column(modifier.fillMaxSize().padding(12.dp)) {
         Row(Modifier.fillMaxWidth().padding(bottom = 6.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                Text("SIGNAL INVENTORY", fontSize = 10.sp, color = ConsoleMuted, letterSpacing = 1.2.sp)
-                Text("${view.visible.size} / ${view.total} devices", fontSize = 18.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold)
+                Text("SIGNAL INVENTORY", fontSize = 10.sp, color = ConsoleMuted, letterSpacing = 1.2.sp, maxLines = 1)
+                Text("${view.visible.size} / ${view.total} devices", fontSize = 17.sp, maxLines = 1, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold)
             }
             if (!filter.isDefault) {
                 TextButton(onClick = { vm.updateDeviceFilter { DeviceFilter(sort = it.sort) } }) { Text("Clear") }
-            }
-            androidx.compose.foundation.layout.Box {
-                OutlinedButton(onClick = { sortMenu = true }) { Text("${filter.sort.label} ▾", fontSize = 12.sp) }
-                androidx.compose.material3.DropdownMenu(expanded = sortMenu, onDismissRequest = { sortMenu = false }) {
-                    DeviceSort.entries.forEach { option ->
-                        androidx.compose.material3.DropdownMenuItem(
-                            text = { Text((if (option == filter.sort) "● " else "") + option.label) },
-                            onClick = { vm.updateDeviceFilter { it.copy(sort = option) }; sortMenu = false },
-                        )
-                    }
-                }
             }
             Button(onClick = onRoom, modifier = Modifier.padding(start = 6.dp)) { Text("Room sweep") }
         }
@@ -108,6 +98,18 @@ fun DevicesScreen(vm: RfWatchViewModel, modifier: Modifier = Modifier, onRoom: (
         )
         // Row 1: time window + status filters (status chips combine with AND).
         Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+            androidx.compose.foundation.layout.Box {
+                FilterChip(selected = filter.sort != DeviceSort.DISCOVERY, onClick = { sortMenu = true }, label = { Text("⇅ ${filter.sort.label}") })
+                androidx.compose.material3.DropdownMenu(expanded = sortMenu, onDismissRequest = { sortMenu = false }) {
+                    DeviceSort.entries.forEach { option ->
+                        androidx.compose.material3.DropdownMenuItem(
+                            text = { Text((if (option == filter.sort) "● " else "") + option.label) },
+                            onClick = { vm.updateDeviceFilter { it.copy(sort = option) }; sortMenu = false },
+                        )
+                    }
+                }
+            }
+            Text("|", color = ConsoleMuted)
             TimeWindow.entries.forEach { w ->
                 FilterChip(selected = filter.window == w, onClick = { vm.updateDeviceFilter { it.copy(window = w) } }, label = { Text(w.label) })
             }

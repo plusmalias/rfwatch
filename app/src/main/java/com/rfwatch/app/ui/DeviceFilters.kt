@@ -59,8 +59,27 @@ private val THREAT_KINDS = setOf(
 private val THREAT_CLASSES = setOf("TRACKER", "PRIORITY", "NOTABLE")
 private const val NEW_WINDOW_MS = 24 * 60 * 60_000L
 
-internal fun isThreat(d: DeviceEntity, kind: DeviceKind): Boolean =
-    !d.isOwnDevice && !d.isAllowlisted && (d.classification in THREAT_CLASSES || kind in THREAT_KINDS)
+/**
+ * Worth a look: not yours/trusted, and either a rule hit or a notable kind. A Find My broadcast
+ * with its owner nearby is someone's own AirTag/iPhone travelling with them — like Apple's own
+ * unwanted-tracking alerts, only the "separated from owner" state counts (measured on-device:
+ * owner-nearby broadcasts made up most of 95 "threats" at home).
+ */
+internal fun isThreat(d: DeviceEntity, kind: DeviceKind): Boolean {
+    if (d.isOwnDevice || d.isAllowlisted) return false
+    val ownerNearby = listOfNotNull(d.model, d.category).any { "owner nearby" in it }
+    if (ownerNearby && d.classification == "TRACKER" && kind == DeviceKind.TRACKER) return false
+    // trackers.json "apple_findmy" matches Apple's company ID alone, so every iPhone/Mac/AirPod
+    // comes out NOTABLE (measured: 63 of 63 remaining "threats" at home). Real Find My trackers
+    // are caught by the tracker parser (classification TRACKER), so ignore that flag here.
+    if (d.classification == "NOTABLE" && d.brand == "Apple" && kind in EVERYDAY_KINDS) return false
+    return d.classification in THREAT_CLASSES || kind in THREAT_KINDS
+}
+
+private val EVERYDAY_KINDS = setOf(
+    DeviceKind.PHONE, DeviceKind.COMPUTER, DeviceKind.AUDIO, DeviceKind.WEARABLE, DeviceKind.TV_MEDIA,
+    DeviceKind.INPUT, DeviceKind.HEALTH, DeviceKind.UNKNOWN,
+)
 
 private fun searchText(d: DeviceEntity, kind: DeviceKind): String =
     listOfNotNull(d.displayName, d.id, d.lastMac, d.brand, d.category, d.band, d.trackerType, d.model, kind.label)

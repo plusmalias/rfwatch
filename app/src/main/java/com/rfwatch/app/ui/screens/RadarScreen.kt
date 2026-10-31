@@ -94,14 +94,19 @@ fun RadarScreen(vm: RfWatchViewModel, modifier: Modifier = Modifier) {
         val n = nav ?: return@LaunchedEffect
         if (n.dest != com.rfwatch.app.ui.DeviceDest.LOCATE) return@LaunchedEffect
         selectedContactId = n.deviceId
-        vm.consumeNav(n)
         // Bring the Locate panel into view: walk down until its keyed item is laid out.
-        radarListState.scrollToItem(0)
-        repeat(40) {
-            val hit = radarListState.layoutInfo.visibleItemsInfo.firstOrNull { it.key == "locate-${n.deviceId}" }
-            if (hit != null) { radarListState.animateScrollToItem(hit.index); return@LaunchedEffect }
+        // Consume only afterwards — clearing the request re-keys (cancels) this effect.
+        try {
             androidx.compose.runtime.withFrameNanos { }
-            radarListState.scrollToItem(radarListState.firstVisibleItemIndex + 1)
+            radarListState.scrollToItem(0)
+            for (step in 0 until 40) {
+                val hit = radarListState.layoutInfo.visibleItemsInfo.firstOrNull { it.key == "locate-${n.deviceId}" }
+                if (hit != null) { radarListState.animateScrollToItem(hit.index); break }
+                radarListState.scrollToItem(radarListState.firstVisibleItemIndex + 1)
+                androidx.compose.runtime.withFrameNanos { }
+            }
+        } finally {
+            vm.consumeNav(n)
         }
     }
     val latestIds by androidx.compose.runtime.rememberUpdatedState(filtered.map { it.id })

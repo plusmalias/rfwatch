@@ -391,14 +391,14 @@ internal fun DeviceLocateChart(vm: RfWatchViewModel, contact: LiveContact, user:
                 }
                 d.centroid != null -> "Heard only from about one spot (${d.centroid.spreadM.toInt()} m of movement) — direction unknown, " +
                     "roughly within ${d.centroid.radiusM.toInt()} m. Walk 10–20 m in a few directions; red dots mark where it is strongest."
-                else -> "Only ${d.sightings.size} hearings so far — keep scanning and move around."
+                else -> "Only ${d.hearings} hearings from ${d.sightings.size} spots so far — keep scanning and move around."
             }
             Text(summary, fontSize = 12.sp)
             Canvas(Modifier.fillMaxWidth().height(280.dp)) { if (d != null) drawLocateChart(d, user) }
             d?.sightings?.maxByOrNull { it.rssi }?.let { best ->
                 Text(
                     "Strongest ${best.rssi} dBm at ${java.text.DateFormat.getTimeInstance(java.text.DateFormat.SHORT).format(java.util.Date(best.timestampMs))}" +
-                        " · ${d.sightings.size} hearings · north up · blue = weak, red = strong",
+                        " · ${d.hearings} hearings at ${d.sightings.size} spots · bigger dot = heard more there · blue = weak, red = strong",
                     fontSize = 10.sp, color = ConsoleMuted,
                 )
             }
@@ -433,7 +433,9 @@ private fun DrawScope.drawLocateChart(d: LocateData, user: GpsFix?) {
     pts.sortedBy { it.second.rssi }.forEach { (e, s) ->
         val t = (s.rssi - minR).toFloat() / span
         val color = Color(red = 0.25f + 0.75f * t, green = 0.55f * (1 - t) + 0.2f, blue = 1f - 0.85f * t)
-        drawCircle(color.copy(alpha = 0.85f), 4f + 6f * t, at(e.east, e.north))
+        // One dot per spot: colour = strongest signal there, size grows with hearings at that spot.
+        val r = 4f + 6f * t + (kotlin.math.ln(s.count.toFloat()) * 2.2f).coerceAtMost(8f)
+        drawCircle(color.copy(alpha = 0.85f), r, at(e.east, e.north))
     }
     d.centroid?.let { c ->
         val e = frame.toEnu(c.lat, c.lon)

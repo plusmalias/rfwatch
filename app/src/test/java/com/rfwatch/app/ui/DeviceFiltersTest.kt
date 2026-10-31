@@ -46,6 +46,20 @@ class DeviceFiltersTest {
         assertTrue(trustedTag.visible.isEmpty())
     }
 
+    @Test fun findMyWithOwnerNearbyIsNotAThreatButSeparatedIs() {
+        val nearby = dev("n", kind = DeviceKind.TRACKER, classification = "TRACKER").copy(model = "Apple Find My broadcast (owner nearby)")
+        val separated = dev("s", kind = DeviceKind.TRACKER, classification = "TRACKER").copy(model = "Apple Find My broadcast (separated from its owner)")
+        val v = applyDeviceFilter(listOf(nearby, separated), DeviceFilter(status = setOf(StatusFilter.THREATS)), now)
+        assertEquals(listOf("s"), v.visible.map { it.id })
+    }
+
+    @Test fun everydayAppleNotableIsNotAThreat() {
+        val iphone = dev("i", kind = DeviceKind.PHONE, classification = "NOTABLE").copy(brand = "Apple")
+        val camera = dev("c", kind = DeviceKind.CAMERA_IOT, classification = "NOTABLE").copy(brand = "Wyze")
+        val v = applyDeviceFilter(listOf(iphone, camera), DeviceFilter(status = setOf(StatusFilter.THREATS)), now)
+        assertEquals(listOf("c"), v.visible.map { it.id })
+    }
+
     @Test fun statusFiltersCombineWithAnd() {
         assertEquals(listOf("tag"), ids(DeviceFilter(status = setOf(StatusFilter.THREATS, StatusFilter.NEW))))
         assertEquals(listOf("axon", "router"), ids(DeviceFilter(status = setOf(StatusFilter.NAMED, StatusFilter.HIDE_MINE))))

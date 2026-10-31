@@ -1,6 +1,7 @@
 package com.rfwatch.app.ui.screens
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.material3.FilterChip
 import androidx.compose.foundation.rememberScrollState
@@ -96,6 +97,18 @@ private const val USER_LABEL_LAYER = "rfwatch-user-label"
 private const val HISTORY_SOURCE = "rfwatch-history-source"
 private const val HISTORY_LAYER = "rfwatch-history-points"
 private const val RADIO_UPDATE_INTERVAL_MS = 1_000L
+private const val STACK_COUNT_LAYER = "rfwatch-stack-count"
+
+/**
+ * ~10 m grid key. Phone GPS is ±10–20 m, so devices heard while standing in one place land on a
+ * handful of jittered fixes; one marker per ~10 m cell reads as "heard here" instead of a pile.
+ */
+private fun stackKey(lat: Double, lon: Double) = "${Math.round(lat * 1e4)}:${Math.round(lon * 1e4)}"
+
+private fun stackPriority(m: MappedDevice): Int = when (m.entity.classification) {
+    "TRACKER" -> 4; "PRIORITY" -> 3; "NOTABLE" -> 2
+    else -> if (m.estimate?.status == EstimateStatus.LOCATED) 1 else 0
+}
 
 // Bundled with the mapsOnline flavor (assets/glyphs, ASCII range only) so labels need no font host.
 private val MAP_LABEL_FONT = arrayOf("Noto Sans Bold")
@@ -178,6 +191,10 @@ private fun OnlineDeviceMap(
             if (lat == null || lon == null) null else MappedDevice(device, lat, lon, estimate)
         }
     }
+    // Devices heard from the same phone fix share exact coordinates; draw them as one numbered
+    // marker (measured on-device: 166 devices on 23 points, up to 29 on one spot).
+    val stacks = remember(mapped) { mapped.groupBy { stackKey(it.latitude, it.longitude) } }
+    var selectedStack by remember { mutableStateOf<String?>(null) }
     val movingCount = mapped.count { it.estimate?.status == EstimateStatus.MOBILE }
     val locatedCount = mapped.count { it.estimate?.status == EstimateStatus.LOCATED }
     val selected = mapped.firstOrNull { it.entity.id == selectedId }
@@ -247,9 +264,14 @@ private fun OnlineDeviceMap(
             map.setPrefetchesTiles(false)
             map.setTileCacheEnabled(true)
             map.uiSettings.isAttributionEnabled = false // a visible attribution chip is drawn below.
+            map.uiSettings.isLogoEnabled = false // it sat on top of the OSM attribution text.
             map.setStyle(Style.Builder().fromJson(OSM_RASTER_STYLE)) { style ->
                 val empty = FeatureCollection.fromFeatures(emptyArray<Feature>())
-                val clusterOptions = { GeoJsonOptions().withCluster(true).withClusterRadius(42).withClusterMaxZoom(15) }
+                // Clusters sum the per-marker device count, so totals stay in devices, not markers.
+                val clusterOptions = {
+                    GeoJsonOptions().withCluster(true).withClusterRadius(42).withClusterMaxZoom(17)
+                        .withClusterProperty("devices", Expression.sum(Expression.accumulated(), Expression.get("devices")), Expression.get("devices"))
+                }
                 // Text labels live in their own sources. A symbol layer makes MapLibre wait for
                 // glyphs before it finishes a source's tiles; sharing a source with the circle
                 // layers meant a missing/slow glyph range hid every marker. Separate label
@@ -265,7 +287,7 @@ private fun OnlineDeviceMap(
                         circleColor("#38BDF8"),
                         circleRadius(
                             Expression.step(
-                                Expression.get("point_count"), Expression.literal(15),
+                                Expression.get("devices"), Expression.literal(15),
                                 Expression.stop(10, Expression.literal(20)),
                                 Expression.stop(50, Expression.literal(26)),
                             ),
@@ -276,7 +298,7 @@ private fun OnlineDeviceMap(
                 style.addLayer(
                     CircleLayer(RADIO_LAYER, RADIO_SOURCE).withFilter(Expression.not(clustered)).withProperties(
                         circleColor(Expression.toColor(Expression.get("markerColor"))),
-                        circleRadius(7f),
+                        circleRadius(Expression.step(Expression.get("devices"), Expression.literal(7f), Expression.stop(2, Expression.literal(11f)))),
                         circleStrokeColor(Expression.toColor(Expression.get("motionColor"))),
                         circleStrokeWidth(2.5f),
                     ),
@@ -289,10 +311,19 @@ private fun OnlineDeviceMap(
                 )
                 style.addLayer(
                     SymbolLayer(CLUSTER_COUNT_LAYER, RADIO_LABEL_SOURCE).withFilter(clustered).withProperties(
-                        textField("{point_count_abbreviated}"), textFont(MAP_LABEL_FONT), textSize(11f),
+                        textField(Expression.toString(Expression.get("devices"))), textFont(MAP_LABEL_FONT), textSize(11f),
                         textColor("#08212A"), textHaloColor("#E0F7FA"), textHaloWidth(0.5f),
                         textAllowOverlap(true), textIgnorePlacement(true),
                     ),
+                )
+                style.addLayer(
+                    SymbolLayer(STACK_COUNT_LAYER, RADIO_LABEL_SOURCE)
+                        .withFilter(Expression.all(Expression.not(clustered), Expression.gt(Expression.get("devices"), Expression.literal(1))))
+                        .withProperties(
+                            textField(Expression.toString(Expression.get("devices"))), textFont(MAP_LABEL_FONT), textSize(10f),
+                            textColor("#08212A"), textHaloColor("#F8FAFC"), textHaloWidth(1f),
+                            textAllowOverlap(true), textIgnorePlacement(true),
+                        ),
                 )
                 style.addLayer(
                     SymbolLayer(USER_LABEL_LAYER, USER_LABEL_SOURCE).withProperties(
@@ -321,6 +352,7 @@ private fun OnlineDeviceMap(
                 val hit = map.queryRenderedFeatures(pixel, RADIO_LAYER, CLUSTER_LAYER).firstOrNull()
                 if (hit == null) {
                     selectedId = null
+                    selectedStack = null
                 } else if (hit.hasNonNullValueForProperty("point_count")) {
                     val source = map.style?.getSource(RADIO_SOURCE) as? GeoJsonSource
                     val zoom = source?.getClusterExpansionZoom(hit)?.toDouble() ?: map.cameraPosition.zoom + 1.0
@@ -329,8 +361,12 @@ private fun OnlineDeviceMap(
                         CameraUpdateFactory.newLatLngZoom(LatLng(point.latitude(), point.longitude()), zoom), 250,
                     )
                     selectedId = null
+                } else if ((hit.getNumberProperty("devices")?.toInt() ?: 1) > 1) {
+                    selectedStack = hit.getStringProperty("stack")
+                    selectedId = null
                 } else {
                     selectedId = hit.getStringProperty("deviceId")
+                    selectedStack = null
                 }
                 true
             }
@@ -345,8 +381,15 @@ private fun OnlineDeviceMap(
     LaunchedEffect(styleReady.value) {
         if (!styleReady.value) return@LaunchedEffect
         snapshotFlow { latestMapped }.conflate().collect { current ->
-            val features = current.map { item ->
-                Feature.fromGeometry(Point.fromLngLat(item.longitude, item.latitude)).apply {
+            val features = current.groupBy { stackKey(it.latitude, it.longitude) }.map { (key, group) ->
+                // The most notable device in the stack sets its colour; size/label show the count.
+                val item = group.maxBy { stackPriority(it) }
+                // Single devices keep their own point; a stack sits at its members' centre.
+                val lat = if (group.size == 1) item.latitude else group.sumOf { it.latitude } / group.size
+                val lon = if (group.size == 1) item.longitude else group.sumOf { it.longitude } / group.size
+                Feature.fromGeometry(Point.fromLngLat(lon, lat)).apply {
+                    addStringProperty("stack", key)
+                    addNumberProperty("devices", group.size)
                     addStringProperty("deviceId", item.entity.id)
                     addStringProperty("label", item.entity.displayName ?: item.entity.id)
                     addStringProperty("band", item.entity.band)
@@ -427,10 +470,8 @@ private fun OnlineDeviceMap(
         Row(Modifier.fillMaxWidth().padding(top = 2.dp), verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
                 Text(if (showHistory) "ENCOUNTER HISTORY" else "LIVE DEVICE MAP", fontSize = 10.sp, color = MaterialTheme.colorScheme.primary, letterSpacing = 1.2.sp)
-                Text(
-                    "${mapped.size} on map · $locatedCount located · $movingCount moving",
-                    fontSize = 15.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
-                )
+                Text("${mapped.size} devices · ${stacks.size} spots", fontSize = 15.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold)
+                Text("$locatedCount located · $movingCount moving · ${mapped.size - locatedCount - movingCount} heard-only", fontSize = 11.sp, color = Color(0xFF9CA3AF))
             }
             androidx.compose.material3.TextButton(onClick = { showMapHelp = !showMapHelp }) { Text(if (showMapHelp) "Hide help" else "ⓘ Help", fontSize = 12.sp) }
         }
@@ -476,6 +517,25 @@ private fun OnlineDeviceMap(
             HistoryPanel(events, selectedEvent) { e ->
                 selectedEvent = e
                 if (e.lat != null && e.lon != null) mapRef.value?.animateCamera(CameraUpdateFactory.newLatLngZoom(LatLng(e.lat!!, e.lon!!), 16.0), 350)
+            }
+        }
+        if (!showHistory && selected == null) selectedStack?.let { stacks[it] }?.let { group ->
+            Card(Modifier.fillMaxWidth().padding(top = 5.dp), colors = CardDefaults.cardColors(containerColor = ConsolePanel), border = androidx.compose.foundation.BorderStroke(1.dp, ConsoleOutline)) {
+                Column(Modifier.padding(9.dp)) {
+                    Text("${group.size} devices heard from this spot", fontSize = 13.sp)
+                    Text("Same phone GPS point — tap one for details", fontSize = 10.sp, color = Color(0xFF9CA3AF))
+                    LazyColumn(Modifier.fillMaxWidth().height((30 * minOf(group.size, 6) + 4).dp)) {
+                        items(group.sortedByDescending { stackPriority(it) }, key = { it.entity.id }) { m ->
+                            Text(
+                                "${m.entity.displayName ?: m.entity.id} · ${m.entity.effectiveKind().label} · ${m.entity.lastRssi} dBm",
+                                fontSize = 12.sp, maxLines = 1,
+                                color = deviceCategoryColor(m.entity.category, m.entity.classification),
+                                modifier = Modifier.fillMaxWidth().height(30.dp).padding(top = 6.dp)
+                                    .clickable { selectedId = m.entity.id },
+                            )
+                        }
+                    }
+                }
             }
         }
         if (!showHistory) selected?.let { item ->

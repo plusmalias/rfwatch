@@ -108,12 +108,18 @@ data class HomeStatus(
     val mature: Boolean get() = visitsLearned >= com.rfwatch.core.cs.Baseline.MIN_SESSIONS
 }
 
-/** One GPS-tagged hearing of a device, for the per-device locate chart. */
-data class DeviceSighting(val lat: Double, val lon: Double, val rssi: Int, val timestampMs: Long, val accuracyM: Double)
+/**
+ * One GPS point where a device was heard, for the per-device locate chart. Hearings at the same
+ * phone fix (standing still repeats one fix for many hearings) are merged: [rssi] is the strongest,
+ * [count] how many hearings the point holds.
+ */
+data class DeviceSighting(val lat: Double, val lon: Double, val rssi: Int, val timestampMs: Long, val accuracyM: Double, val count: Int = 1)
 
 /** Everything the locate chart needs for one device. */
 data class LocateData(
     val sightings: List<DeviceSighting>,
+    /** Stored hearings behind [sightings] (≥ sightings.size). */
+    val hearings: Int = sightings.sumOf { it.count },
     val centroid: com.rfwatch.core.df.CentroidEstimate?,
     val driveBy: EmitterEstimate?,
 )
@@ -125,6 +131,18 @@ data class LocateData(
  * (sweep, drive-by) and follower/room-sweep analyses are driven on demand by the UI and all
  * delegate their maths to :core.
  */
+/** One point per distinct phone fix (~1 m grid): strongest RSSI, latest time, best accuracy, hearing count. */
+internal fun mergeSightings(rows: List<ObservationEntity>): List<DeviceSighting> =
+    rows.filter { it.lat != null && it.lon != null }
+        .groupBy { Math.round(it.lat!! * 1e5) to Math.round(it.lon!! * 1e5) }
+        .values.map { g ->
+            val best = g.maxBy { it.rssi }
+            DeviceSighting(
+                best.lat!!, best.lon!!, best.rssi, g.maxOf { it.timestampMs },
+                g.minOf { it.gpsAccuracyM ?: 20.0 }, g.size,
+            )
+        }
+
 class RfWatchRepository(
     private val database: RfWatchDatabase,
     private val alertManager: AlertManager,
@@ -563,9 +581,7 @@ class RfWatchRepository(
         val rows = database.observationDao().recentGeoForDevice(deviceId, LOCATE_SAMPLE_LIMIT)
         val obs = rows.map { it.toRadioObservation() }
         return LocateData(
-            sightings = rows.mapNotNull { r ->
-                if (r.lat == null || r.lon == null) null else DeviceSighting(r.lat, r.lon, r.rssi, r.timestampMs, r.gpsAccuracyM ?: 20.0)
-            },
+            sightings = mergeSightings(rows),
             centroid = com.rfwatch.core.df.RssiCentroidLocator.estimate(obs),
             driveBy = _contacts.value[deviceId]?.estimate,
         )

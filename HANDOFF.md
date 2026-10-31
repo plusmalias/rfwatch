@@ -350,3 +350,50 @@ Working on: Devices-tab filters (time window, status, sort, multi-category; stat
 ViewModel), ingest hot-path trims (single rule evaluation per advert, timed room-sweep pruning,
 lazy radio-details string), device list published from the in-memory cache instead of a full
 SQLCipher re-query every flush, and wiring the retention purge. No schema changes.
+
+### 2026-11-01 — Claude — DONE (Codex's turn): filters, optimisation, cross-links, map/locate dedupe
+
+Verified on the ZTE P660 (mapsOnline installed with `adb install -r`, data preserved, no crashes).
+Tests: core 102/102, app 15/15; both APK flavours build; offline APK has no INTERNET permission.
+No schema changes (Entities.kt / RfWatchDatabase.kt untouched).
+
+**Devices tab:** filter state lives in the ViewModel (`DeviceFilter`, `applyDeviceFilter` in
+`ui/DeviceFilters.kt`, computed off-main). Time window (Live 2 min / 1 h / 24 h / All), status chips
+(Threats / New 24 h / Named / Hide mine-trusted, AND), multi-select kinds (Axon / law always shown),
+Wi-Fi/BLE, sort menu (Discovery / Strongest / Last heard / Most heard / Name). "Approx. closest"
+removed (it sorted exactly like Strongest).
+- `isThreat`: excludes own/trusted, Find My "owner nearby", and everyday Apple kinds flagged NOTABLE.
+  **Rule-pack issue for whoever owns detection:** `trackers.json` `apple_findmy` matches companyId 76
+  alone, so every iPhone/Mac/AirPod is classified NOTABLE (63 of 63 "threats" at home). Consider
+  requiring the 0xFD44 service UUID or a Find My payload. Not changed here (affects alerts).
+
+**Cross-linked features:** `DeviceDest` / `DeviceNav` / `DeviceLinks` (ui/DeviceNav.kt). `vm.openDevice(id,
+dest)` → MainActivity switches tab; Devices (Details), Radar (Locate panel, rebuilt from the stored row
+when not live), Sweep (Hunt via existing huntRequest), Map (centre + select). Screens consume the
+request only *after* their scroll — consuming first re-keys and cancels the LaunchedEffect.
+Map has a "Devices filters" chip (shows `deviceView.visible`).
+
+**Map / Locate duplicates — measured first** (debug-only `DuplicateReport`, logcat tag `RFWatchDup`,
+runs on Map open in debug builds): 166 devices on 23 points (stack up to 29); Locate 88–94 % of dots
+were repeats of the same phone fix; 5 SSIDs on 2 BSSIDs (dual-band); ~25 BLE rows look like rotations.
+- Map: one numbered marker per ~10 m cell (`stackKey`, 1e-4°), colour = most notable member; tap →
+  list → device card with links. Clusters sum a `devices` property (counts stay in devices).
+  Cluster max zoom 17. Header/legend/Help toggle, overlay "◎ Me" / "⤢ Fit" (were "My location"/"Fit all").
+- Locate: `mergeSightings` → one dot per GPS point (strongest RSSI, count → dot size); `LocateData.hearings`.
+- NOT merged: rotating BLE identities and dual-band BSSIDs in the inventory (heuristic; could hide
+  distinct devices). Candidate next step: show "probably same as …" hints rather than merging.
+
+**Radar:** "Distance only" now plots every device on one log-scale strip (0.5–100 m), then the
+individual rows (10 + "Show all N"). No more "+N more below".
+
+**Performance:** device list served from the write-behind cache (`deviceFlow`, published after each
+flush / flag change / wipe) instead of a full SQLCipher re-read every 3 s; one rule pass per advert
+(`RoomSweep.analyze(facts, hits)`); room-sweep pruning on the 1 s publisher; BLE parse/fingerprint/
+radio-details reused for byte-identical adverts (`bleParseCache`); `core.math.Hex` replaces per-byte
+String.format.
+
+**Retention purge now runs** (30 s after monitoring starts, then every 6 h): observations, alerts and
+events older than Settings → retention; devices and mine/trusted marks kept; logs `RETENTION_PURGE`.
+
+**Next ideas:** "probably same device" hints for rotations / dual-band; per-device stats panel
+(first/last seen, places, RSSI over time); CSV/KML export via document picker; fix the apple_findmy rule.
