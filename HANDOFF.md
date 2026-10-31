@@ -432,3 +432,11 @@ events older than Settings → retention; devices and mine/trusted marks kept; l
 
 **Next ideas:** "probably same device" hints for rotations / dual-band; per-device stats panel
 (first/last seen, places, RSSI over time); CSV/KML export via document picker; fix the apple_findmy rule.
+
+### 2026-11-01 (morning) — Claude — IN PROGRESS (Codex: please hold edits until my next entry)
+
+Organisation / ease-of-use pass: Radar verdict + tappable status chips (open Devices with a preset
+filter), Radar inventory section replaced by a link, one shared compact device row with friendly
+names (Radar live / Find / Devices), "Sweep" tab renamed "Find" with search, per-device stats in
+Details, then device nicknames via an explicit Room v4→v5 migration (encrypted, wiped with data).
+Keeping Codex's single Radar lazy scroll, compact session row and collapsible filters.
