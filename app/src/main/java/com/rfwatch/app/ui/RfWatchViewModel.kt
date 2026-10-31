@@ -20,6 +20,8 @@ class RfWatchViewModel(private val repo: RfWatchRepository) : ViewModel() {
     val contacts = repo.contacts
     val sweep = repo.sweep
     val sweepLive = repo.sweepLive
+    val hunt = repo.hunt
+    fun setHuntTarget(deviceId: String?) = repo.setHuntTarget(deviceId)
     val hasCompass: Boolean get() = repo.hasCompass
     val room = repo.roomFindings
     val cell = repo.cellAssessment

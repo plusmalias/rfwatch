@@ -284,7 +284,7 @@
 0127Salutica Allied Solutions
 0128GPSI Group Pty Ltd
 0129Nimble Devices Oy
-012AChangzhou Yongse Infotech  Co., Ltd.
+012AChangzhou Yongse Infotech Co., Ltd.
 012BSportIQ
 012CTEMEC Instruments B.V.
 012DSony Corporation
@@ -508,7 +508,7 @@
 021CMobicomm Inc
 021DEdamic
 021EGoodnet, Ltd
-021FLuster Leaf Products  Inc
+021FLuster Leaf Products Inc
 0220Manus Machina BV
 0221Mobiquity Networks Inc
 0222Praxis Dynamics
@@ -831,7 +831,7 @@
 037DMICRODIA Ltd.
 037Elulabytes S.L.
 037FSociété des Produits Nestlé S.A.
-0380LLC "MEGA-F service"
+0380LLC "MEGA-F service
 0381Sharp Corporation
 0382Precision Outcomes Ltd
 0383Kronos Incorporated
@@ -1217,7 +1217,7 @@
 0522NS Tech, Inc.
 0523MTG Co., Ltd.
 0524Hangzhou iMagic Technology Co., Ltd
-0525HONGKONG NANO IC TECHNOLOGIES  CO., LIMITED
+0525HONGKONG NANO IC TECHNOLOGIES CO., LIMITED
 0526Honeywell International Inc.
 0527Albrecht JUNG
 0528Lunera Lighting Inc.
@@ -1667,7 +1667,7 @@
 06FFRedpine Signals Inc
 0700TraqFreq LLC
 0701PAFERS TECH
-0702Akciju sabiedriba "SAF TEHNIKA"
+0702Akciju sabiedriba "SAF TEHNIKA
 0703Beijing Jingdong Century Trading Co., Ltd.
 0704JBX Designs Inc.
 0705AB Electrolux
@@ -1857,7 +1857,7 @@
 07CDSmart Wave Technologies Canada Inc
 07CEShanghai Top-Chip Microelectronics Tech. Co., LTD
 07CFNeoSensory, Inc.
-07D0Hangzhou Tuya Information  Technology Co., Ltd
+07D0Hangzhou Tuya Information Technology Co., Ltd
 07D1Shanghai Panchip Microelectronics Co., Ltd
 07D2React Accessibility Limited
 07D3LIVNEX Co.,Ltd.
@@ -2051,7 +2051,7 @@
 0896Nokian Renkaat Oyj
 0897Current Lighting Solutions LLC
 0899SFS unimarket AG
-089APrivate limited company "Teltonika"
+089APrivate limited company "Teltonika
 089BSaucon Technologies
 089CEmbedded Devices Co. Company
 089DJ-J.A.D.E. Enterprise LLC
@@ -2220,7 +2220,7 @@
 094CGimmiSys GmbH
 094DtkLABS INC.
 094EPassiveBolt, Inc.
-094FLimited Liability Company "Mikrotikls"
+094FLimited Liability Company "Mikrotikls
 0950Capetech
 0951PPRS
 0952Apptricity Corporation
@@ -2860,7 +2860,7 @@
 0C05Montage Connect, Inc.
 0C06LED Smart Inc.
 0C07CONSTRUKTS, INC.
-0C08limited liability company "Red"
+0C08limited liability company "Red
 0C09Senic Inc.
 0C0AAutomated Pet Care Products, LLC
 0C0Baconno GmbH
@@ -3062,7 +3062,7 @@
 0CDBCircus World Displays Limited
 0CDCYpsomed AG
 0CDDAlif Semiconductor, Inc.
-0CDFSHENZHEN CHENYUN ELECTRONICS  CO., LTD
+0CDFSHENZHEN CHENYUN ELECTRONICS CO., LTD
 0CE0VODALOGIC PTY LTD
 0CE1Regal Beloit America, Inc.
 0CE2CORVENT MEDICAL, INC.
@@ -4036,3 +4036,25 @@
 1125Wavarts Technologies, Co., Ltd
 1126Hakemann GmbH & Co. KG
 1127Permobil AB
+1128NIC IMPEX
+1129I.T.O. Vaarwegmarkering B.V.
+112AFlowil International Lighting (Holding) B.V.
+112BIXI Eyewear Oy
+112Cmees audio technology., co.ltd.
+112DAktiia SA
+112EOticon Medical AB
+112FSECANDA Systems AG
+1130Pi Variables, Inc.
+1131Chirp Innovation, LLC
+1132Nicrew Technology Co., Limited
+1133THE KEEON Co., Ltd.
+1134Barksdale, Inc.
+1135Shenzhen GetD Technology Co.,Ltd.
+1136Loop
+1137Eberlein Innovations EOOD
+1138Crane Aerospace & Electronics
+1139NaturalCycles Nordic AB
+113ACeladon, Inc.
+113BONiO AS
+113CSOTI INC.
+113DVenndelta Pty Ltd

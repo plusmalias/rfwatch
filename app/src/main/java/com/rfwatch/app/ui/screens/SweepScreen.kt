@@ -1,6 +1,8 @@
 package com.rfwatch.app.ui.screens
 
 import android.content.Context
+import android.media.AudioManager
+import android.media.ToneGenerator
 import android.os.Build
 import android.os.VibrationEffect
 import android.os.Vibrator
@@ -12,6 +14,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -20,6 +23,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.mutableIntStateOf
@@ -45,6 +49,7 @@ import com.rfwatch.core.model.Band
 import kotlinx.coroutines.delay
 import com.rfwatch.app.ui.theme.RadarCyan
 import com.rfwatch.app.ui.theme.RadarPink
+import com.rfwatch.core.df.HuntTone
 import com.rfwatch.core.df.SweepResult
 import kotlin.math.cos
 import kotlin.math.min
@@ -71,6 +76,7 @@ fun SweepScreen(vm: RfWatchViewModel, modifier: Modifier = Modifier) {
     val hasCompass = vm.hasCompass
     var target by remember { mutableStateOf<String?>(null) }
     var sweeping by remember { mutableStateOf(false) }
+    var hunt by remember { mutableStateOf(true) }
     var guided by remember { mutableStateOf(!hasCompass) }
     var finishedGuided by remember { mutableStateOf(false) }
     var step by remember { mutableIntStateOf(0) }
@@ -92,21 +98,25 @@ fun SweepScreen(vm: RfWatchViewModel, modifier: Modifier = Modifier) {
     }
 
     Column(modifier.fillMaxSize().padding(12.dp)) {
-        Text("Sweep", fontSize = 18.sp)
-        if (!hasCompass) {
-            Text(
-                "This phone has no compass (magnetometer), so the sweep uses guided steps: " +
-                    "the bearing is relative to the direction you start facing.",
-                fontSize = 12.sp, color = WarnAmber,
-            )
-        } else {
-            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                FilterChip(selected = !guided, enabled = !sweeping, onClick = { guided = false }, label = { Text("Continuous") })
-                FilterChip(selected = guided, enabled = !sweeping, onClick = { guided = true }, label = { Text("Guided steps") })
+        Text("Find a device", fontSize = 18.sp)
+        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            FilterChip(selected = hunt, enabled = !sweeping, onClick = { hunt = true }, label = { Text("Hunt (hot/cold)") })
+            FilterChip(selected = !hunt && guided, enabled = !sweeping, onClick = { hunt = false; guided = true }, label = { Text("Sweep: steps") })
+            if (hasCompass) {
+                FilterChip(selected = !hunt && !guided, enabled = !sweeping, onClick = { hunt = false; guided = false }, label = { Text("Sweep: compass") })
             }
         }
+        if (!hasCompass && !hunt) {
+            Text(
+                "This phone has no compass (magnetometer), so the sweep uses guided steps: " +
+                    "the direction is relative to where you start facing.",
+                fontSize = 12.sp, color = WarnAmber,
+            )
+        }
         Text(
-            if (guided) "Hold the phone flat against your chest and face a landmark. Start, then turn " +
+            if (hunt) "Walk around with the phone: the reading rises and the beeps speed up as you get closer. " +
+                "Most reliable way to find a nearby device — no compass needed."
+            else if (guided) "Hold the phone flat against your chest and face a landmark. Start, then turn " +
                 "45° to your right at every buzz (${GUIDED_STEPS} steps, ~${GUIDED_STEPS * GUIDED_STEP_MS / 1000} s). " +
                 "Your body shadows the signal, making it direction-dependent."
             else "Hold the phone flat against your chest and turn slowly through 360° over " +
@@ -144,6 +154,10 @@ fun SweepScreen(vm: RfWatchViewModel, modifier: Modifier = Modifier) {
             )
             if (targetContact?.band == Band.WIFI) {
                 Text("Wi-Fi targets update only every ~30 s — expect too few samples. Prefer a Bluetooth device.", fontSize = 11.sp, color = WarnAmber)
+            }
+            if (hunt) {
+                HuntPanel(vm, target!!, onChange = { target = null })
+                return@Column
             }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Button(
@@ -202,11 +216,27 @@ private fun SweepReadout(sweep: SweepResult?, live: SweepLive?, relative: Boolea
     }
     val bearing = sweep.bearingDeg
     val where = bearing?.let { if (relative) "${it.toInt()}° clockwise from your start direction" else "bearing ${it.toInt()}° (true)" }
+    val strongest = sweep.bins.maxByOrNull { it.medianRssi }
+    val spread = if (sweep.bins.isEmpty()) 0.0 else sweep.bins.maxOf { it.medianRssi } - sweep.bins.minOf { it.medianRssi }
     Text(
-        if (where != null) "Strongest toward $where · confidence ${"%.2f".format(sweep.confidence)} · depth ${"%.1f".format(sweep.amplitudeDb)} dB · ${sweep.bins.size} sectors"
-        else "No clear direction (confidence ${"%.2f".format(sweep.confidence)}, ${sweep.bins.size} sectors) — move closer or pick a stronger BLE target",
+        if (where != null) "Strongest toward $where · confidence ${"%.2f".format(sweep.confidence)} · depth ${"%.1f".format(sweep.amplitudeDb)} dB"
+        else "No clear direction (confidence ${"%.2f".format(sweep.confidence)})",
         fontSize = 13.sp,
     )
+    strongest?.let { b ->
+        val angle = b.centerDeg.toInt() - (b.centerDeg.toInt() % 5)
+        Text(
+            "Strongest step: ${if (relative) "$angle° right of start" else "$angle°"} (${b.medianRssi.toInt()} dBm) · " +
+                "signal changed ${"%.1f".format(spread)} dB while turning",
+            fontSize = 12.sp, color = RadarPink,
+        )
+    }
+    if (spread < 4.0) {
+        Text(
+            "The signal hardly changed while turning — the target is probably far away or reflections dominate. Use Hunt and walk toward it instead.",
+            fontSize = 11.sp, color = WarnAmber,
+        )
+    }
 }
 
 private fun DrawScope.drawPolar(sweep: SweepResult?) {
@@ -214,34 +244,118 @@ private fun DrawScope.drawPolar(sweep: SweepResult?) {
     val maxR = min(cx, cy) * 0.9f
     val grid = Color(0xFF123240)
     for (i in 1..3) drawCircle(grid, maxR * i / 3f, Offset(cx, cy), style = Stroke(1.5f))
+    // "Start / ahead" tick at the top.
+    drawLine(RadarCyan.copy(alpha = 0.6f), Offset(cx, cy - maxR - 4f), Offset(cx, cy - maxR + 14f), strokeWidth = 4f)
     if (sweep == null || sweep.bins.isEmpty()) return
 
     val minV = sweep.bins.minOf { it.medianRssi }
     val maxV = sweep.bins.maxOf { it.medianRssi }
     val span = (maxV - minV).coerceAtLeast(1.0)
-    // Binned medians.
+    val strongest = sweep.bins.maxByOrNull { it.medianRssi }
+    // One wedge per sector, length = relative signal; the strongest is highlighted.
+    val halfWidth = min(22.0, 170.0 / sweep.bins.size)
     sweep.bins.forEach { b ->
-        val r = (maxR * ((b.medianRssi - minV) / span)).toFloat().coerceIn(6f, maxR)
-        val a = Math.toRadians(b.centerDeg)
-        drawCircle(RadarCyan, 5f, Offset(cx + (r * sin(a)).toFloat(), cy - (r * cos(a)).toFloat()))
-    }
-    // Fitted lobe a + b·cos(θ−φ), sampled.
-    sweep.bearingDeg?.let { phi ->
-        val path = androidx.compose.ui.graphics.Path()
-        var first = true
-        var deg = 0.0
-        while (deg <= 360.0) {
-            val model = sweep.offsetDb + sweep.amplitudeDb * cos(Math.toRadians(deg - phi))
-            val r = (maxR * ((model - minV) / span)).toFloat().coerceIn(2f, maxR)
-            val a = Math.toRadians(deg)
-            val p = Offset(cx + (r * sin(a)).toFloat(), cy - (r * cos(a)).toFloat())
-            if (first) { path.moveTo(p.x, p.y); first = false } else path.lineTo(p.x, p.y)
-            deg += 5.0
+        val r = (maxR * (0.25 + 0.75 * ((b.medianRssi - minV) / span))).toFloat()
+        val color = if (b === strongest) RadarPink else RadarCyan.copy(alpha = 0.45f)
+        val path = androidx.compose.ui.graphics.Path().apply {
+            moveTo(cx, cy)
+            var d = b.centerDeg - halfWidth
+            while (d <= b.centerDeg + halfWidth + 0.01) {
+                val a = Math.toRadians(d)
+                lineTo(cx + (r * sin(a)).toFloat(), cy - (r * cos(a)).toFloat())
+                d += 2.0
+            }
+            close()
         }
-        drawPath(path, RadarPink.copy(alpha = 0.7f), style = Stroke(3f))
-        // Bearing arrow.
+        drawPath(path, color)
+    }
+    // Fitted direction arrow, only when the fit is confident.
+    sweep.bearingDeg?.let { phi ->
         val ar = Math.toRadians(phi)
-        drawLine(RadarPink, Offset(cx, cy),
-            Offset(cx + (maxR * sin(ar)).toFloat(), cy - (maxR * cos(ar)).toFloat()), strokeWidth = 4f)
+        drawLine(Color.White, Offset(cx, cy),
+            Offset(cx + (maxR * sin(ar)).toFloat(), cy - (maxR * cos(ar)).toFloat()), strokeWidth = 5f)
     }
 }
+
+/**
+ * Hot/cold hunting: streams every advert from the target, smooths it (EWMA) and compares it
+ * with the level a few seconds ago, with optional Geiger-style beeps from [HuntTone].
+ */
+@Composable
+private fun HuntPanel(vm: RfWatchViewModel, targetId: String, onChange: () -> Unit) {
+    val sample by vm.hunt.collectAsState()
+    var ewma by remember(targetId) { mutableStateOf<Double?>(null) }
+    var reference by remember(targetId) { mutableStateOf<Double?>(null) }
+    var lastHeardMs by remember(targetId) { mutableStateOf(0L) }
+    var nowMs by remember { mutableStateOf(System.currentTimeMillis()) }
+    var sound by remember { mutableStateOf(true) }
+    val history = remember(targetId) { ArrayDeque<Pair<Long, Double>>() }
+
+    DisposableEffect(targetId) {
+        vm.setHuntTarget(targetId)
+        onDispose { vm.setHuntTarget(null) }
+    }
+    LaunchedEffect(sample) {
+        val s = sample ?: return@LaunchedEffect
+        val next = ewma?.let { it + HUNT_ALPHA * (s.rssi - it) } ?: s.rssi.toDouble()
+        ewma = next
+        lastHeardMs = s.timestampMs
+        history.addLast(s.timestampMs to next)
+        while (history.isNotEmpty() && s.timestampMs - history.first().first > HUNT_TREND_WINDOW_MS) history.removeFirst()
+        reference = history.firstOrNull()?.second
+    }
+    LaunchedEffect(Unit) { while (true) { nowMs = System.currentTimeMillis(); delay(500) } }
+    // Geiger beeps: faster and higher as the smoothed signal rises.
+    LaunchedEffect(sound) {
+        if (!sound) return@LaunchedEffect
+        val tone = runCatching { ToneGenerator(AudioManager.STREAM_MUSIC, 70) }.getOrNull() ?: return@LaunchedEffect
+        try {
+            while (true) {
+                val level = ewma
+                val fresh = System.currentTimeMillis() - lastHeardMs < HUNT_LOST_MS
+                if (level != null && fresh) {
+                    tone.startTone(ToneGenerator.TONE_PROP_BEEP, 35)
+                    delay((1000.0 / HuntTone.pulseRateHz(level)).toLong().coerceAtLeast(60L))
+                } else delay(400)
+            }
+        } finally { tone.release() }
+    }
+
+    val level = ewma
+    val lost = level == null || nowMs - lastHeardMs > HUNT_LOST_MS
+    val trend = if (level != null && reference != null) HuntTone.proximity(level - reference!!) else HuntTone.Proximity.SAME
+    Column(Modifier.fillMaxWidth().padding(top = 10.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(
+            if (level == null) "Waiting for the target to advertise…" else "${level.toInt()} dBm",
+            fontSize = 44.sp, color = if (lost) Color(0xFF6B7280) else RadarCyan,
+        )
+        val fraction = level?.let { ((it + 100.0) / 70.0).coerceIn(0.0, 1.0).toFloat() } ?: 0f
+        Canvas(Modifier.fillMaxWidth().height(22.dp)) {
+            drawRect(Color(0xFF123240))
+            drawRect(if (trend == HuntTone.Proximity.HOTTER) RadarPink else RadarCyan, size = size.copy(width = size.width * fraction))
+        }
+        Text(
+            when {
+                lost -> "Signal lost — last heard ${((nowMs - lastHeardMs) / 1000).coerceAtLeast(0)} s ago. Go back toward where it was stronger."
+                trend == HuntTone.Proximity.HOTTER -> "HOTTER ↑  getting closer"
+                trend == HuntTone.Proximity.COLDER -> "COLDER ↓  moving away"
+                else -> "Steady — try another direction"
+            },
+            fontSize = 18.sp,
+            color = when { lost -> WarnAmber; trend == HuntTone.Proximity.HOTTER -> RadarPink; else -> Color(0xFF9CA3AF) },
+        )
+        Text(
+            "Rough distance from signal alone: ~${level?.let { formatRssiDistance(rssiDistanceEstimateMeters(it.toInt())) } ?: "?"} m " +
+                "(walls and the device's transmit power change this a lot). Pause a few seconds at each spot — readings are smoothed.",
+            fontSize = 11.sp, color = Color(0xFF9CA3AF),
+        )
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            FilterChip(selected = sound, onClick = { sound = !sound }, label = { Text(if (sound) "Beeps on" else "Beeps off") })
+            Button(onClick = onChange) { Text("Change target") }
+        }
+    }
+}
+
+private const val HUNT_ALPHA = 0.25
+private const val HUNT_TREND_WINDOW_MS = 4_000L
+private const val HUNT_LOST_MS = 8_000L

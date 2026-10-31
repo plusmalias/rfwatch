@@ -82,3 +82,36 @@ Codex: if you pick something from this list, note it here first so we don't coll
   registries (16-bit service/member UUIDs, full appearance subcategories, latest company IDs),
   Fast Pair / Apple / Samsung model tables, large name-pattern DB → Devices-tab category filters.
   Codex: please don't edit `core/.../id/`, `DevicesScreen.kt` or `DeviceIdentity.kt` until that lands.
+
+### 2026-10-31 (evening) — Claude — phone battery died; NOT yet verified on device
+
+Pushed, compiled + unit-tested (core 64/64, app 3/3), **not installed/tested on the phone yet**:
+- **Hunt mode (Sweep tab, default):** hot/cold device finding — every advert from the target
+  (`repo.setHuntTarget` / `vm.hunt`), EWMA-smoothed dBm, HOTTER/COLDER vs 4 s ago, signal-lost
+  notice, Geiger beeps via `HuntTone` + `ToneGenerator`. Works without a compass.
+- **Sweep plot:** wedges per sector (strongest highlighted), arrow only when the fit is
+  confident, "strongest step X° right of start", warning when the signal barely changed.
+- **Device database (data in place, partly wired):** `core/src/main/resources/devices/` —
+  `uuid16.tsv` (801 SIG service + member UUIDs), `appearance.tsv` (342 category/subcategory),
+  `fastpair.tsv` (500 Google Fast Pair models), `apple_pp.tsv` (22), `apple_actions.tsv` (15),
+  `samsung.tsv` (Galaxy Buds 24-bit / Watch 8-bit EasySetup IDs: buds model = mfr bytes
+  10,11,13 after prefix `42 09 81 02 14 15 03 21 01 09`; watch = byte 11 after
+  `00 01 00 02 00 01 01 FF 00 00 43`); `vendors/company_ids.txt` refreshed (4060, SIG YAML).
+  Code: `core/.../id/` (DeviceKind, VendorDb, BleFingerprinter, WifiFingerprinter, NameHints)
+  + `IdentificationTest`. BleFingerprinter still uses its built-in Apple table; loading the
+  TSVs (DeviceDb) and wiring kinds into the repository/Devices tab is the next step.
+
+**User's open asks (priority order):**
+1. **Radar shows "random spots"** — `RadarScreen.drawRadar` puts every contact without a LOCATED
+   estimate at an angle from `id.hashCode()`. On a compass-less phone that is every contact.
+   Plan: proximity scope — angle = labelled category sector, radius = RSSI proxy; real bearings
+   only for drive-by LOCATED estimates.
+2. **Police / law-enforcement detection with live notifications** (focus): expand
+   `rules/law_enforcement.json` (Axon/TASER, body-cam and in-car video, police vehicle
+   routers/modems, ALPR) and make detections raise an immediate high-priority notification
+   (+ optional TTS), with per-device debounce, event-log entry and a "law" filter. Heuristic only —
+   say so in the UI.
+3. Wire the device database → `DeviceEntity.kind/model` (Room v3→v4 migration, keep data) →
+   Devices-tab category chips with counts (Phones, Computers, Audio, Wearables, TV/media,
+   Vehicles, Smart home, Health, Beacons, Hotspots, Routers, Trackers, Axon/law, Cameras).
+4. Then: device actions (mine/trust/locate), follower wiring, retention purge, CSV export.

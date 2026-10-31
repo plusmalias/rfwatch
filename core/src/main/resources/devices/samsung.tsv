@@ -1,0 +1,51 @@
+# type (B=buds 24-bit, W=watch 8-bit)	model	kind	name — Samsung EasySetup model IDs (community-collected, best-effort)
+B	EE7A0C	AUDIO	Galaxy Fallback Buds
+B	9D1700	AUDIO	Galaxy Fallback Dots
+B	39EA48	AUDIO	Galaxy Light Purple Buds2
+B	A7C62C	AUDIO	Galaxy Bluish Silver Buds2
+B	850116	AUDIO	Galaxy Black Buds Live
+B	3D8F41	AUDIO	Galaxy Gray & Black Buds2
+B	3B6D02	AUDIO	Galaxy Bluish Chrome Buds2
+B	AE063C	AUDIO	Galaxy Gray Beige Buds2
+B	B8B905	AUDIO	Galaxy Pure White Buds
+B	EAAA17	AUDIO	Galaxy Pure White Buds2
+B	D30704	AUDIO	Galaxy Black Buds
+B	9DB006	AUDIO	Galaxy French Flag Buds
+B	101F1A	AUDIO	Galaxy Dark Purple Buds Live
+B	859608	AUDIO	Galaxy Dark Blue Buds
+B	8E4503	AUDIO	Galaxy Pink Buds
+B	2C6740	AUDIO	Galaxy White & Black Buds2
+B	3F6718	AUDIO	Galaxy Bronze Buds Live
+B	42C519	AUDIO	Galaxy Red Buds Live
+B	AE073A	AUDIO	Galaxy Black & White Buds2
+B	011716	AUDIO	Galaxy Sleek Black Buds2
+W	1A	WEARABLE	Galaxy Fallback Watch
+W	01	WEARABLE	Galaxy White Watch4 Classic 44m
+W	02	WEARABLE	Galaxy Black Watch4 Classic 40m
+W	03	WEARABLE	Galaxy White Watch4 Classic 40m
+W	04	WEARABLE	Galaxy Black Watch4 44mm
+W	05	WEARABLE	Galaxy Silver Watch4 44mm
+W	06	WEARABLE	Galaxy Green Watch4 44mm
+W	07	WEARABLE	Galaxy Black Watch4 40mm
+W	08	WEARABLE	Galaxy White Watch4 40mm
+W	09	WEARABLE	Galaxy Gold Watch4 40mm
+W	0A	WEARABLE	Galaxy French Watch4
+W	0B	WEARABLE	Galaxy French Watch4 Classic
+W	0C	WEARABLE	Galaxy Fox Watch5 44mm
+W	11	WEARABLE	Galaxy Black Watch5 44mm
+W	12	WEARABLE	Galaxy Sapphire Watch5 44mm
+W	13	WEARABLE	Galaxy Purpleish Watch5 40mm
+W	14	WEARABLE	Galaxy Gold Watch5 40mm
+W	15	WEARABLE	Galaxy Black Watch5 Pro 45mm
+W	16	WEARABLE	Galaxy Gray Watch5 Pro 45mm
+W	17	WEARABLE	Galaxy White Watch5 44mm
+W	18	WEARABLE	Galaxy White & Black Watch5
+W	E4	WEARABLE	Galaxy Black Watch5 Golf Edition
+W	E5	WEARABLE	Galaxy White Watch5 Gold Edition
+W	1B	WEARABLE	Galaxy Black Watch6 Pink 40mm
+W	1C	WEARABLE	Galaxy Gold Watch6 Gold 40mm
+W	1D	WEARABLE	Galaxy Silver Watch6 Cyan 44mm
+W	1E	WEARABLE	Galaxy Black Watch6 Classic 43m
+W	20	WEARABLE	Galaxy Green Watch6 Classic 43m
+W	EC	WEARABLE	Galaxy Black Watch6 Golf Edition
+W	EF	WEARABLE	Galaxy Black Watch6 TB Edition

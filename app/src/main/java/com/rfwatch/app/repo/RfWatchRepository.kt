@@ -54,6 +54,9 @@ import kotlinx.coroutines.launch
 /** Live progress of a running sweep: how many usable samples the target has produced. */
 data class SweepLive(val samples: Int, val stepSamples: Int, val lastRssi: Int?, val headingAvailable: Boolean)
 
+/** One raw RSSI reading from the hunt target (every advert, unthrottled). */
+data class HuntSample(val rssi: Int, val timestampMs: Long)
+
 /** A live contact shown on the radar. Bearing/estimate are null until a DF method runs. */
 data class LiveContact(
     val id: String,
@@ -139,6 +142,16 @@ class RfWatchRepository(
     private var sweepStepSamples = 0
     private val _sweepLive = MutableStateFlow<SweepLive?>(null)
     val sweepLive: StateFlow<SweepLive?> = _sweepLive.asStateFlow()
+
+    @Volatile private var huntTargetId: String? = null
+    private val _hunt = MutableStateFlow<HuntSample?>(null)
+    val hunt: StateFlow<HuntSample?> = _hunt.asStateFlow()
+
+    /** Hunt (hot/cold) mode: stream every RSSI reading from [deviceId]; null stops. */
+    fun setHuntTarget(deviceId: String?) {
+        huntTargetId = deviceId
+        _hunt.value = null
+    }
 
     /** Whether this phone can give a compass heading (needed for the continuous sweep). */
     val hasCompass: Boolean get() = headingProvider.hasCompass
@@ -344,6 +357,8 @@ class RfWatchRepository(
         if (findings.isNotEmpty() || stale.isNotEmpty()) {
             _room.value = roomMap.values.sortedByDescending { it.threat.ordinal }
         }
+
+        if (huntTargetId == id) _hunt.value = HuntSample(rssi, ts)
 
         // Live sweep capture (every advert, not throttled like stored observations).
         if (sweepTargetId == id) {

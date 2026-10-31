@@ -1,0 +1,16 @@
+# action	kind	name — Apple Continuity Nearby Action types (furiousMAC/continuity; best-effort)
+01	TV_MEDIA	Setup New AppleTV
+02	PHONE	Transfer Phone Number
+05	WEARABLE	Apple Watch
+06	TV_MEDIA	Pair AppleTV
+09	PHONE	Setup New iPhone
+0B	TV_MEDIA	HomePod Setup
+0D	TV_MEDIA	HomeKit AppleTV Setup
+13	TV_MEDIA	AppleTV AutoFill
+19	TV_MEDIA	AppleTV Audio Sync
+1E	TV_MEDIA	AppleTV Color Balance
+20	TV_MEDIA	Join This AppleTV?
+24	WEARABLE	Apple Vision Pro
+27	TV_MEDIA	AppleTV Connecting...
+2B	TV_MEDIA	AppleID for AppleTV?
+2F	PHONE	Sign in to other device
