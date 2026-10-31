@@ -86,7 +86,24 @@ fun RadarScreen(vm: RfWatchViewModel, modifier: Modifier = Modifier) {
     val drones by vm.drones.collectAsState()
     val followers by vm.followers.collectAsState()
     val userLocation by vm.userLocation.collectAsState()
-    val selectedContact = selectedContactId?.let { contacts[it] }
+    // Live contact, or (when opened from another screen) one rebuilt from the stored device.
+    val selectedContact = selectedContactId?.let { id -> contacts[id] ?: devices.firstOrNull { it.id == id }?.let { vm.contactFor(id) } }
+    val radarListState = androidx.compose.foundation.lazy.rememberLazyListState()
+    val nav by vm.deviceNav.collectAsState()
+    LaunchedEffect(nav) {
+        val n = nav ?: return@LaunchedEffect
+        if (n.dest != com.rfwatch.app.ui.DeviceDest.LOCATE) return@LaunchedEffect
+        selectedContactId = n.deviceId
+        vm.consumeNav(n)
+        // Bring the Locate panel into view: walk down until its keyed item is laid out.
+        radarListState.scrollToItem(0)
+        repeat(40) {
+            val hit = radarListState.layoutInfo.visibleItemsInfo.firstOrNull { it.key == "locate-${n.deviceId}" }
+            if (hit != null) { radarListState.animateScrollToItem(hit.index); return@LaunchedEffect }
+            androidx.compose.runtime.withFrameNanos { }
+            radarListState.scrollToItem(radarListState.firstVisibleItemIndex + 1)
+        }
+    }
     val latestIds by androidx.compose.runtime.rememberUpdatedState(filtered.map { it.id })
     LaunchedEffect(Unit) {
         while (true) {
@@ -101,6 +118,7 @@ fun RadarScreen(vm: RfWatchViewModel, modifier: Modifier = Modifier) {
 
     LazyColumn(
         modifier = modifier.fillMaxSize(),
+        state = radarListState,
         contentPadding = PaddingValues(horizontal = 12.dp, vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {

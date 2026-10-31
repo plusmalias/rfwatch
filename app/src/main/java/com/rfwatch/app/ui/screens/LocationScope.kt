@@ -183,10 +183,18 @@ internal fun LocationScopePanel(
             )
             if (unplaced.isNotEmpty()) {
                 Text("DISTANCE ONLY · NO DIRECTION YET (${unplaced.size})", fontSize = 10.sp, color = ConsoleMuted, letterSpacing = 1.sp, modifier = Modifier.padding(top = 4.dp))
-                unplaced.sortedByDescending { it.lastRssi }.take(10).forEach { c ->
+                // Every device on one chart, then the individual rows (strongest first).
+                DistanceSwarm(unplaced, selectedId, onSelect)
+                var showAll by remember { mutableStateOf(false) }
+                val sorted = unplaced.sortedByDescending { it.lastRssi }
+                (if (showAll) sorted else sorted.take(DISTANCE_ROWS)).forEach { c ->
                     DistanceBar(c, selected = c.id == selectedId) { onSelect(c.id) }
                 }
-                if (unplaced.size > 10) Text("+${unplaced.size - 10} more below", fontSize = 10.sp, color = ConsoleMuted)
+                if (unplaced.size > DISTANCE_ROWS) {
+                    TextButton(onClick = { showAll = !showAll }) {
+                        Text(if (showAll) "Show strongest $DISTANCE_ROWS" else "Show all ${unplaced.size}", fontSize = 11.sp)
+                    }
+                }
             }
         }
     }
@@ -207,6 +215,72 @@ private fun DistanceBar(c: LiveContact, selected: Boolean, onClick: () -> Unit) 
             drawRect(deviceCategoryColor(c.category, c.classification), size = size.copy(width = size.width * fraction))
         }
         Text("~${formatRssiDistance(meters)} m", fontSize = 11.sp, color = ConsoleMuted, modifier = Modifier.weight(0.2f))
+    }
+}
+
+private class SwarmLayout { var value: List<Pair<LiveContact, Offset>> = emptyList() }
+
+private const val DISTANCE_ROWS = 10
+private const val SWARM_MIN_M = 0.5
+private const val SWARM_MAX_M = 100.0
+
+/** 0..1 position on a log distance axis from [SWARM_MIN_M] to [SWARM_MAX_M]. */
+private fun swarmX(meters: Double): Float =
+    (kotlin.math.log10(meters.coerceIn(SWARM_MIN_M, SWARM_MAX_M) / SWARM_MIN_M) / kotlin.math.log10(SWARM_MAX_M / SWARM_MIN_M)).toFloat()
+
+/**
+ * One chart for every distance-only device: a log-scale strip (0.5–100 m, you at the left) with a
+ * dot per device, stacked where they overlap. Distance is an RSSI guess; direction is unknown.
+ */
+@Composable
+private fun DistanceSwarm(contacts: List<LiveContact>, selectedId: String?, onSelect: (String) -> Unit) {
+    val density = androidx.compose.ui.platform.LocalDensity.current
+    val dotPx = with(density) { 9.dp.toPx() }
+    val heightDp = 96.dp
+    // Layout is computed in pixel space inside the canvas; keep the last layout for hit-testing.
+    val layout = remember { SwarmLayout() }
+    Canvas(
+        Modifier.fillMaxWidth().height(heightDp).pointerInput(contacts) {
+            detectTapGestures { tap ->
+                layout.value.minByOrNull { (_, o) -> hypot((o.x - tap.x).toDouble(), (o.y - tap.y).toDouble()) }
+                    ?.takeIf { (_, o) -> hypot((o.x - tap.x).toDouble(), (o.y - tap.y).toDouble()) < dotPx * 2.5 }
+                    ?.let { (c, _) -> onSelect(c.id) }
+            }
+        },
+    ) {
+        val axisY = size.height - 18f
+        val left = 10f; val right = size.width - 10f
+        val usable = right - left
+        val grid = Color(0xFF1C4852)
+        drawLine(grid, Offset(left, axisY), Offset(right, axisY), strokeWidth = 1.5f)
+        val paint = android.graphics.Paint().apply {
+            isAntiAlias = true; textSize = 22f; color = android.graphics.Color.argb(170, 145, 164, 176)
+            textAlign = android.graphics.Paint.Align.CENTER
+        }
+        listOf(1.0, 3.0, 10.0, 30.0, 100.0).forEach { m ->
+            val x = left + swarmX(m) * usable
+            drawLine(grid, Offset(x, axisY - 4f), Offset(x, axisY + 4f), strokeWidth = 1.5f)
+            drawContext.canvas.nativeCanvas.drawText("${m.toInt()} m", x, size.height - 1f, paint)
+        }
+        // Stack dots in columns one dot wide; shrink dots if a column would overflow the chart.
+        val columns = HashMap<Int, Int>()
+        val raw = contacts.sortedByDescending { it.lastRssi }.map { c ->
+            val x = left + swarmX(rssiDistanceEstimateMeters(c.lastRssi)) * usable
+            val col = (x / dotPx).toInt()
+            val stack = columns.merge(col, 1, Int::plus)!! - 1
+            Triple(c, col, stack)
+        }
+        val maxStack = (columns.values.maxOrNull() ?: 1).coerceAtLeast(1)
+        val step = minOf(dotPx, (axisY - 6f) / maxStack)
+        val placedDots = raw.map { (c, col, stack) ->
+            c to Offset(col * dotPx + dotPx / 2f, axisY - 6f - step / 2f - stack * step)
+        }
+        layout.value = placedDots
+        placedDots.forEach { (c, o) ->
+            val color = deviceCategoryColor(c.category, c.classification)
+            drawCircle(color, step * 0.45f, o)
+            if (c.id == selectedId) drawCircle(RadarCyan, step * 0.45f + 4f, o, style = Stroke(2.5f))
+        }
     }
 }
 
@@ -304,6 +378,7 @@ internal fun DeviceLocateChart(vm: RfWatchViewModel, contact: LiveContact, user:
                 }
                 TextButton(onClick = onClose) { Text("Close") }
             }
+            com.rfwatch.app.ui.DeviceLinks(vm, contact.id, here = com.rfwatch.app.ui.DeviceDest.LOCATE)
             val summary = when {
                 d == null -> "Loading sightings…"
                 d.sightings.isEmpty() -> "No GPS-tagged hearings yet — keep Location on while scanning."

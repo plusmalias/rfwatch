@@ -38,6 +38,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -114,6 +115,20 @@ class MainActivity : androidx.fragment.app.FragmentActivity() {
                 }
 
                 var tab by remember { mutableStateOf(Tab.RADAR) }
+                // Cross-screen device links (Details / Locate / Hunt / Map) switch tabs here;
+                // the target screen selects the device and consumes the request.
+                val deviceNav by vm.deviceNav.collectAsState()
+                LaunchedEffect(deviceNav) {
+                    val nav = deviceNav ?: return@LaunchedEffect
+                    tab = when (nav.dest) {
+                        com.rfwatch.app.ui.DeviceDest.DETAILS -> Tab.DEVICES
+                        com.rfwatch.app.ui.DeviceDest.LOCATE -> Tab.RADAR
+                        com.rfwatch.app.ui.DeviceDest.HUNT -> Tab.SWEEP
+                        com.rfwatch.app.ui.DeviceDest.MAP -> Tab.MAP
+                    }
+                    // Hunt is carried by huntRequest (SweepScreen already consumes it).
+                    if (nav.dest == com.rfwatch.app.ui.DeviceDest.HUNT) vm.consumeNav(nav)
+                }
                 var locationEnabled by remember { mutableStateOf(isLocationEnabled()) }
                 val lifecycleOwner = LocalLifecycleOwner.current
                 DisposableEffect(lifecycleOwner) {

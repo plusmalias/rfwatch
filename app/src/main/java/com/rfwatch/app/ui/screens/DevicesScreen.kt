@@ -66,6 +66,15 @@ fun DevicesScreen(vm: RfWatchViewModel, modifier: Modifier = Modifier, onRoom: (
     val filter by vm.deviceFilter.collectAsState()
     var selectedId by remember { mutableStateOf<String?>(null) }
     var sortMenu by remember { mutableStateOf(false) }
+    val listState = androidx.compose.foundation.lazy.rememberLazyListState()
+    val nav by vm.deviceNav.collectAsState()
+    LaunchedEffect(nav) {
+        val n = nav ?: return@LaunchedEffect
+        if (n.dest != com.rfwatch.app.ui.DeviceDest.DETAILS) return@LaunchedEffect
+        selectedId = n.deviceId
+        vm.consumeNav(n)
+        listState.scrollToItem(0) // the selected card is pinned as the first row
+    }
     val selected = selectedId?.let { id -> devices.firstOrNull { it.id == id } }
     Column(modifier.fillMaxSize().padding(12.dp)) {
         Row(Modifier.fillMaxWidth().padding(bottom = 6.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
@@ -134,7 +143,7 @@ fun DevicesScreen(vm: RfWatchViewModel, modifier: Modifier = Modifier, onRoom: (
                     label = { Text("${b.label} ${view.bandCounts[b] ?: 0}") })
             }
         }
-        LazyColumn(Modifier.fillMaxWidth().weight(1f).padding(top = 4.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        LazyColumn(Modifier.fillMaxWidth().weight(1f).padding(top = 4.dp), state = listState, verticalArrangement = Arrangement.spacedBy(6.dp)) {
             if (selected != null) {
                 item(key = "selected-${selected.id}") {
                     DeviceCard(selected, selected = true, vm = vm) { selectedId = null }
@@ -224,6 +233,7 @@ private fun DeviceCard(d: com.rfwatch.app.data.DeviceEntity, selected: Boolean, 
                                     )
                                 }
                             }
+                            com.rfwatch.app.ui.DeviceLinks(vm, d.id, here = com.rfwatch.app.ui.DeviceDest.DETAILS)
                             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                                 OutlinedButton(onClick = { vm.setDeviceFlags(d.id, own = !d.isOwnDevice) }) {
                                     Text(if (d.isOwnDevice) "Unmark mine" else "Mark mine")

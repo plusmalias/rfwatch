@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.rfwatch.app.repo.LiveContact
+import com.rfwatch.app.ui.screens.effectiveKind
 import com.rfwatch.app.repo.RfWatchRepository
 import com.rfwatch.app.data.ObservationEntity
 import com.rfwatch.core.cs.FollowerScore
@@ -44,6 +45,30 @@ class RfWatchViewModel(private val repo: RfWatchRepository) : ViewModel() {
 
     /** One-shot request from another screen (car sweep, radar) to open Hunt on a device. */
     val huntRequest = kotlinx.coroutines.flow.MutableStateFlow<String?>(null)
+
+    /** Cross-screen device navigation (Details / Locate / Hunt / Map); MainActivity routes it. */
+    private val _deviceNav = MutableStateFlow<DeviceNav?>(null)
+    val deviceNav: StateFlow<DeviceNav?> = _deviceNav
+    fun openDevice(deviceId: String, dest: DeviceDest) {
+        if (dest == DeviceDest.HUNT) huntRequest.value = deviceId
+        _deviceNav.value = DeviceNav(deviceId, dest)
+    }
+    /** Called by the screen that handled [nav]. */
+    fun consumeNav(nav: DeviceNav) { _deviceNav.compareAndSet(nav, null) }
+
+    /** Live radar contact for [id], or one rebuilt from the stored row when it is not live now. */
+    fun contactFor(id: String): LiveContact? = contacts.value[id] ?: devices.value.firstOrNull { it.id == id }?.let { d ->
+        LiveContact(
+            id = d.id,
+            band = runCatching { com.rfwatch.core.model.Band.valueOf(d.band) }.getOrDefault(com.rfwatch.core.model.Band.BLE),
+            label = d.displayName ?: d.id, classification = d.classification,
+            lastRssi = d.lastRssi, lastSeenMs = d.lastSeenMs, brand = d.brand, category = d.category,
+            kind = d.effectiveKind(),
+        )
+    }
+
+    /** Map shows only what the Devices filters let through (shared filter) when true. */
+    val mapUsesDeviceFilter = MutableStateFlow(false)
 
     fun logCarSweep(lines: List<String>, heard: Int) { viewModelScope.launch { repo.logCarSweep(lines, heard) } }
 

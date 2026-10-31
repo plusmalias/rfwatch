@@ -127,13 +127,19 @@ private data class MappedDevice(
 
 @Composable
 fun MapScreen(vm: RfWatchViewModel, modifier: Modifier = Modifier) {
-    val devices by vm.devices.collectAsState()
+    val allDevices by vm.devices.collectAsState()
     val contacts by vm.contacts.collectAsState()
     val userLocation by vm.userLocation.collectAsState()
+    // Shared filter: optionally show only what the Devices tab's filters let through.
+    val useDeviceFilter by vm.mapUsesDeviceFilter.collectAsState()
+    val filteredView by vm.deviceView.collectAsState()
+    val devices = if (useDeviceFilter) filteredView.visible else allDevices
     if (BuildConfig.FLAVOR == "mapsOnline") {
         OnlineDeviceMap(devices, contacts, userLocation, vm, modifier)
     } else {
         val events by vm.events.collectAsState()
+        val nav by vm.deviceNav.collectAsState()
+        LaunchedEffect(nav) { nav?.takeIf { it.dest == com.rfwatch.app.ui.DeviceDest.MAP }?.let { vm.consumeNav(it) } }
         OfflineDeviceMap(devices, events, modifier)
     }
 }
@@ -174,6 +180,28 @@ private fun OnlineDeviceMap(
     val movingCount = mapped.count { it.estimate?.status == EstimateStatus.MOBILE }
     val locatedCount = mapped.count { it.estimate?.status == EstimateStatus.LOCATED }
     val selected = mapped.firstOrNull { it.entity.id == selectedId }
+    val useDeviceFilter by vm.mapUsesDeviceFilter.collectAsState()
+    val deviceFilter by vm.deviceFilter.collectAsState()
+    var navNotice by remember { mutableStateOf<String?>(null) }
+    val nav by vm.deviceNav.collectAsState()
+    LaunchedEffect(nav, styleReady.value) {
+        val n = nav ?: return@LaunchedEffect
+        if (n.dest != com.rfwatch.app.ui.DeviceDest.MAP || !styleReady.value) return@LaunchedEffect
+        vm.consumeNav(n)
+        // A device hidden by the shared filter is still shown: drop the filter rather than fail.
+        if (mapped.none { it.entity.id == n.deviceId } && useDeviceFilter) vm.mapUsesDeviceFilter.value = false
+        val target = vm.devices.value.firstOrNull { it.id == n.deviceId }
+        val est = contacts[n.deviceId]?.estimate
+        val lat = if (est?.status == EstimateStatus.LOCATED) est.lat else target?.observedLat
+        val lon = if (est?.status == EstimateStatus.LOCATED) est.lon else target?.observedLon
+        if (lat != null && lon != null) {
+            selectedId = n.deviceId
+            navNotice = null
+            mapRef.value?.animateCamera(CameraUpdateFactory.newLatLngZoom(LatLng(lat, lon), 17.0), 350)
+        } else {
+            navNotice = "${target?.displayName ?: n.deviceId}: no GPS-tagged sighting yet — keep Location on while scanning."
+        }
+    }
 
     // Direction-finding fits update while this screen is visible. Only a bounded set of
     // recent GPS histories are evaluated; under-sampled emitters remain explicitly unknown.
@@ -387,7 +415,13 @@ private fun OnlineDeviceMap(
         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             FilterChip(selected = !showHistory, onClick = { showHistory = false }, label = { Text("Devices") })
             FilterChip(selected = showHistory, onClick = { showHistory = true; selectedId = null }, label = { Text("History ${events.count { it.isMappableHistory() }}") })
+            if (!showHistory) FilterChip(
+                selected = useDeviceFilter,
+                onClick = { vm.mapUsesDeviceFilter.value = !useDeviceFilter },
+                label = { Text(if (useDeviceFilter && !deviceFilter.isDefault) "Devices filters ✓" else "Devices filters") },
+            )
         }
+        navNotice?.let { Text(it, fontSize = 11.sp, color = com.rfwatch.app.ui.theme.WarnAmber) }
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
             Column(Modifier.weight(1f)) {
                 Text(if (showHistory) "ENCOUNTER HISTORY" else "LIVE DEVICE MAP", fontSize = 10.sp, color = MaterialTheme.colorScheme.primary, letterSpacing = 1.2.sp)
@@ -445,6 +479,7 @@ private fun OnlineDeviceMap(
                         "${item.entity.band} · ${item.entity.lastRssi} dBm · ${String.format(Locale.US, "%.5f, %.5f", item.latitude, item.longitude)}",
                         fontSize = 10.sp, color = deviceCategoryColor(item.entity.category, item.entity.classification),
                     )
+                    com.rfwatch.app.ui.DeviceLinks(vm, item.entity.id, here = com.rfwatch.app.ui.DeviceDest.MAP, modifier = Modifier.padding(top = 4.dp))
                 }
             }
         }
