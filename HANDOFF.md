@@ -176,3 +176,9 @@ Pushed, compiled + unit-tested (core 64/64, app 3/3), **not installed/tested on 
    Devices-tab category chips with counts (Phones, Computers, Audio, Wearables, TV/media,
    Vehicles, Smart home, Health, Beacons, Hotspots, Routers, Trackers, Axon/law, Cameras).
 4. Then: device actions (mine/trust/locate), follower wiring, retention purge, CSV export.
+
+### 2026-10-31 (night) — Claude — WORKING NOW (Codex: please hold edits until my next entry)
+
+Taking: device-database wiring (Room v3→v4: kind/model/stats), Devices category chips, police /
+law-enforcement detection with live notifications, Radar category lanes (Codex idea 1). Will keep
+the console theme and the single lazy Radar scroll.
