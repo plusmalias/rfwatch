@@ -22,6 +22,7 @@ import androidx.compose.material.icons.filled.CellTower
 import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.MoreHoriz
+import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material.icons.filled.Place
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Button
@@ -68,7 +69,7 @@ import com.rfwatch.app.ui.theme.ConsoleText
 import com.rfwatch.app.ui.theme.OkGreen
 
 private enum class Tab(val label: String) {
-    RADAR("Radar"), DEVICES("Devices"), SWEEP("Sweep"), MAP("Map"), MORE("More"),
+    RADAR("Radar"), DEVICES("Devices"), SWEEP("Sweep"), MAP("Map"), MORE("Protect"),
     CELL("Cell"), ROOM("Room"), LOG("Log"), SETTINGS("Settings"), SKIMMER("Skimmer"), STALKERWARE("Stalkerware"), CAR("Car check"), CAMERA_FINDER("Camera finder")
 }
 
@@ -139,7 +140,7 @@ class MainActivity : androidx.fragment.app.FragmentActivity() {
                                 Tab.DEVICES to Icons.Filled.List,
                                 Tab.SWEEP to Icons.Filled.Search,
                                 Tab.MAP to Icons.Filled.Place,
-                                Tab.MORE to Icons.Filled.MoreHoriz,
+                                Tab.MORE to Icons.Filled.Shield,
                             )
                             items.forEach { (t, icon) ->
                                 NavigationBarItem(
@@ -207,19 +208,18 @@ class MainActivity : androidx.fragment.app.FragmentActivity() {
                                 Tab.STALKERWARE -> com.rfwatch.app.ui.screens.StalkerwareScreen(contentModifier)
                                 Tab.CAMERA_FINDER -> com.rfwatch.app.ui.screens.CameraFinderScreen(contentModifier)
                                 Tab.CAR -> com.rfwatch.app.ui.screens.CarSweepScreen(vm, contentModifier) { id -> vm.huntRequest.value = id; tab = Tab.SWEEP }
-                                Tab.MORE -> MoreScreen(
-                                    modifier = contentModifier,
-                                    onCell = { tab = Tab.CELL },
-                                    onRoom = { tab = Tab.ROOM },
-                                    onLog = { tab = Tab.LOG },
-                                    onSettings = { tab = Tab.SETTINGS },
-                                    tools = listOf(
-                                        Triple("Check your car", "60-second walk-around sweep for item trackers and GPS trackers, with Hunt.") { tab = Tab.CAR },
-                                        Triple("Hidden camera finder", "Spot night-vision IR LEDs and lens glints with the phone camera.") { tab = Tab.CAMERA_FINDER },
-                                        Triple("Stalkerware check", "Scan this phone's apps for stalkerware & spyware (thousands of indicators).") { tab = Tab.STALKERWARE },
-                                        Triple("Skimmer check", "Fuel pump / ATM card-skimmer Bluetooth check with full evidence.") { tab = Tab.SKIMMER },
-                                    ),
-                                )
+                                Tab.MORE -> com.rfwatch.app.ui.screens.ProtectHub(vm, contentModifier) { dest ->
+                                    tab = when (dest) {
+                                        com.rfwatch.app.ui.screens.HubDest.STALKERWARE -> Tab.STALKERWARE
+                                        com.rfwatch.app.ui.screens.HubDest.CAMERA_FINDER -> Tab.CAMERA_FINDER
+                                        com.rfwatch.app.ui.screens.HubDest.ROOM -> Tab.ROOM
+                                        com.rfwatch.app.ui.screens.HubDest.SKIMMER -> Tab.SKIMMER
+                                        com.rfwatch.app.ui.screens.HubDest.CAR -> Tab.CAR
+                                        com.rfwatch.app.ui.screens.HubDest.CELL -> Tab.CELL
+                                        com.rfwatch.app.ui.screens.HubDest.LOG -> Tab.LOG
+                                        com.rfwatch.app.ui.screens.HubDest.SETTINGS -> Tab.SETTINGS
+                                    }
+                                }
                             }
                         }
                     }

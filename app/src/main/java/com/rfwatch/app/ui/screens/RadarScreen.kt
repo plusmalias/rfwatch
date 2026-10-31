@@ -8,6 +8,8 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.horizontalScroll
+import com.rfwatch.app.ui.theme.OkGreen
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -115,6 +117,22 @@ fun RadarScreen(vm: RfWatchViewModel, modifier: Modifier = Modifier) {
                 ) {
                     Text("$priorityCount WATCH", Modifier.padding(horizontal = 12.dp, vertical = 7.dp), fontSize = 10.sp, color = if (priorityCount > 0) DangerRed else ConsoleMuted)
                 }
+            }
+        }
+        item(key = "status-strip") {
+            val home by vm.homeStatus.collectAsState()
+            val activeLaw = law?.takeIf { it.active }
+            val trackers = list.count { it.kind == com.rfwatch.core.id.DeviceKind.TRACKER || it.trackerType != null }
+            val recentDrones = drones.values.count { System.currentTimeMillis() - it.lastSeenMs < 5 * 60_000L }
+            Row(Modifier.fillMaxWidth().horizontalScroll(androidx.compose.foundation.rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                StatusPill(if (activeLaw != null) "POLICE ${activeLaw.signatures.size}" else "No police", if (activeLaw != null) DangerRed else OkGreen)
+                StatusPill(if (followers.isNotEmpty()) "FOLLOWING ${followers.size}" else "No followers", if (followers.isNotEmpty()) WarnAmber else OkGreen)
+                StatusPill(if (recentDrones > 0) "DRONES $recentDrones" else "No drones", if (recentDrones > 0) Color(0xFFE040FB) else OkGreen)
+                StatusPill("Trackers $trackers", if (trackers > 0) RadarPink else ConsoleMuted)
+                StatusPill(
+                    when { !home.isSet -> "Home: not set"; !home.mature -> "Home: learning ${home.visitsLearned}/3"; home.inside -> "Home: watching"; else -> "Away" },
+                    if (home.isSet) RadarCyan else ConsoleMuted,
+                )
             }
         }
         item(key = "scan-session") {
@@ -243,6 +261,13 @@ private fun ScanSessionCard(
             )
         }
     }
+}
+
+@Composable
+private fun StatusPill(text: String, color: Color) {
+    androidx.compose.material3.Surface(
+        color = color.copy(alpha = 0.12f), shape = CircleShape, border = BorderStroke(1.dp, color.copy(alpha = 0.5f)),
+    ) { Text(text, Modifier.padding(horizontal = 10.dp, vertical = 5.dp), fontSize = 11.sp, color = color, letterSpacing = 0.6.sp) }
 }
 
 @Composable

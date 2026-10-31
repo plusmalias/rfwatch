@@ -126,22 +126,26 @@ private fun AppRiskCard(a: AppAssessment, now: Long) {
     val f = a.facts
     val color = when (a.risk) { AppRisk.CRITICAL, AppRisk.HIGH -> DangerRed; AppRisk.MEDIUM -> WarnAmber; AppRisk.LOW -> ConsoleMuted }
     val fmt = DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT)
+    var expanded by remember(f.packageName) { mutableStateOf(a.risk == AppRisk.CRITICAL) }
     Card(colors = CardDefaults.cardColors(containerColor = ConsolePanel), border = BorderStroke(1.dp, color.copy(alpha = 0.6f))) {
         Column(Modifier.fillMaxWidth().padding(10.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Text("${a.risk} · score ${a.score}" + (a.family?.let { " · ${it.name}" } ?: ""), color = color, fontSize = 13.sp, fontWeight = FontWeight.Bold)
             Text(f.label, fontSize = 15.sp)
             Text(f.packageName, fontSize = 11.sp, color = ConsoleMuted)
-            a.reasons.forEach { Text(it, fontSize = 11.sp) }
-            Text(
+            (if (expanded) a.reasons else a.reasons.take(2)).forEach { Text(it, fontSize = 11.sp) }
+            androidx.compose.material3.TextButton(onClick = { expanded = !expanded }) {
+                Text(if (expanded) "Hide details" else "Show all ${a.reasons.size} reasons & details", fontSize = 12.sp)
+            }
+            if (expanded) Text(
                 "Installer: ${f.installer ?: "none / sideloaded"} · ${if (f.isSystem) "system app" else "user app"} · " +
                     "icon ${if (f.hasLauncherIcon) "visible" else "HIDDEN"}",
                 fontSize = 11.sp, color = ConsoleMuted,
             )
-            if (f.firstInstallMs > 0) Text("Installed ${fmt.format(Date(f.firstInstallMs))} · updated ${fmt.format(Date(f.lastUpdateMs))} (${(now - f.firstInstallMs) / 86_400_000} days ago)", fontSize = 11.sp, color = ConsoleMuted)
-            f.certSha1.forEach { Text("Signing cert SHA-1 $it", fontSize = 10.sp, color = ConsoleMuted) }
-            f.apkSha256?.let { Text("APK SHA-256 $it", fontSize = 10.sp, color = ConsoleMuted) }
+            if (expanded && f.firstInstallMs > 0) Text("Installed ${fmt.format(Date(f.firstInstallMs))} · updated ${fmt.format(Date(f.lastUpdateMs))} (${(now - f.firstInstallMs) / 86_400_000} days ago)", fontSize = 11.sp, color = ConsoleMuted)
+            if (expanded) f.certSha1.forEach { Text("Signing cert SHA-1 $it", fontSize = 10.sp, color = ConsoleMuted) }
+            if (expanded) f.apkSha256?.let { Text("APK SHA-256 $it", fontSize = 10.sp, color = ConsoleMuted) }
             val sensitive = f.grantedPermissions.filter { p -> SENSITIVE.any { p.endsWith(it) } }.map { it.substringAfterLast('.') }
-            if (sensitive.isNotEmpty()) Text("Granted: ${sensitive.sorted().joinToString()}", fontSize = 10.sp, color = ConsoleMuted)
+            if (expanded && sensitive.isNotEmpty()) Text("Granted: ${sensitive.sorted().joinToString()}", fontSize = 10.sp, color = ConsoleMuted)
             if (a.risk != AppRisk.LOW) {
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.padding(top = 4.dp)) {
                     OutlinedButton(onClick = {

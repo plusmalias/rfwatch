@@ -140,6 +140,7 @@ fun SkimmerScreen(modifier: Modifier = Modifier) {
 @Composable
 private fun SkimmerRow(f: ClassicFound, a: SkimmerAssessment) {
     val color = when (a.level) { SkimmerLevel.HIGH -> DangerRed; SkimmerLevel.MEDIUM -> WarnAmber; SkimmerLevel.LOW -> ConsoleMuted }
+    var expanded by remember(f.address) { mutableStateOf(a.level == SkimmerLevel.HIGH) }
     Card(colors = CardDefaults.cardColors(containerColor = ConsolePanel), border = BorderStroke(1.dp, color.copy(alpha = 0.6f))) {
         Column(Modifier.fillMaxWidth().padding(10.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -158,7 +159,10 @@ private fun SkimmerRow(f: ClassicFound, a: SkimmerAssessment) {
                     },
                 fontSize = 11.sp, color = ConsoleMuted,
             )
-            a.reasons.forEach { Text(it, fontSize = 11.sp, color = if (it.startsWith("-")) OkGreen else Color.Unspecified) }
+            (if (expanded) a.reasons else a.reasons.take(2)).forEach { Text(it, fontSize = 11.sp, color = if (it.startsWith("-")) OkGreen else Color.Unspecified) }
+            if (a.reasons.size > 2) androidx.compose.material3.TextButton(onClick = { expanded = !expanded }) {
+                Text(if (expanded) "Hide details" else "Show all ${a.reasons.size} reasons", fontSize = 12.sp)
+            }
         }
     }
 }
