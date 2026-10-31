@@ -1,16 +1,96 @@
 {
   "id": "fleet",
-  "name": "Fleet & vehicle telematics",
+  "name": "Vehicle GPS trackers & fleet telematics",
   "category": "FLEET",
-  "source": "Vendor names common in Australian fleets. Name-matched to avoid OUI false positives; these devices are mostly cellular and may not advertise over BLE/Wi-Fi unless in pairing mode.",
-  "version": 1,
+  "source": "Identifiers checked 2026-10-31 against the bundled IEEE OUI and Bluetooth SIG registries (company IDs, member UUIDs); names are vendor/model strings. Most trackers report over cellular and only advertise BLE/Wi-Fi for configuration, pairing or short-range features — absence of a hit is not proof there is no tracker.",
+  "version": 2,
   "rules": [
     {
       "id": "fleet_telematics_au",
       "label": "Fleet telematics unit",
       "threat": "INFO",
-      "nameSubstrings": ["geotab", "samsara", "teletrac", "navman", "eroad", "cartrack", "verizon connect", "procon", "ctrack", "smartrak"],
+      "nameSubstrings": [
+        "geotab",
+        "samsara",
+        "teletrac",
+        "navman",
+        "eroad",
+        "cartrack",
+        "verizon connect",
+        "procon",
+        "ctrack",
+        "smartrak"
+      ],
       "note": "Telematics/GPS tracking units common in Australian commercial fleets (EROAD, Teletrac Navman, Cartrack, Smartrak, Geotab, Samsara)."
+    },
+    {
+      "id": "vehicle_gps_tracker",
+      "label": "GPS tracker / telematics unit",
+      "threat": "NOTABLE",
+      "ouiPrefixes": [
+        "000a99",
+        "001b4e",
+        "001e42",
+        "388a21",
+        "6cafab",
+        "7cd9f4",
+        "002544",
+        "04db8a",
+        "481a84",
+        "64fc8c",
+        "780541",
+        "7ca236",
+        "b4a828",
+        "28ea5b",
+        "fcdb21",
+        "18b79e",
+        "d858c6"
+      ],
+      "companyIds": [
+        629,
+        2202,
+        2923,
+        3679,
+        3681,
+        4035,
+        4033
+      ],
+      "serviceUuids": [
+        64646,
+        64647,
+        64740,
+        64741,
+        65179
+      ],
+      "nameSubstrings": [
+        "teltonika",
+        "fmb0",
+        "fmb1",
+        "fmb9",
+        "fmc",
+        "queclink",
+        "concox",
+        "jimi",
+        "gt06",
+        "tk905",
+        "tk102",
+        "invoxia",
+        "tracki",
+        "landairsea",
+        "spytec",
+        "optimus 2",
+        "bouncie",
+        "vyncs",
+        "lojack",
+        "ituran",
+        "calamp",
+        "zonar",
+        "ruptela",
+        "suntech",
+        "katch",
+        "gps tracker"
+      ],
+      "note": "Vehicle/asset GPS trackers: Teltonika (company 0x089A; OUIs 38:8A:21, 6C:AF:AB, 7C:D9:F4, 00:1E:42), Geotab (0x0275), Samsara (0x0B6B, UUIDs 0xFC86/FC87/FCE4/FCE5/FE9B), Ruptela (0x0E5F), Queclink (0x0E61, 78:05:41), Jimi IoT / Concox (0x0FC3, B4:A8:28), CalAmp, LoJack, Suntech, Pointer, Zonar, Verizon Connect, Navman, Invoxia (consumer), Katch (AU). A tracker that keeps appearing near you or your car is worth checking."
     }
   ]
 }

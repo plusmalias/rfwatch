@@ -7,9 +7,10 @@ package com.rfwatch.core.id
  */
 enum class DeviceKind(val label: String) {
     TRACKER("Tracker"),
+    DRONE("Drone"),
     LAW_ENFORCEMENT("Axon / law"),
     CAMERA_IOT("Camera / IoT"),
-    FLEET("Fleet / vehicle"),
+    FLEET("GPS tracker / fleet"),
     VEHICLE("Vehicle"),
     PHONE("Phone / tablet"),
     COMPUTER("Computer"),

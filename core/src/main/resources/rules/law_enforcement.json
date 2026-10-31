@@ -3,94 +3,300 @@
   "name": "Law-enforcement equipment",
   "category": "LAW_ENFORCEMENT",
   "source": "Identifiers checked 2026-10-31 against the IEEE MA-L (OUI) registry and the Bluetooth SIG assigned numbers (company identifiers, 16-bit member UUIDs) bundled with RFWatch. Name/SSID patterns are community-reported. These are vendor/device signatures, not proof of police presence: the same vendors also sell to security firms, fleets, utilities and emergency services.",
-  "version": 2,
+  "version": 3,
   "rules": [
     {
       "id": "axon",
       "label": "Axon / TASER (body camera, Signal, TASER)",
       "threat": "PRIORITY",
-      "ouiPrefixes": ["0025df"],
-      "companyIds": [845, 64641],
-      "serviceUuids": [64641, 65131, 65132],
-      "ssidPatterns": ["axon", "taser"],
-      "nameSubstrings": ["axon", "taser", "signal sidearm", "signal vehicle"],
+      "ouiPrefixes": [
+        "0025df"
+      ],
+      "companyIds": [
+        845,
+        64641
+      ],
+      "serviceUuids": [
+        64641,
+        65131,
+        65132
+      ],
+      "ssidPatterns": [
+        "axon",
+        "taser"
+      ],
+      "nameSubstrings": [
+        "axon",
+        "taser",
+        "signal sidearm",
+        "signal vehicle"
+      ],
       "note": "OUI 00:25:DF (Axon Enterprise), Bluetooth SIG company 0x034D (TASER International; 0xFC81 also accepted in the company-ID field as seen live) and member UUIDs 0xFC81 (Axon Enterprise) / 0xFE6B, 0xFE6C (TASER International). Axon body cameras, Signal Sidearm/Vehicle triggers and TASER devices; vendor-level evidence only."
     },
     {
       "id": "watchguard_video",
       "label": "WatchGuard Video (in-car / body camera)",
       "threat": "PRIORITY",
-      "ouiPrefixes": ["001d96"],
-      "nameSubstrings": ["watchguard", "4re", "vista wifi"],
+      "ouiPrefixes": [
+        "001d96"
+      ],
+      "nameSubstrings": [
+        "watchguard",
+        "4re",
+        "vista wifi"
+      ],
       "note": "OUI 00:1D:96 is WatchGuard Video (police in-car and body cameras, now Motorola Solutions). Not WatchGuard Technologies (firewalls, 00:01:21 / 00:90:7F), which is deliberately excluded."
     },
     {
       "id": "digital_ally",
       "label": "Digital Ally (in-car / body camera)",
       "threat": "PRIORITY",
-      "ouiPrefixes": ["0023bd"],
-      "nameSubstrings": ["digital ally", "firstvu"],
+      "ouiPrefixes": [
+        "0023bd"
+      ],
+      "nameSubstrings": [
+        "digital ally",
+        "firstvu"
+      ],
       "note": "OUI 00:23:BD (Digital Ally, Inc.) — law-enforcement video systems."
     },
     {
       "id": "utility_inc",
       "label": "Utility Inc (police body / in-car video)",
       "threat": "PRIORITY",
-      "ouiPrefixes": ["0009bc", "0016ed"],
-      "nameSubstrings": ["bodyworn", "rocketiot", "avail"],
+      "ouiPrefixes": [
+        "0009bc",
+        "0016ed"
+      ],
+      "nameSubstrings": [
+        "bodyworn",
+        "rocketiot",
+        "avail"
+      ],
       "note": "OUIs 00:09:BC, 00:16:ED (Utility, Inc) — BodyWorn cameras and in-vehicle video/routers for police."
     },
     {
       "id": "motorola_solutions",
       "label": "Motorola Solutions (radio / body camera)",
       "threat": "NOTABLE",
-      "ouiPrefixes": ["00047d", "001885", "001f92", "4ccc34", "10746f", "9c862b", "b8e28c"],
-      "companyIds": [1260],
-      "serviceUuids": [64910, 65028],
-      "nameSubstrings": ["motorola solutions", "apx", "mototrbo", "v300", "si500", "vb400", "lex l11"],
+      "ouiPrefixes": [
+        "00047d",
+        "001885",
+        "001f92",
+        "4ccc34",
+        "10746f",
+        "9c862b",
+        "b8e28c"
+      ],
+      "companyIds": [
+        1260
+      ],
+      "serviceUuids": [
+        64910,
+        65028
+      ],
+      "nameSubstrings": [
+        "motorola solutions",
+        "apx",
+        "mototrbo",
+        "v300",
+        "si500",
+        "vb400",
+        "lex l11"
+      ],
       "note": "Motorola Solutions OUIs, SIG company 0x04EC and member UUIDs 0xFD8E / 0xFE04: APX / MOTOTRBO radios, V300/VB400/Si500 body cameras, LEX handhelds. Used by AU police and emergency services but also by security and commercial radio users. Distinct from Motorola Mobility (consumer phones), which is excluded."
     },
     {
       "id": "tait",
       "label": "Tait radio",
       "threat": "NOTABLE",
-      "ouiPrefixes": ["000dca"],
-      "companyIds": [2191],
-      "nameSubstrings": ["tait"],
+      "ouiPrefixes": [
+        "000dca"
+      ],
+      "companyIds": [
+        2191
+      ],
+      "nameSubstrings": [
+        "tait"
+      ],
       "note": "OUI 00:0D:CA (Tait Electronics) and SIG company 0x088F (Tait International). Tait radios are fielded by Australian/NZ police and emergency services, and by utilities."
     },
     {
       "id": "public_safety_radio",
-      "label": "Public-safety radio (Harris / Sepura / Hytera)",
+      "label": "Public-safety radio / dispatch (Harris / Sepura / Hytera / Zetron)",
       "threat": "NOTABLE",
-      "ouiPrefixes": ["0000c3", "0006ec", "0017f3", "001e96", "6469bc", "9c066e"],
-      "nameSubstrings": ["l3harris", "xl-200", "xl-185", "sepura", "tetra"],
-      "note": "Harris Corporation, Sepura (TETRA) and Hytera OUIs. Radios with Wi-Fi/BLE programming interfaces; also sold commercially."
+      "ouiPrefixes": [
+        "0000c3",
+        "0006ec",
+        "0017f3",
+        "001e96",
+        "6469bc",
+        "9c066e",
+        "000268",
+        "000b13"
+      ],
+      "nameSubstrings": [
+        "l3harris",
+        "xl-200",
+        "xl-185",
+        "sepura",
+        "tetra"
+      ],
+      "note": "Harris Corporation, Sepura (TETRA) and Hytera OUIs. Radios with Wi-Fi/BLE programming interfaces; also sold commercially. Harris Government Communications (00:02:68) and Zetron dispatch (00:0B:13) added in v3."
     },
     {
       "id": "alpr",
       "label": "ALPR / plate-reader camera",
       "threat": "PRIORITY",
-      "ouiPrefixes": ["b41e52", "000ab1", "00bf15", "0cbf15", "0040de", "0080e7", "00173d"],
-      "ssidPatterns": ["^flock", "pigvision", "fs ext battery"],
-      "nameSubstrings": ["flock", "pigvision", "fs ext battery", "autovu", "anpr", "alpr"],
+      "ouiPrefixes": [
+        "b41e52",
+        "000ab1",
+        "00bf15",
+        "0cbf15",
+        "0040de",
+        "0080e7",
+        "00173d"
+      ],
+      "ssidPatterns": [
+        "^flock",
+        "pigvision",
+        "fs ext battery"
+      ],
+      "nameSubstrings": [
+        "flock",
+        "pigvision",
+        "fs ext battery",
+        "autovu",
+        "anpr",
+        "alpr"
+      ],
       "note": "Flock Safety (B4:1E:52), Genetec AutoVu (00:0A:B1, 00:BF:15, 0C:BF:15), Elsag/Leonardo (00:40:DE, 00:80:E7) and Neology (00:17:3D) OUIs; Flock SSID/BLE names as reported by the Flock You project. Usually fixed roadside or vehicle-mounted cameras."
     },
     {
       "id": "vehicle_modem",
       "label": "Agency vehicle router / modem",
       "threat": "NOTABLE",
-      "ouiPrefixes": ["003044", "00e01c", "00a0d5", "28a331", "50139d", "64ce6e", "84db2f", "cc934a", "001f9c"],
-      "nameSubstrings": ["cradlepoint", "ibr900", "ibr1700", "r1900", "airlink", "mg90", "mp70", "rv55"],
-      "note": "Cradlepoint (00:30:44, 00:E0:1C) and Sierra Wireless AirLink (00:A0:D5, 28:A3:31, 50:13:9D, 64:CE:6E, 84:DB:2F, CC:93:4A) in-vehicle routers, and Havis (00:1F:9C) vehicle docking. Standard uplinks in police cars, but also in ambulances, buses and utility fleets."
+      "ouiPrefixes": [
+        "003044",
+        "00e01c",
+        "00a0d5",
+        "28a331",
+        "50139d",
+        "64ce6e",
+        "84db2f",
+        "cc934a",
+        "001f9c",
+        "00116e",
+        "001add",
+        "1056ca",
+        "6ca3d3",
+        "a8c0ea",
+        "d413f8"
+      ],
+      "nameSubstrings": [
+        "cradlepoint",
+        "ibr900",
+        "ibr1700",
+        "r1900",
+        "airlink",
+        "mg90",
+        "mp70",
+        "rv55",
+        "pepwave",
+        "peplink",
+        "max br1",
+        "max hd2",
+        "max transit"
+      ],
+      "note": "Cradlepoint (00:30:44, 00:E0:1C) and Sierra Wireless AirLink (00:A0:D5, 28:A3:31, 50:13:9D, 64:CE:6E, 84:DB:2F, CC:93:4A) in-vehicle routers, and Havis (00:1F:9C) vehicle docking. Standard uplinks in police cars, but also in ambulances, buses and utility fleets. v3 adds Peplink / Pepwave (MAX in-vehicle routers) OUIs — also used by buses and event networks."
     },
     {
       "id": "forensic_rugged",
       "label": "Rugged / forensic agency equipment",
       "threat": "NOTABLE",
-      "ouiPrefixes": ["001600", "d42dc5"],
-      "nameSubstrings": ["getac", "cellebrite", "i-pro", "arbitrator"],
+      "ouiPrefixes": [
+        "001600",
+        "d42dc5"
+      ],
+      "nameSubstrings": [
+        "getac",
+        "cellebrite",
+        "i-pro",
+        "arbitrator"
+      ],
       "note": "Cellebrite (00:16:00) and i-PRO (D4:2D:C5, Panasonic Arbitrator in-car/body video) OUIs; Getac (rugged laptops and Getac Video body cameras) by name only."
+    },
+    {
+      "id": "speed_radar",
+      "label": "Police speed radar / lidar",
+      "threat": "PRIORITY",
+      "ouiPrefixes": [
+        "6c1811"
+      ],
+      "nameSubstrings": [
+        "decatur",
+        "genesis ii",
+        "stalker",
+        "kustom",
+        "prolaser",
+        "laser technology",
+        "lti 20",
+        "truspeed",
+        "mph industries",
+        "dragoneye"
+      ],
+      "note": "Decatur Electronics OUI 6C:18:11 (Genesis handheld/vehicle radar with Bluetooth printers/apps); other speed-enforcement vendors (Stalker/Applied Concepts, Kustom Signals, LTI, MPH, DragonEye) by name only — not in the IEEE/SIG registries."
+    },
+    {
+      "id": "mobile_data_terminal",
+      "label": "Rugged in-car computer (Toughbook / Getac)",
+      "threat": "NOTABLE",
+      "ouiPrefixes": [
+        "4c364e",
+        "b8208e",
+        "bc3e0b"
+      ],
+      "nameSubstrings": [
+        "toughbook",
+        "cf-33",
+        "cf-54",
+        "fz-55",
+        "fz-g2",
+        "getac"
+      ],
+      "note": "Panasonic Connect OUIs (Toughbook rugged laptops/tablets — the common police mobile data terminal; also utilities and field services)."
+    },
+    {
+      "id": "emergency_lighting",
+      "label": "Emergency lighting / siren controller",
+      "threat": "NOTABLE",
+      "nameSubstrings": [
+        "whelen",
+        "cencom",
+        "federal signal",
+        "pathfinder",
+        "code 3",
+        "code3",
+        "soundoff",
+        "feniex",
+        "ecco safety"
+      ],
+      "note": "Emergency-vehicle lightbar/siren control brands, by advertised name only (not registered in IEEE/SIG). Also used by ambulances, fire and tow vehicles."
+    },
+    {
+      "id": "police_drone",
+      "label": "Public-safety drone (Skydio)",
+      "threat": "PRIORITY",
+      "ouiPrefixes": [
+        "381d14"
+      ],
+      "ssidPatterns": [
+        "^skydio"
+      ],
+      "nameSubstrings": [
+        "skydio"
+      ],
+      "note": "Skydio Inc. OUI 38:1D:14. Skydio X2/X10 are widely used in police drone-as-first-responder programs; also sold to enterprises."
     }
   ]
 }

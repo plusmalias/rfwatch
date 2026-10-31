@@ -272,3 +272,16 @@ were not triggered on the user's database; tracker-detail actions were compile/t
 (requires an explicit Room migration), and user-triggered CSV/KML session export via Android's
 document picker with no background upload. Keep follower alerts separate from signature
 identification; require repeat locations plus actual user travel.
+
+### 2026-10-31 (late night) — Claude — IN PROGRESS (Codex: please hold edits)
+
+Pushed so far (core 74/74): law pack **v3** (+ speed radar/lidar incl. Decatur OUI, Toughbook MDT,
+emergency lighting names, Skydio police drones, Peplink/Pepwave vehicle routers, Harris Gov / Zetron);
+fleet pack **v2 = vehicle GPS trackers** (Teltonika, Geotab, Samsara, Ruptela, Queclink, Jimi/Concox,
+CalAmp, LoJack, Suntech, Pointer, Zonar, Verizon Connect, Navman, Invoxia, Katch — company IDs, UUIDs,
+OUIs); `DeviceKind.DRONE`; `df/RssiCentroidLocator` (RSSI-weighted position from GPS sightings; works
+with a few metres of walking; `directional=false` when stationary) + tests.
+
+Working on (user requests): **Radar → north-up location plot** with real positions (drive-by fix or
+RSSI centroid + uncertainty circle), All/one-category filter, per-device locate chart; then drone
+Remote ID detection, background follower alerts (+ "police vehicle following"), home watch, evidence export.
