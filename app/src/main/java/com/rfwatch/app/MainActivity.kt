@@ -69,7 +69,7 @@ import com.rfwatch.app.ui.theme.OkGreen
 
 private enum class Tab(val label: String) {
     RADAR("Radar"), DEVICES("Devices"), SWEEP("Sweep"), MAP("Map"), MORE("More"),
-    CELL("Cell"), ROOM("Room"), LOG("Log"), SETTINGS("Settings"), SKIMMER("Skimmer"), STALKERWARE("Stalkerware"), CAR("Car check")
+    CELL("Cell"), ROOM("Room"), LOG("Log"), SETTINGS("Settings"), SKIMMER("Skimmer"), STALKERWARE("Stalkerware"), CAR("Car check"), CAMERA_FINDER("Camera finder")
 }
 
 class MainActivity : androidx.fragment.app.FragmentActivity() {
@@ -205,6 +205,7 @@ class MainActivity : androidx.fragment.app.FragmentActivity() {
                                 Tab.SETTINGS -> SettingsScreen(contentModifier)
                                 Tab.SKIMMER -> com.rfwatch.app.ui.screens.SkimmerScreen(contentModifier)
                                 Tab.STALKERWARE -> com.rfwatch.app.ui.screens.StalkerwareScreen(contentModifier)
+                                Tab.CAMERA_FINDER -> com.rfwatch.app.ui.screens.CameraFinderScreen(contentModifier)
                                 Tab.CAR -> com.rfwatch.app.ui.screens.CarSweepScreen(vm, contentModifier) { id -> vm.huntRequest.value = id; tab = Tab.SWEEP }
                                 Tab.MORE -> MoreScreen(
                                     modifier = contentModifier,
@@ -214,6 +215,7 @@ class MainActivity : androidx.fragment.app.FragmentActivity() {
                                     onSettings = { tab = Tab.SETTINGS },
                                     tools = listOf(
                                         Triple("Check your car", "60-second walk-around sweep for item trackers and GPS trackers, with Hunt.") { tab = Tab.CAR },
+                                        Triple("Hidden camera finder", "Spot night-vision IR LEDs and lens glints with the phone camera.") { tab = Tab.CAMERA_FINDER },
                                         Triple("Stalkerware check", "Scan this phone's apps for stalkerware & spyware (thousands of indicators).") { tab = Tab.STALKERWARE },
                                         Triple("Skimmer check", "Fuel pump / ATM card-skimmer Bluetooth check with full evidence.") { tab = Tab.SKIMMER },
                                     ),

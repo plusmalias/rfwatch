@@ -45,6 +45,9 @@
 
     <!-- Stalkerware check: list every installed app to compare against known indicators.
          Never uploaded; the app is distributed outside Play, where this needs no special review. -->
+    <!-- Camera finder (IR LED / lens-glint detection); requested only when that tool is opened. -->
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
     <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES"
         tools:ignore="QueryAllPackagesPermission" />
 
