@@ -62,7 +62,7 @@ fun SettingsScreen(modifier: Modifier = Modifier) {
         Text("Settings", fontSize = 21.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold)
 
         Text("Data retention: ${retentionDays.toInt()} days", fontSize = 14.sp, modifier = Modifier.padding(top = 16.dp))
-        Text("Observations and alerts older than this are purged automatically.", fontSize = 12.sp, color = Color(0xFF9CA3AF))
+        Text("Sightings, alerts and log entries older than this are deleted automatically (checked every 6 h). The device list and your mine / trusted marks are kept.", fontSize = 12.sp, color = Color(0xFF9CA3AF))
         Slider(
             value = retentionDays,
             onValueChange = { retentionDays = it },

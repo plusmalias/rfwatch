@@ -55,6 +55,8 @@ import kotlinx.coroutines.withContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.emitAll
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.launch
 
 /** Live progress of a running sweep: how many usable samples the target has produced. */
@@ -135,6 +137,8 @@ class RfWatchRepository(
     private val locationProvider: LocationProvider,
     /** Receives the widget / tile status summary (see [publishStatus]). */
     private val onStatus: (com.rfwatch.app.widget.StatusSummary) -> Unit = {},
+    /** User's retention window in days (Settings); read each time the purge runs. */
+    private val retentionDays: () -> Int = { com.rfwatch.core.data.RetentionPolicy.DEFAULT_RETENTION_DAYS },
 ) {
     // All scan ingestion runs on one background thread: the caches below are plain maps
     // touched only from this dispatcher, and the main thread never parses adverts.
@@ -216,7 +220,22 @@ class RfWatchRepository(
     /** Whether this phone can give a compass heading (needed for the continuous sweep). */
     val hasCompass: Boolean get() = headingProvider.hasCompass
 
-    val deviceFlow get() = database.deviceDao().observeAll()
+    /**
+     * Device inventory in discovery order (firstSeenMs DESC, id ASC), served from the in-memory
+     * write-behind cache and republished after each flush. The cache is the only writer of the
+     * devices table, so this matches the database without re-reading (and decrypting) the whole
+     * table every few seconds. Seeded on first collection even when monitoring is stopped.
+     */
+    private val _devices = MutableStateFlow<List<DeviceEntity>?>(null)
+    val deviceFlow: kotlinx.coroutines.flow.Flow<List<DeviceEntity>> = kotlinx.coroutines.flow.flow {
+        if (_devices.value == null) withContext(ingestDispatcher) { ensureDeviceCache(); publishDevices() }
+        emitAll(_devices.filterNotNull())
+    }
+
+    /** Snapshot the cache for the UI. Call on [ingestDispatcher] only (the cache is a plain map). */
+    private fun publishDevices() {
+        _devices.value = deviceCache.values.sortedWith(DISCOVERY_ORDER)
+    }
     val alertFlow get() = database.alertDao().recent()
     val eventFlow get() = database.eventDao().recent()
 
@@ -604,6 +623,13 @@ class RfWatchRepository(
                 delay(CONTACT_PUBLISH_INTERVAL_MS)
                 publishContacts()
                 publishRoom(System.currentTimeMillis())
+            }
+        }
+        scope.launch {
+            delay(RETENTION_FIRST_RUN_MS)
+            while (isActive) {
+                runCatching { purgeExpired() }
+                delay(RETENTION_INTERVAL_MS)
             }
         }
         scope.launch {
@@ -1029,10 +1055,16 @@ class RfWatchRepository(
         return ((absBearing - facing) % 360.0 + 360.0) % 360.0
     }
 
+    private val cacheLoadMutex = Mutex()
+
     private suspend fun ensureDeviceCache() {
         if (deviceCacheLoaded) return
-        database.deviceDao().all().forEach { deviceCache[it.id] = it }
-        deviceCacheLoaded = true
+        cacheLoadMutex.withLock {
+            if (deviceCacheLoaded) return
+            // putIfAbsent: never let the stored row replace a fresher in-memory one.
+            database.deviceDao().all().forEach { deviceCache.putIfAbsent(it.id, it) }
+            deviceCacheLoaded = true
+        }
     }
 
     private suspend fun loadActiveSession() {
@@ -1060,6 +1092,30 @@ class RfWatchRepository(
             if (devices.isNotEmpty()) database.deviceDao().upsertAll(devices)
             if (observations.isNotEmpty()) database.observationDao().insertAll(observations)
         }
+        if (devices.isNotEmpty() && deviceCacheLoaded) publishDevices()
+    }
+
+    /**
+     * Deletes observations, alerts and log events older than the user's retention window
+     * (Settings). Devices — and with them the mine / trusted marks — are kept. Returns rows removed.
+     */
+    suspend fun purgeExpired(nowMs: Long = System.currentTimeMillis()): Int = withContext(ingestDispatcher) {
+        flushPending()
+        val days = retentionDays().coerceIn(1, 365)
+        val cutoff = com.rfwatch.core.data.RetentionPolicy.cutoffMs(nowMs, days)
+        var removed = 0
+        database.withTransaction {
+            removed = database.observationDao().purgeOlderThan(cutoff) +
+                database.alertDao().purgeOlderThan(cutoff) +
+                database.eventDao().purgeOlderThan(cutoff)
+        }
+        if (removed > 0) {
+            database.eventDao().insert(
+                com.rfwatch.app.data.EventEntity(kind = "RETENTION_PURGE", timestampMs = nowMs,
+                    detail = "Removed $removed records older than $days days (devices and your marks kept)"),
+            )
+        }
+        removed
     }
 
     /**
@@ -1096,6 +1152,7 @@ class RfWatchRepository(
                 lastHomeAlertMs.clear(); lastFollowerAlertMs.clear(); lastDroneAlertMs.clear()
                 lastAlertMs.clear()
                 database.clearAllTables()
+                _devices.value = emptyList()
             }
             _contacts.value = emptyMap()
             _room.value = emptyList()
@@ -1251,6 +1308,9 @@ class RfWatchRepository(
         private const val CAMERA_ALERT_COOLDOWN_MS = 6 * 60 * 60_000L
         const val MIN_SWEEP_SAMPLES = 6
         private const val FLUSH_INTERVAL_MS = 3_000L
+        private const val RETENTION_FIRST_RUN_MS = 30_000L
+        private const val RETENTION_INTERVAL_MS = 6 * 60 * 60_000L
+        private val DISCOVERY_ORDER = compareByDescending<DeviceEntity> { it.firstSeenMs }.thenBy { it.id }
         private const val OBSERVATION_MIN_INTERVAL_MS = 2_000L
         private const val CONTACT_PUBLISH_INTERVAL_MS = 1_000L
         private const val LAW_TICK_MS = 5_000L

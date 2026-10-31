@@ -48,6 +48,10 @@ class AppContainer(context: Context) {
             headingProvider = headingProvider,
             locationProvider = locationProvider,
             onStatus = { com.rfwatch.app.widget.StatusWidget.push(appContext, it) },
+            retentionDays = {
+                appContext.getSharedPreferences("rfwatch_settings", Context.MODE_PRIVATE)
+                    .getInt("retention_days", com.rfwatch.core.data.RetentionPolicy.DEFAULT_RETENTION_DAYS)
+            },
         )
     }
 }
