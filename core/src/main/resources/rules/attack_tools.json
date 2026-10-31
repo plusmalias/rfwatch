@@ -1,0 +1,57 @@
+{
+  "id": "attack_tools",
+  "name": "Hacking & attack tools",
+  "category": "ATTACK_TOOLS",
+  "source": "Flipper Devices identifiers from the bundled Bluetooth SIG (company 0x0E29) and IEEE (0C:FA:22) registries; other tools by their default advertised names / SSIDs as published by their projects and reported by the community. Owning these tools is legal and common among hobbyists — a hit means 'someone nearby has one', not that you are being attacked.",
+  "version": 1,
+  "rules": [
+    {
+      "id": "flipper_zero",
+      "label": "Flipper Zero",
+      "threat": "NOTABLE",
+      "ouiPrefixes": ["0cfa22"],
+      "companyIds": [3625],
+      "nameSubstrings": ["flipper "],
+      "note": "Flipper Devices SIG company 0x0E29 and OUI 0C:FA:22; Flipper Zero advertises 'Flipper <name>' over BLE. Multi-tool for Sub-GHz, RFID/NFC, IR, BadUSB and BLE (incl. BLE-spam firmware)."
+    },
+    {
+      "id": "wifi_pineapple",
+      "label": "Hak5 WiFi Pineapple (rogue access point)",
+      "threat": "PRIORITY",
+      "ssidPatterns": ["^pineapple[_-]", "^mk7", "^pineap", "^PineAP"],
+      "nameSubstrings": ["pineapple"],
+      "note": "WiFi Pineapple management SSIDs ('Pineapple_XXXX', MK7). Pineapples conventionally use BSSIDs starting 00:13:37, which is officially registered to Orient Power — so the OUI alone is not used. PineAP impersonates networks your devices have joined before (see evil-twin alerts)."
+    },
+    {
+      "id": "esp32_attack_firmware",
+      "label": "ESP32 / ESP8266 attack firmware (deauther, Marauder, Bruce, Nemo, GhostESP)",
+      "threat": "PRIORITY",
+      "ssidPatterns": ["^pwned$", "marauder", "^bruce", "nemo", "ghostesp", "ghost[_ -]?esp", "deauther", "evil[_ -]?portal", "^wifi[_ -]?nugget", "^m5stick"],
+      "nameSubstrings": ["marauder", "bruce", "nemo", "ghostesp", "deauther", "wifi nugget", "m5stick", "evil portal"],
+      "note": "Default SSIDs / BLE names of popular Wi-Fi attack firmwares: Spacehuhn ESP8266 Deauther ('pwned'), ESP32 Marauder, Bruce, M5Stick NEMO, GhostESP, WiFi Nugget, evil-portal captive portals. These can deauthenticate Wi-Fi clients, clone networks and spam BLE."
+    },
+    {
+      "id": "pwnagotchi",
+      "label": "Pwnagotchi (Wi-Fi handshake capture)",
+      "threat": "NOTABLE",
+      "ssidPatterns": ["pwnagotchi"],
+      "nameSubstrings": ["pwnagotchi"],
+      "note": "Pwnagotchi peers announce themselves in beacons (custom information element 222 with JSON); RFWatch also checks for that element directly. Collects WPA handshakes by deauthenticating clients."
+    },
+    {
+      "id": "hardware_implant",
+      "label": "Covert hardware implant (O.MG cable / keylogger)",
+      "threat": "PRIORITY",
+      "ssidPatterns": ["^O\\.?MG", "keylogger", "^AirDrive", "^KeyGrabber"],
+      "nameSubstrings": ["o.mg", "omg cable", "keylogger", "airdrive", "keygrabber"],
+      "note": "Wi-Fi access points opened by covert implants: O.MG cable/plug/adapter (default 'O.MG' SSID), AirDrive / KeyGrabber Wi-Fi keyloggers. Check USB cables, keyboards and chargers you didn't buy yourself."
+    },
+    {
+      "id": "rfid_nfc_tools",
+      "label": "RFID / NFC cloning tool",
+      "threat": "NOTABLE",
+      "nameSubstrings": ["chameleonultra", "chameleon ultra", "chameleonlite", "pm3_rdv", "proxmark", "icopy", "keysy"],
+      "note": "Bluetooth names of Proxmark3 RDV4 (BT add-on), ChameleonUltra/Lite, iCopy-X and Keysy — tools that read and clone access cards and key fobs."
+    }
+  ]
+}

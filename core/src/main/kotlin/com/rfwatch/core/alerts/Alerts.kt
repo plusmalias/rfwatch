@@ -15,6 +15,9 @@ enum class AlertType {
     POSSIBLE_FOLLOWER,
     LAW_VEHICLE_FOLLOWING,
     EMERGENCY_VEHICLE,
+    ATTACK_TOOL,
+    BLE_SPAM,
+    EVIL_TWIN,
 }
 
 /**
@@ -55,6 +58,9 @@ object AlertPhrasing {
             AlertType.POSSIBLE_FOLLOWER -> "A device has been travelling with you"
             AlertType.LAW_VEHICLE_FOLLOWING -> "Possible police equipment travelling with you"
             AlertType.EMERGENCY_VEHICLE -> "Possible ambulance or fire equipment nearby"
+            AlertType.ATTACK_TOOL -> "Hacking tool detected nearby"
+            AlertType.BLE_SPAM -> "Bluetooth spam attack nearby"
+            AlertType.EVIL_TWIN -> "Possible fake Wi-Fi network copying a known one"
         }
         val speakDirection = relativeBearingDeg != null && confidence > MIN_SPOKEN_CONFIDENCE
         return if (speakDirection) "$base, ${relativeSector(relativeBearingDeg!!)}" else base

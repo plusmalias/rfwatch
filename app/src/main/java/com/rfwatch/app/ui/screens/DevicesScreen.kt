@@ -290,6 +290,7 @@ internal fun com.rfwatch.app.data.DeviceEntity.effectiveKind(): DeviceKind {
         "axon" in c || "law" in c -> DeviceKind.LAW_ENFORCEMENT
         "camera" in c || "iot" in c -> DeviceKind.CAMERA_IOT
         "emergency services" in c -> DeviceKind.EMERGENCY
+        "hacking tool" in c -> DeviceKind.ATTACK_TOOL
         "fleet" in c || "vehicle" in c -> DeviceKind.FLEET
         band == "WIFI" -> DeviceKind.NETWORK
         else -> DeviceKind.UNKNOWN

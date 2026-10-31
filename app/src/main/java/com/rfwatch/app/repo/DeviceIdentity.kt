@@ -31,10 +31,12 @@ internal object DeviceIdentityClassifier {
         val axonHit = taserHit || hits.any { it.ruleId == "axon" }
         val lawHit = hits.firstOrNull { it.category == RuleCategory.LAW_ENFORCEMENT }
         val emergencyHit = hits.firstOrNull { it.category == RuleCategory.EMERGENCY_SERVICES }
+        val toolHit = hits.firstOrNull { it.category == RuleCategory.ATTACK_TOOLS }
         val brand = if (axonHit) "Axon" else match?.type?.brand() ?: fingerprint?.brand ?: serviceBrand(facts) ?: advertiserBrand(facts)
         val fpKind = fingerprint?.kind?.takeIf { it != DeviceKind.UNKNOWN }
         val kind = when {
             axonHit || lawHit != null -> DeviceKind.LAW_ENFORCEMENT
+            toolHit != null -> DeviceKind.ATTACK_TOOL
             match != null -> DeviceKind.TRACKER
             hits.any { it.category == RuleCategory.CAMERA_IOT } -> DeviceKind.CAMERA_IOT
             hits.any { it.category == RuleCategory.FLEET } -> DeviceKind.FLEET
@@ -50,6 +52,7 @@ internal object DeviceIdentityClassifier {
             hits.any { it.category == RuleCategory.CAMERA_IOT } -> "Camera / IoT candidate"
             hits.any { it.category == RuleCategory.FLEET } -> "Fleet / vehicle signature"
             lawHit != null -> "Law-enforcement signature · ${lawHit.label}"
+            toolHit != null -> "Hacking tool · ${toolHit.label}"
             emergencyHit != null -> "Emergency services · ${emergencyHit.label}"
             fpKind != null && fpKind != DeviceKind.NETWORK -> fpKind.label
             band == Band.WIFI -> "Wi-Fi access point / device"

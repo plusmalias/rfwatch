@@ -29,6 +29,8 @@ data class WifiSighting(
     val remoteId: com.rfwatch.core.id.RemoteIdInfo? = null,
     /** DJI DroneID vendor element present (proprietary; not decoded). */
     val djiDroneId: Boolean = false,
+    /** Pwnagotchi peer-advertisement element (IE 222, JSON) — its name if present. */
+    val pwnagotchi: String? = null,
 )
 
 /**
@@ -95,6 +97,20 @@ class WifiScanner(private val context: Context) {
         return remoteId to dji
     }
 
+    /** Pwnagotchi announces itself with a custom information element 222 carrying JSON ("name": …). */
+    private fun ScanResult.pwnagotchiName(): String? {
+        if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.R) return null
+        return runCatching {
+            informationElements.firstOrNull { it.id == 222 }?.let { ie ->
+                val buf = ie.bytes.duplicate()
+                val text = String(ByteArray(buf.remaining()).also { buf.get(it) }, Charsets.UTF_8)
+                if ("pwnd_tot" in text || "pwnagotchi" in text || "\"name\"" in text)
+                    Regex("\"name\"\\s*:\\s*\"([^\"]{1,40})\"").find(text)?.groupValues?.get(1) ?: "pwnagotchi"
+                else null
+            }
+        }.getOrNull()
+    }
+
     private fun ScanResult.toSighting(now: Long): WifiSighting {
         val droneElements = droneVendorElements()
         val ssidStr = wifiSsid()
@@ -138,6 +154,7 @@ class WifiScanner(private val context: Context) {
             frequencyMhz = frequency,
             remoteId = droneElements.first,
             djiDroneId = droneElements.second,
+            pwnagotchi = pwnagotchiName(),
         )
     }
 

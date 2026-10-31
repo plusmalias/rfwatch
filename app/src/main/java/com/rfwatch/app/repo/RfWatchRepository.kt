@@ -532,6 +532,10 @@ class RfWatchRepository(
 
     private suspend fun runMonitoring(scope: CoroutineScope) {
         ensureDeviceCache()
+        // Seed the evil-twin detector with every Wi-Fi network already in the inventory.
+        deviceCache.values.filter { it.band == Band.WIFI.name && !it.displayName.isNullOrBlank() }.forEach {
+            evilTwin.learn(it.displayName!!, it.id, it.wifiSecurity ?: "Unknown", it.firstSeenMs)
+        }
         runCatching { loadHome() }
         loadActiveSession()
         scope.launch {
@@ -593,6 +597,9 @@ class RfWatchRepository(
                     "0x${companyId.toString(16).uppercase().padStart(4, '0')}=${bytes.joinToString("") { "%02X".format(it.toInt() and 0xFF) }}"
                 }
                 val fingerprint = com.rfwatch.core.id.BleFingerprinter.fingerprint(adv, sighting.deviceName)
+                com.rfwatch.core.cs.BleSpamDetector.popupType(adv)?.let { type ->
+                    bleSpam.onPopupAdvert(adv.address, type, adv.rssi, adv.timestampMs)?.let { onBleSpam(it, adv.timestampMs) }
+                }
                 adv.serviceData16[com.rfwatch.core.id.RemoteIdParser.BLE_SERVICE_UUID]
                     ?.let { com.rfwatch.core.id.RemoteIdParser.parseBleServiceData(it) }
                     ?.let { onDrone(adv.address, it, adv.rssi, adv.timestampMs, "Bluetooth Remote ID") }
@@ -614,6 +621,9 @@ class RfWatchRepository(
         scope.launch {
             wifiScanner.scans().collect { list ->
                 list.forEach { s ->
+                    evilTwin.observe(s.facts.ssid, s.bssid, com.rfwatch.core.id.WifiFingerprinter.security(s.capabilities).label, s.timestampMs)
+                        ?.let { onEvilTwin(it, s.bssid, s.facts.rssi, s.timestampMs) }
+                    s.pwnagotchi?.let { onAttackTool(s.bssid, "Pwnagotchi \"$it\" (beacon element 222)", "Wi-Fi beacon announces a Pwnagotchi peer", s.facts.rssi, s.timestampMs) }
                     when {
                         s.remoteId != null -> onDrone(s.bssid, s.remoteId, s.facts.rssi, s.timestampMs, "Wi-Fi Remote ID")
                         s.djiDroneId -> onDrone(s.bssid, com.rfwatch.core.id.RemoteIdInfo(description = s.facts.ssid), s.facts.rssi, s.timestampMs, "DJI DroneID beacon")
@@ -768,6 +778,9 @@ class RfWatchRepository(
         )
         contactsDirty = true
 
+        hits.firstOrNull { it.category == com.rfwatch.core.rules.RuleCategory.ATTACK_TOOLS }
+            ?.let { hit -> onAttackTool(id, hit.label, "${hit.matchedOn} (rule ${hit.ruleId})", rssi, ts) }
+
         // Possible ambulance / fire equipment: gentle alert, once per device per cooldown.
         hits.filter { it.category == com.rfwatch.core.rules.RuleCategory.EMERGENCY_SERVICES }
             .maxByOrNull { it.threat.ordinal }
@@ -833,6 +846,39 @@ class RfWatchRepository(
                 } else titleFor(type), bearingDeg = relBearing, confidence = confidence,
             )
         )
+    }
+
+    private val bleSpam = com.rfwatch.core.cs.BleSpamDetector()
+    private val evilTwin = com.rfwatch.core.cs.EvilTwinDetector()
+    private val lastToolAlertMs = HashMap<String, Long>()
+
+    private suspend fun onBleSpam(d: com.rfwatch.core.cs.BleSpamDetection, ts: Long) {
+        val detail = d.describe()
+        alertManager.raise(AlertType.BLE_SPAM, titleFor(AlertType.BLE_SPAM), detail, null, 0.0)
+        database.alertDao().insert(com.rfwatch.app.data.AlertEntity(type = AlertType.BLE_SPAM.name, timestampMs = ts, deviceId = null, message = detail))
+        val fix = fixHolder.current
+        database.eventDao().insert(com.rfwatch.app.data.EventEntity(kind = "BLE_SPAM", timestampMs = ts, detail = detail, lat = fix?.lat, lon = fix?.lon))
+    }
+
+    private suspend fun onEvilTwin(d: com.rfwatch.core.cs.EvilTwinDetection, bssid: String, rssi: Int, ts: Long) {
+        val detail = d.describe() + " Signal $rssi dBm."
+        alertManager.raise(AlertType.EVIL_TWIN, titleFor(AlertType.EVIL_TWIN), detail, null, 0.0)
+        database.alertDao().insert(com.rfwatch.app.data.AlertEntity(type = AlertType.EVIL_TWIN.name, timestampMs = ts, deviceId = bssid, message = detail))
+        val fix = fixHolder.current
+        database.eventDao().insert(com.rfwatch.app.data.EventEntity(kind = "EVIL_TWIN", timestampMs = ts, deviceId = bssid, detail = detail, lat = fix?.lat, lon = fix?.lon))
+    }
+
+    /** Hacking-tool sighting: once per device per [TOOL_ALERT_COOLDOWN_MS], with the matched evidence. */
+    private suspend fun onAttackTool(id: String, label: String, evidence: String, rssi: Int, ts: Long) {
+        if (ts - (lastToolAlertMs[id] ?: 0L) < TOOL_ALERT_COOLDOWN_MS) return
+        lastToolAlertMs[id] = ts
+        val device = deviceCache[id]
+        if (device?.isOwnDevice == true || device?.isAllowlisted == true) return
+        val detail = "$label · $id · $rssi dBm (~${com.rfwatch.core.df.RssiCentroidLocator.rssiRangeM(rssi).toInt()} m) · matched on $evidence"
+        alertManager.raise(AlertType.ATTACK_TOOL, titleFor(AlertType.ATTACK_TOOL), detail, null, 0.0)
+        database.alertDao().insert(com.rfwatch.app.data.AlertEntity(type = AlertType.ATTACK_TOOL.name, timestampMs = ts, deviceId = id, message = detail))
+        val fix = fixHolder.current
+        database.eventDao().insert(com.rfwatch.app.data.EventEntity(kind = "ATTACK_TOOL", timestampMs = ts, deviceId = id, detail = detail, lat = fix?.lat, lon = fix?.lon))
     }
 
     @Volatile private var lastEmergencyHitMs = 0L
@@ -1087,12 +1133,16 @@ class RfWatchRepository(
         AlertType.POSSIBLE_FOLLOWER -> "Device travelling with you"
         AlertType.LAW_VEHICLE_FOLLOWING -> "Possible police equipment travelling with you"
         AlertType.EMERGENCY_VEHICLE -> "Ambulance / fire equipment nearby"
+        AlertType.ATTACK_TOOL -> "Hacking tool nearby"
+        AlertType.BLE_SPAM -> "Bluetooth spam attack nearby"
+        AlertType.EVIL_TWIN -> "Possible fake Wi-Fi (evil twin)"
     }
 
     companion object {
         private const val ALERT_DEBOUNCE_MS = 60_000L
         private const val CAMERA_ALERT_MIN_RSSI = -75
         private const val EMERGENCY_ALERT_COOLDOWN_MS = 30 * 60_000L
+        private const val TOOL_ALERT_COOLDOWN_MS = 60 * 60_000L
         private const val EMERGENCY_CONTEXT_MS = 3 * 60_000L
         private const val CAMERA_ALERT_COOLDOWN_MS = 6 * 60 * 60_000L
         const val MIN_SWEEP_SAMPLES = 6

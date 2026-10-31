@@ -6,7 +6,7 @@ import kotlinx.serialization.Serializable
 enum class Threat { INFO, NOTABLE, PRIORITY }
 
 /** Which toggleable pack a rule belongs to. */
-enum class RuleCategory { LAW_ENFORCEMENT, TRACKER, CAMERA_IOT, FLEET, EMERGENCY_SERVICES }
+enum class RuleCategory { LAW_ENFORCEMENT, TRACKER, CAMERA_IOT, FLEET, EMERGENCY_SERVICES, ATTACK_TOOLS }
 
 /**
  * A single detection rule. A device matches if ANY of the populated predicates match

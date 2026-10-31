@@ -95,6 +95,7 @@ class AlertManager(private val context: Context) : TextToSpeech.OnInitListener {
         AlertType.CAMERA_IOT_SIGNATURE, AlertType.NEW_AT_HOME, AlertType.SWEEP_HIT -> 0xFFFFB020
         AlertType.TRACKER_FOLLOWING -> 0xFFF277A6
         AlertType.EMERGENCY_VEHICLE -> 0xFF3B82F6
+        AlertType.ATTACK_TOOL, AlertType.BLE_SPAM, AlertType.EVIL_TWIN -> 0xFF22D3EE
     }
 
     /** Screen flash (if the app is open) and optional camera-torch strobe for a loud alert. */
@@ -217,6 +218,9 @@ class AlertManager(private val context: Context) : TextToSpeech.OnInitListener {
             AlertType.POSSIBLE_FOLLOWER -> longArrayOf(0, 600, 250, 600)
             AlertType.LAW_VEHICLE_FOLLOWING -> longArrayOf(0, 600, 150, 300, 150, 600)
             AlertType.EMERGENCY_VEHICLE -> longArrayOf(0, 200, 120, 200, 120, 200)
+            AlertType.ATTACK_TOOL -> longArrayOf(0, 80, 60, 80, 60, 80, 60, 400)
+            AlertType.BLE_SPAM -> longArrayOf(0, 60, 40, 60, 40, 60, 40, 60, 40, 60)
+            AlertType.EVIL_TWIN -> longArrayOf(0, 500, 100, 100, 100, 500)
         }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             vibrator.vibrate(VibrationEffect.createWaveform(pattern, -1))
@@ -242,6 +246,9 @@ class AlertManager(private val context: Context) : TextToSpeech.OnInitListener {
             AlertType.POSSIBLE_FOLLOWER to "Device travelling with you",
             AlertType.LAW_VEHICLE_FOLLOWING to "Police equipment travelling with you",
             AlertType.EMERGENCY_VEHICLE to "Ambulance / fire equipment nearby",
+            AlertType.ATTACK_TOOL to "Hacking tool nearby",
+            AlertType.BLE_SPAM to "Bluetooth spam attack",
+            AlertType.EVIL_TWIN to "Fake / evil-twin Wi-Fi",
         ).map { (type, name) ->
             NotificationChannel(channelId(type), name, NotificationManager.IMPORTANCE_HIGH).apply {
                 enableVibration(true)
