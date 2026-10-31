@@ -31,6 +31,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -66,6 +67,7 @@ fun RadarScreen(vm: RfWatchViewModel, modifier: Modifier = Modifier) {
     val heading by vm.heading.collectAsState()
     val contacts by vm.contacts.collectAsState()
     val devices by vm.devices.collectAsState()
+    val law by vm.lawEncounter.collectAsState()
     // Keep discovery order stable. RSSI fluctuates per packet, so sorting on it makes targets jump.
     val list = contacts.values.toList()
     var selectedContactId by remember { mutableStateOf<String?>(null) }
@@ -90,6 +92,11 @@ fun RadarScreen(vm: RfWatchViewModel, modifier: Modifier = Modifier) {
                 ) {
                     Text("$priorityCount WATCH", Modifier.padding(horizontal = 12.dp, vertical = 7.dp), fontSize = 10.sp, color = if (priorityCount > 0) DangerRed else ConsoleMuted)
                 }
+            }
+        }
+        law?.let { encounter ->
+            if (encounter.active || System.currentTimeMillis() - encounter.lastSeenMs < LAW_BANNER_KEEP_MS) {
+                item(key = "law-banner") { LawBanner(encounter) }
             }
         }
         item(key = "radar-scope") {
@@ -121,7 +128,11 @@ fun RadarScreen(vm: RfWatchViewModel, modifier: Modifier = Modifier) {
                             LegendDot(Color(0xFFB79CFF), "Fleet")
                         }
                     }
-                    Text("RSSI-only range is a rough model, not a measurement; walls and transmitter power can shift it greatly.", fontSize = 10.sp, color = Color(0xFF78909A))
+                    Text(
+                        "Without a measured bearing, dots sit in their category's sector (stable order) and closer to the centre means a stronger signal — " +
+                            "a rough RSSI proxy, not a distance. Only drive-by fixes are plotted at a real direction.",
+                        fontSize = 10.sp, color = Color(0xFF78909A),
+                    )
                 }
             }
         }
@@ -226,6 +237,23 @@ private fun DrawScope.drawRadar(contacts: List<LiveContact>, facingDeg: Double, 
 
     val maxDist = (contacts.mapNotNull { it.estimate?.distanceFromUserM }.maxOrNull() ?: 100.0).coerceAtLeast(50.0)
 
+    // Category lanes for contacts without a real bearing: fixed sectors, stable order by id.
+    val lanes = contacts.filterNot { it.hasRealBearing() }.groupBy { laneOf(it) }
+        .mapValues { (_, list) -> list.sortedBy { it.id } }
+    val labelPaint = android.graphics.Paint().apply {
+        isAntiAlias = true; textSize = 22f; color = android.graphics.Color.argb(150, 145, 164, 176)
+        textAlign = android.graphics.Paint.Align.CENTER
+    }
+    RADAR_LANES.forEachIndexed { i, name ->
+        val center = Math.toRadians(i * LANE_DEG)
+        drawLine(grid.copy(alpha = 0.9f), Offset(cx, cy),
+            Offset(cx + (maxR * sin(center - Math.toRadians(LANE_DEG / 2))).toFloat(), cy - (maxR * cos(center - Math.toRadians(LANE_DEG / 2))).toFloat()),
+            strokeWidth = 1.4f)
+        drawContext.canvas.nativeCanvas.drawText(
+            name, cx + (maxR * 0.78f * sin(center)).toFloat(), cy - (maxR * 0.78f * cos(center)).toFloat() + 8f, labelPaint,
+        )
+    }
+
     contacts.forEach { c ->
         val est = c.estimate
         val color = colorFor(c)
@@ -243,12 +271,64 @@ private fun DrawScope.drawRadar(contacts: List<LiveContact>, facingDeg: Double, 
             if (c.id == selectedId) drawCircle(RadarCyan, radius = 15f, center = Offset(px, py), style = Stroke(2f))
             drawCircle(color, radius = 7f, center = Offset(px, py))
         } else {
-            // Bearing unknown → grey outer ring, spread by hash so they don't overlap.
-            val a = Math.toRadians((c.id.hashCode().and(0xFFFF)) % 360.0)
-            val px = cx + (maxR * sin(a)).toFloat()
-            val py = cy - (maxR * cos(a)).toFloat()
+            // Bearing unknown → the contact's category lane; radius from signal strength.
+            val lane = laneOf(c)
+            val members = lanes[lane].orEmpty()
+            val index = members.indexOfFirst { it.id == c.id }.coerceAtLeast(0)
+            val spread = LANE_DEG * 0.8
+            val angleDeg = lane * LANE_DEG - spread / 2 + spread * (index + 0.5) / members.size.coerceAtLeast(1)
+            val strength = ((c.lastRssi + 100.0) / 70.0).coerceIn(0.0, 1.0)
+            val r = maxR * (0.95 - 0.8 * strength).toFloat()
+            val a = Math.toRadians(angleDeg)
+            val px = cx + (r * sin(a)).toFloat()
+            val py = cy - (r * cos(a)).toFloat()
             if (c.id == selectedId) drawCircle(RadarCyan, radius = 11f, center = Offset(px, py), style = Stroke(2f))
             drawCircle(colorFor(c).copy(alpha = 0.85f), radius = if (c.id == selectedId) 6f else 4.5f, center = Offset(px, py))
+        }
+    }
+}
+
+private val RADAR_LANES = listOf("TRACKER", "LAW", "CAMERA", "VEHICLE", "WI-FI", "BLE")
+private const val LANE_DEG = 60.0
+private const val LAW_BANNER_KEEP_MS = 10 * 60_000L
+
+private fun LiveContact.hasRealBearing() =
+    estimate?.status == EstimateStatus.LOCATED && estimate.bearingFromUserDeg != null
+
+private fun laneOf(c: LiveContact): Int {
+    val label = c.category.orEmpty().lowercase()
+    return when {
+        c.trackerType != null || "tracker" in label -> 0
+        "axon" in label || "law" in label || "police" in label -> 1
+        "camera" in label || "iot" in label -> 2
+        "fleet" in label || "vehicle" in label -> 3
+        c.band == com.rfwatch.core.model.Band.WIFI -> 4
+        else -> 5
+    }
+}
+
+@Composable
+private fun LawBanner(encounter: com.rfwatch.core.alerts.LawEncounter) {
+    val now = System.currentTimeMillis()
+    val color = if (encounter.active) DangerRed else WarnAmber
+    Card(
+        Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = color.copy(alpha = 0.12f)),
+        border = BorderStroke(1.dp, color.copy(alpha = 0.6f)),
+    ) {
+        Column(Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+            Text(
+                if (encounter.active) "POSSIBLE POLICE EQUIPMENT NEARBY"
+                else "POLICE EQUIPMENT LAST HEARD ${((now - encounter.lastSeenMs) / 60_000).coerceAtLeast(0)} MIN AGO",
+                fontSize = 12.sp, color = color, letterSpacing = 1.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
+            )
+            encounter.signatures.take(6).forEach {
+                Text(
+                    "• ${it.label} — ${it.lastRssi} dBm (max ${it.maxRssi}) · ${((now - it.lastSeenMs) / 1000).coerceAtLeast(0)} s ago",
+                    fontSize = 12.sp,
+                )
+            }
+            Text("Vendor radio signatures only — not proof that police are present.", fontSize = 10.sp, color = ConsoleMuted)
         }
     }
 }

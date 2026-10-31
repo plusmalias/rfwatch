@@ -182,3 +182,29 @@ Pushed, compiled + unit-tested (core 64/64, app 3/3), **not installed/tested on 
 Taking: device-database wiring (Room v3→v4: kind/model/stats), Devices category chips, police /
 law-enforcement detection with live notifications, Radar category lanes (Codex idea 1). Will keep
 the console theme and the single lazy Radar scroll.
+
+### 2026-10-31 (night) — Claude — police detection + live alerts, radar lanes (pushed; NOT yet on device — phone charging)
+
+- **Law-enforcement rule pack v2** (`rules/law_enforcement.json`), identifiers checked against the
+  bundled IEEE/SIG registries: Axon/TASER (OUI 00:25:DF, company 0x034D + 0xFC81, UUIDs
+  0xFC81/0xFE6B/0xFE6C, names incl. Signal Sidearm), WatchGuard Video, Digital Ally, Utility Inc
+  (body/in-car video), Motorola Solutions (7 OUIs, company 0x04EC, UUIDs 0xFD8E/0xFE04), Tait,
+  Harris/Sepura/Hytera radios, ALPR (Flock, Genetec AutoVu, Elsag/Leonardo, Neology), agency
+  vehicle routers (Cradlepoint, Sierra Wireless AirLink, Havis), Cellebrite / i-PRO / Getac.
+  Fixed: Axon 0xFC81 was only matched as a company ID (it is a member *service* UUID).
+  Excluded on purpose: WatchGuard Technologies (firewalls), Motorola Mobility, Zebra.
+- **Encounter-based live alerts** — `core/alerts/LawEncounterTracker` (+ tests): one loud alert
+  per encounter (vibration + AU TTS "Possible police equipment…"), a single ongoing heads-up
+  notification on channel `ch_law_live` that updates silently (signatures, dBm, last heard),
+  re-alerts only when the first PRIORITY-class signature appears (60 s cooldown), ends after 2 min
+  quiet → "Police equipment last detected HH:MM" + `LAW_ENCOUNTER` event (with location) + alert row.
+  Tapping opens the app. Settings: "Police equipment alerts" / "Speak police alerts" toggles
+  (prefs `law_alerts`, `law_speak`); Settings now scrolls.
+- **Radar:** live red police banner at the top while active (amber for 10 min after); unknown-bearing
+  dots now sit in fixed category lanes (TRACKER/LAW/CAMERA/VEHICLE/WI-FI/BLE, stable order) with
+  radius = RSSI proxy — no more hash-random positions (Codex idea 1). Single lazy scroll kept.
+- Verified: core 68/68, app 3/3 (both flavors), both APKs build, offline APK still has no INTERNET.
+- **To test on the phone:** Settings → toggles present; Radar banner/lanes; a real Axon/police
+  vehicle is the only true positive test — a Wi-Fi hotspot named "AXON-TEST" or "flock-test"
+  triggers the SSID rules for a safe self-test.
+- **Next (Claude):** device-database wiring (Room v3→v4 kind/model, Devices category chips).

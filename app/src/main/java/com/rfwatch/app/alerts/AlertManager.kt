@@ -11,6 +11,7 @@ import android.speech.tts.TextToSpeech
 import androidx.core.app.NotificationCompat
 import com.rfwatch.core.alerts.AlertPhrasing
 import com.rfwatch.core.alerts.AlertType
+import com.rfwatch.core.alerts.LawEncounter
 import java.util.Locale
 
 /**
@@ -73,6 +74,80 @@ class AlertManager(private val context: Context) : TextToSpeech.OnInitListener {
         return phrase
     }
 
+    private val prefs = context.getSharedPreferences("rfwatch_settings", Context.MODE_PRIVATE)
+
+    /**
+     * Live, updating notification for a possible law-enforcement encounter. [loud] alerts with
+     * heads-up, vibration and (if enabled) speech; otherwise the same notification is refreshed
+     * silently. Disabled entirely by the "Police equipment alerts" setting.
+     */
+    fun lawEncounter(encounter: LawEncounter, loud: Boolean) {
+        if (!prefs.getBoolean(PREF_LAW_ALERTS, true)) return
+        val strongest = encounter.strongest ?: return
+        val count = encounter.signatures.size
+        val title = "Possible police equipment nearby"
+        val text = "${strongest.label} · ${strengthWords(strongest.lastRssi)} (${strongest.lastRssi} dBm)" +
+            if (count > 1) " · $count signatures" else ""
+        val now = System.currentTimeMillis()
+        val details = encounter.signatures.joinToString("\n") {
+            "• ${it.label}: ${it.lastRssi} dBm, ${((now - it.lastSeenMs) / 1000).coerceAtLeast(0)} s ago"
+        } + "\nVendor radio signatures only — not proof police are present."
+        val n = NotificationCompat.Builder(context, LAW_CHANNEL)
+            .setSmallIcon(android.R.drawable.ic_dialog_alert)
+            .setContentTitle(title)
+            .setContentText(text)
+            .setStyle(NotificationCompat.BigTextStyle().bigText("$text\n$details"))
+            .setPriority(NotificationCompat.PRIORITY_MAX)
+            .setCategory(NotificationCompat.CATEGORY_ALARM)
+            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+            .setOngoing(true)
+            .setOnlyAlertOnce(!loud)
+            .setWhen(encounter.startedMs).setShowWhen(true).setUsesChronometer(true)
+            .setContentIntent(openAppIntent())
+            .build()
+        nm.notify(LAW_NOTIFICATION_ID, n)
+        if (loud) {
+            vibrate(if (encounter.hasPriority) AlertType.AXON_SIGNATURE else AlertType.LAW_ENFORCEMENT_SIGNATURE)
+            if (ttsReady && prefs.getBoolean(PREF_LAW_SPEAK, true)) {
+                tts.speak(
+                    "Possible police equipment. ${strongest.label.substringBefore(" (")}, ${strengthWords(strongest.lastRssi)}.",
+                    TextToSpeech.QUEUE_FLUSH, null, "rfwatch-law",
+                )
+            }
+        }
+    }
+
+    /** Turns the live notification into a dismissible "last detected" summary. */
+    fun lawEncounterEnded(encounter: LawEncounter) {
+        if (!prefs.getBoolean(PREF_LAW_ALERTS, true)) return
+        val time = java.text.DateFormat.getTimeInstance(java.text.DateFormat.SHORT).format(java.util.Date(encounter.lastSeenMs))
+        val n = NotificationCompat.Builder(context, LAW_CHANNEL)
+            .setSmallIcon(android.R.drawable.ic_dialog_info)
+            .setContentTitle("Police equipment last detected $time")
+            .setContentText(encounter.signatures.joinToString { it.label.substringBefore(" (") })
+            .setStyle(NotificationCompat.BigTextStyle().bigText(
+                encounter.signatures.joinToString("\n") { "• ${it.label}: strongest ${it.maxRssi} dBm" },
+            ))
+            .setOngoing(false).setAutoCancel(true).setOnlyAlertOnce(true)
+            .setContentIntent(openAppIntent())
+            .build()
+        nm.notify(LAW_NOTIFICATION_ID, n)
+    }
+
+    private fun strengthWords(rssi: Int) = when {
+        rssi >= -60 -> "very close"
+        rssi >= -75 -> "nearby"
+        rssi >= -85 -> "in range"
+        else -> "distant"
+    }
+
+    private fun openAppIntent(): android.app.PendingIntent = android.app.PendingIntent.getActivity(
+        context, 0,
+        android.content.Intent(context, com.rfwatch.app.MainActivity::class.java)
+            .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK or android.content.Intent.FLAG_ACTIVITY_SINGLE_TOP),
+        android.app.PendingIntent.FLAG_IMMUTABLE or android.app.PendingIntent.FLAG_UPDATE_CURRENT,
+    )
+
     private fun vibrate(type: AlertType) {
         val pattern = when (type) {
             AlertType.PRIORITY_NEARBY -> longArrayOf(0, 200, 150, 200)
@@ -109,6 +184,10 @@ class AlertManager(private val context: Context) : TextToSpeech.OnInitListener {
             NotificationChannel(channelId(type), name, NotificationManager.IMPORTANCE_HIGH).apply {
                 enableVibration(true)
             }
+        } + NotificationChannel(LAW_CHANNEL, "Police equipment (live)", NotificationManager.IMPORTANCE_HIGH).apply {
+            description = "Live alert while possible law-enforcement radio signatures are nearby"
+            enableVibration(true)
+            lockscreenVisibility = android.app.Notification.VISIBILITY_PUBLIC
         } + NotificationChannel("ch_tracker_candidate_v2", "Persistent item-tracker-like signal", NotificationManager.IMPORTANCE_LOW) +
             NotificationChannel(MONITOR_CHANNEL, "Monitoring active", NotificationManager.IMPORTANCE_LOW)
         channels.forEach { nm.createNotificationChannel(it) }
@@ -120,5 +199,9 @@ class AlertManager(private val context: Context) : TextToSpeech.OnInitListener {
 
     companion object {
         const val MONITOR_CHANNEL = "ch_monitor"
+        const val LAW_CHANNEL = "ch_law_live"
+        const val PREF_LAW_ALERTS = "law_alerts"
+        const val PREF_LAW_SPEAK = "law_speak"
+        private const val LAW_NOTIFICATION_ID = 4242
     }
 }

@@ -2,6 +2,8 @@ package com.rfwatch.app.ui.screens
 
 import android.content.Context
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -26,6 +28,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.rfwatch.app.RfWatchApp
+import com.rfwatch.app.alerts.AlertManager
 import com.rfwatch.app.BuildConfig
 import com.rfwatch.app.ui.theme.OkGreen
 import com.rfwatch.app.ui.theme.ConsoleMuted
@@ -46,9 +49,11 @@ fun SettingsScreen(modifier: Modifier = Modifier) {
     }
     var appLock by remember { mutableStateOf(prefs.getBoolean("app_lock", false)) }
     var confirmWipe by remember { mutableStateOf(false) }
+    var lawAlerts by remember { mutableStateOf(prefs.getBoolean(AlertManager.PREF_LAW_ALERTS, true)) }
+    var lawSpeak by remember { mutableStateOf(prefs.getBoolean(AlertManager.PREF_LAW_SPEAK, true)) }
     val scope = rememberCoroutineScope()
 
-    Column(modifier.fillMaxSize().padding(16.dp)) {
+    Column(modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp)) {
         Text("PREFERENCES", fontSize = 10.sp, color = OkGreen, letterSpacing = 1.3.sp)
         Text("Settings", fontSize = 21.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold)
 
@@ -68,6 +73,25 @@ fun SettingsScreen(modifier: Modifier = Modifier) {
             }
             Switch(checked = appLock, onCheckedChange = {
                 appLock = it; prefs.edit().putBoolean("app_lock", it).apply()
+            })
+        }
+
+        Row(Modifier.fillMaxWidth().padding(top = 16.dp), verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text("Police equipment alerts", fontSize = 14.sp)
+                Text("Live heads-up notification while possible law-enforcement radio signatures (Axon, agency vehicle routers, public-safety radios, ALPR) are nearby.", fontSize = 12.sp, color = Color(0xFF9CA3AF))
+            }
+            Switch(checked = lawAlerts, onCheckedChange = {
+                lawAlerts = it; prefs.edit().putBoolean(AlertManager.PREF_LAW_ALERTS, it).apply()
+            })
+        }
+        Row(Modifier.fillMaxWidth().padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text("Speak police alerts", fontSize = 14.sp)
+                Text("Say \"Possible police equipment…\" when an encounter starts.", fontSize = 12.sp, color = Color(0xFF9CA3AF))
+            }
+            Switch(checked = lawSpeak, enabled = lawAlerts, onCheckedChange = {
+                lawSpeak = it; prefs.edit().putBoolean(AlertManager.PREF_LAW_SPEAK, it).apply()
             })
         }
 

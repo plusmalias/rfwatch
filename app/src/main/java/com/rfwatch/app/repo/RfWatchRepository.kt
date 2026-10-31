@@ -108,6 +108,11 @@ class RfWatchRepository(
 
     private val writeMutex = Mutex()
 
+    private val lawTracker = com.rfwatch.core.alerts.LawEncounterTracker()
+    private val _lawEncounter = MutableStateFlow<com.rfwatch.core.alerts.LawEncounter?>(null)
+    /** Current / most recent possible law-enforcement encounter, for the live banner. */
+    val lawEncounter: StateFlow<com.rfwatch.core.alerts.LawEncounter?> = _lawEncounter.asStateFlow()
+
     private val stingray = StingrayDetector()
     private val trackerAlertGate = TrackerAlertGate()
     private val fixHolder = LocationFixHolder()
@@ -208,6 +213,12 @@ class RfWatchRepository(
             while (isActive) {
                 delay(CONTACT_PUBLISH_INTERVAL_MS)
                 publishContacts()
+            }
+        }
+        scope.launch {
+            while (isActive) {
+                delay(LAW_TICK_MS)
+                handleLawAction(lawTracker.tick(System.currentTimeMillis()))
             }
         }
         scope.launch {
@@ -381,14 +392,17 @@ class RfWatchRepository(
         )
         contactsDirty = true
 
+        // Possible law-enforcement equipment: grouped into encounters with a live notification.
+        hits.filter { it.category == com.rfwatch.core.rules.RuleCategory.LAW_ENFORCEMENT }
+            .maxByOrNull { it.threat.ordinal }
+            ?.let { hit -> handleLawAction(lawTracker.onHit(id, hit.label, hit.threat, rssi, ts), hit.ruleId) }
+
         val trackerAlertConfirmed = match?.let {
             trackerAlertGate.shouldAlert(id, ts, it.confidence)
         } ?: false
         maybeAlert(
             id, classification, match,
             trackerAlertConfirmed = trackerAlertConfirmed,
-            axonSignature = hits.any { it.ruleId == "axon" },
-            lawEnforcementSignature = hits.any { it.category == com.rfwatch.core.rules.RuleCategory.LAW_ENFORCEMENT },
             cameraSignature = hits.any { it.category == com.rfwatch.core.rules.RuleCategory.CAMERA_IOT },
         )
     }
@@ -400,16 +414,12 @@ class RfWatchRepository(
         classification: String,
         match: TrackerMatch?,
         trackerAlertConfirmed: Boolean,
-        axonSignature: Boolean,
-        lawEnforcementSignature: Boolean,
         cameraSignature: Boolean,
     ) {
         val now = System.currentTimeMillis()
         if ((now - (lastAlertMs[id] ?: 0)) < ALERT_DEBOUNCE_MS) return
         val relBearing = relativeBearingFor(id)
         val type = when {
-            axonSignature -> AlertType.AXON_SIGNATURE
-            lawEnforcementSignature -> AlertType.LAW_ENFORCEMENT_SIGNATURE
             cameraSignature -> AlertType.CAMERA_IOT_SIGNATURE
             match != null && trackerAlertConfirmed -> AlertType.TRACKER_FOLLOWING
             classification == "PRIORITY" -> AlertType.PRIORITY_NEARBY
@@ -427,6 +437,41 @@ class RfWatchRepository(
                 } else titleFor(type), bearingDeg = relBearing, confidence = confidence,
             )
         )
+    }
+
+    private suspend fun handleLawAction(action: com.rfwatch.core.alerts.LawAction, ruleId: String? = null) {
+        if (action == com.rfwatch.core.alerts.LawAction.NONE) return
+        val encounter = lawTracker.snapshot() ?: return
+        _lawEncounter.value = encounter
+        val now = System.currentTimeMillis()
+        val fix = fixHolder.current
+        when (action) {
+            com.rfwatch.core.alerts.LawAction.ALERT -> {
+                alertManager.lawEncounter(encounter, loud = true)
+                val strongest = encounter.strongest
+                database.alertDao().insert(
+                    com.rfwatch.app.data.AlertEntity(
+                        type = (if (ruleId == "axon") AlertType.AXON_SIGNATURE else AlertType.LAW_ENFORCEMENT_SIGNATURE).name,
+                        timestampMs = now, deviceId = strongest?.deviceId,
+                        message = "Possible law-enforcement equipment: " + encounter.signatures.joinToString { it.label },
+                        confidence = 0.0,
+                    )
+                )
+            }
+            com.rfwatch.core.alerts.LawAction.UPDATE -> alertManager.lawEncounter(encounter, loud = false)
+            com.rfwatch.core.alerts.LawAction.ENDED -> {
+                alertManager.lawEncounterEnded(encounter)
+                database.eventDao().insert(
+                    com.rfwatch.app.data.EventEntity(
+                        kind = "LAW_ENCOUNTER", timestampMs = now, deviceId = encounter.strongest?.deviceId,
+                        detail = "Possible law-enforcement equipment for ${(encounter.lastSeenMs - encounter.startedMs) / 1000} s: " +
+                            encounter.signatures.joinToString { "${it.label} (max ${it.maxRssi} dBm)" },
+                        lat = fix?.lat, lon = fix?.lon,
+                    )
+                )
+            }
+            com.rfwatch.core.alerts.LawAction.NONE -> Unit
+        }
     }
 
     /** Bearing to the device relative to where the user is facing (0 = ahead), or null. */
@@ -482,11 +527,13 @@ class RfWatchRepository(
                 lastObservationMs.clear(); liveContacts.clear(); contactsDirty = false
                 roomMap.clear(); roomLastSeenMs.clear()
                 trackerAlertGate.reset()
+                lawTracker.reset()
                 lastAlertMs.clear()
                 database.clearAllTables()
             }
             _contacts.value = emptyMap()
             _room.value = emptyList()
+            _lawEncounter.value = null
         }
     }
 
@@ -591,6 +638,7 @@ class RfWatchRepository(
         private const val FLUSH_INTERVAL_MS = 3_000L
         private const val OBSERVATION_MIN_INTERVAL_MS = 2_000L
         private const val CONTACT_PUBLISH_INTERVAL_MS = 1_000L
+        private const val LAW_TICK_MS = 5_000L
         private const val CELL_SCAN_INTERVAL_MS = 6_000L
         private const val MAX_FIX_AGE_MS = 120_000L
         private const val MAX_FIX_ACCURACY_M = 100.0

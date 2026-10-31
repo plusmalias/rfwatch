@@ -25,6 +25,7 @@ class RfWatchViewModel(private val repo: RfWatchRepository) : ViewModel() {
     val hasCompass: Boolean get() = repo.hasCompass
     val room = repo.roomFindings
     val cell = repo.cellAssessment
+    val lawEncounter = repo.lawEncounter
 
     val devices = repo.deviceFlow.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
     val alerts = repo.alertFlow.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
