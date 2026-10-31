@@ -72,11 +72,15 @@ fun SettingsScreen(modifier: Modifier = Modifier) {
 
         Row(Modifier.fillMaxWidth().padding(top = 16.dp), verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
-                Text("Biometric app lock", fontSize = 14.sp)
-                Text("Require fingerprint/face to open RFWatch.", fontSize = 12.sp, color = Color(0xFF9CA3AF))
+                Text("Lock with phone PIN / pattern", fontSize = 14.sp)
+                Text("Ask for your phone's PIN / pattern (or fingerprint, if the phone has one) to open RFWatch.", fontSize = 12.sp, color = Color(0xFF9CA3AF))
             }
             Switch(checked = appLock, onCheckedChange = {
-                appLock = it; prefs.edit().putBoolean("app_lock", it).apply()
+                if (it && !com.rfwatch.app.discreet.Discreet.canUseDeviceCredential(context)) {
+                    android.widget.Toast.makeText(context, "Set a screen lock (PIN / pattern) on the phone first", android.widget.Toast.LENGTH_LONG).show()
+                } else {
+                    appLock = it; prefs.edit().putBoolean("app_lock", it).apply()
+                }
             })
         }
 
@@ -97,6 +101,51 @@ fun SettingsScreen(modifier: Modifier = Modifier) {
             Switch(checked = lawSpeak, enabled = lawAlerts, onCheckedChange = {
                 lawSpeak = it; prefs.edit().putBoolean(AlertManager.PREF_LAW_SPEAK, it).apply()
             })
+        }
+
+        val discreet = com.rfwatch.app.discreet.Discreet
+        var disguise by remember { mutableStateOf(discreet.isDisguised(context)) }
+        var neutral by remember { mutableStateOf(prefs.getBoolean(discreet.PREF_NEUTRAL_NOTIFICATIONS, false)) }
+        var shake by remember { mutableStateOf(discreet.shakeToHide(context)) }
+        var hasPin by remember { mutableStateOf(discreet.hasPin(context)) }
+        var pinInput by remember { mutableStateOf("") }
+        Text("Discreet mode", fontSize = 14.sp, modifier = Modifier.padding(top = 20.dp))
+        Text(
+            "For when your phone may be checked by someone else. With a PIN set, opening the app shows a working calculator — " +
+                "type the PIN and press = to get in. Screenshots and the Recents preview are blocked while any of these are on.",
+            fontSize = 12.sp, color = Color(0xFF9CA3AF),
+        )
+        androidx.compose.material3.OutlinedTextField(
+            value = pinInput, onValueChange = { v -> pinInput = v.filter { it.isDigit() }.take(12) },
+            label = { Text(if (hasPin) "New PIN (4–12 digits)" else "Set a PIN (4–12 digits)") }, singleLine = true,
+            visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(),
+            keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.NumberPassword),
+            modifier = Modifier.fillMaxWidth().padding(top = 6.dp),
+        )
+        Row(horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp)) {
+            Button(enabled = pinInput.length >= 4, onClick = { discreet.setPin(context, pinInput); pinInput = ""; hasPin = true }) { Text("Save PIN") }
+            if (hasPin) TextButton(onClick = { discreet.setPin(context, null); hasPin = false; if (disguise) { discreet.setDisguised(context, false); disguise = false } }) { Text("Remove PIN") }
+        }
+        Row(Modifier.fillMaxWidth().padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text("Disguise as \"Calculator\"", fontSize = 14.sp)
+                Text(if (hasPin) "App drawer shows a Calculator icon instead of RFWatch; locks every time you leave." else "Set a PIN first so you can get back in.", fontSize = 12.sp, color = Color(0xFF9CA3AF))
+            }
+            Switch(checked = disguise, enabled = hasPin || disguise, onCheckedChange = { discreet.setDisguised(context, it); disguise = it })
+        }
+        Row(Modifier.fillMaxWidth().padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text("Neutral notifications", fontSize = 14.sp)
+                Text("Alerts show only \"Reminder · Open the app for details\", no spoken alerts (always on while disguised).", fontSize = 12.sp, color = Color(0xFF9CA3AF))
+            }
+            Switch(checked = neutral || disguise, enabled = !disguise, onCheckedChange = { neutral = it; prefs.edit().putBoolean(discreet.PREF_NEUTRAL_NOTIFICATIONS, it).apply() })
+        }
+        Row(Modifier.fillMaxWidth().padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text("Shake to hide", fontSize = 14.sp)
+                Text("A hard double shake closes RFWatch instantly and removes it from Recents (locks if a lock is set).", fontSize = 12.sp, color = Color(0xFF9CA3AF))
+            }
+            Switch(checked = shake, onCheckedChange = { shake = it; prefs.edit().putBoolean(discreet.PREF_SHAKE_HIDE, it).apply() })
         }
 
         val repo = remember { (context.applicationContext as RfWatchApp).container.repository }

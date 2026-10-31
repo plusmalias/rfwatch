@@ -55,22 +55,23 @@ class AlertManager(private val context: Context) : TextToSpeech.OnInitListener {
         speak: Boolean = true,
     ): String {
         val phrase = AlertPhrasing.phrase(type, relativeBearingDeg, confidence)
-        val text = if (deviceLabel != null) "$phrase ($deviceLabel)" else phrase
+        val discreet = com.rfwatch.app.discreet.Discreet.neutralNotifications(context)
+        val text = if (discreet) NEUTRAL_TEXT else if (deviceLabel != null) "$phrase ($deviceLabel)" else phrase
 
         val channel = channelId(type)
         val n = NotificationCompat.Builder(context, channel)
             .setSmallIcon(android.R.drawable.ic_dialog_alert)
-            .setContentTitle(title)
+            .setContentTitle(if (discreet) NEUTRAL_TITLE else title)
             .setContentText(text)
             .setPriority(if (type == AlertType.TRACKER_FOLLOWING) NotificationCompat.PRIORITY_LOW else NotificationCompat.PRIORITY_HIGH)
             .setCategory(NotificationCompat.CATEGORY_ALARM)
             .setAutoCancel(true)
             .build()
         nm.notify(type.ordinal + 1000, n)
-        if (type != AlertType.TRACKER_FOLLOWING) flash(type, title)
+        if (type != AlertType.TRACKER_FOLLOWING) flash(type, if (discreet) "" else title)
 
         if (type != AlertType.TRACKER_FOLLOWING) vibrate(type)
-        if (speak && ttsReady) {
+        if (speak && ttsReady && !discreet) {
             tts.speak(phrase, TextToSpeech.QUEUE_ADD, null, "rfwatch-${type.name}")
         }
         return phrase
@@ -138,7 +139,8 @@ class AlertManager(private val context: Context) : TextToSpeech.OnInitListener {
         val strongest = encounter.strongest ?: return
         val count = encounter.signatures.size
         // Police, ambulance and fire share routers, light bars and radios; say so when EMS/fire gear is also heard.
-        val title = if (emergencyNearby && !encounter.hasPriority) "Possible police / ambulance / fire vehicle nearby" else "Possible police equipment nearby"
+        val discreet = com.rfwatch.app.discreet.Discreet.neutralNotifications(context)
+        val title = if (discreet) NEUTRAL_TITLE else if (emergencyNearby && !encounter.hasPriority) "Possible police / ambulance / fire vehicle nearby" else "Possible police equipment nearby"
         val text = "${strongest.label} · ${strengthWords(strongest.lastRssi)} (${strongest.lastRssi} dBm)" +
             if (count > 1) " · $count signatures" else ""
         val now = System.currentTimeMillis()
@@ -148,8 +150,8 @@ class AlertManager(private val context: Context) : TextToSpeech.OnInitListener {
         val n = NotificationCompat.Builder(context, LAW_CHANNEL)
             .setSmallIcon(android.R.drawable.ic_dialog_alert)
             .setContentTitle(title)
-            .setContentText(text)
-            .setStyle(NotificationCompat.BigTextStyle().bigText("$text\n$details"))
+            .setContentText(if (discreet) NEUTRAL_TEXT else text)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(if (discreet) NEUTRAL_TEXT else "$text\n$details"))
             .setPriority(NotificationCompat.PRIORITY_MAX)
             .setCategory(NotificationCompat.CATEGORY_ALARM)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
@@ -160,9 +162,9 @@ class AlertManager(private val context: Context) : TextToSpeech.OnInitListener {
             .build()
         nm.notify(LAW_NOTIFICATION_ID, n)
         if (loud) {
-            flash(AlertType.LAW_ENFORCEMENT_SIGNATURE, "POLICE EQUIPMENT · ${strongest.label.substringBefore(" (")}")
+            flash(AlertType.LAW_ENFORCEMENT_SIGNATURE, if (discreet) "" else "POLICE EQUIPMENT · ${strongest.label.substringBefore(" (")}")
             vibrate(if (encounter.hasPriority) AlertType.AXON_SIGNATURE else AlertType.LAW_ENFORCEMENT_SIGNATURE)
-            if (ttsReady && prefs.getBoolean(PREF_LAW_SPEAK, true)) {
+            if (ttsReady && prefs.getBoolean(PREF_LAW_SPEAK, true) && !discreet) {
                 tts.speak(
                     "Possible police equipment. ${strongest.label.substringBefore(" (")}, ${strengthWords(strongest.lastRssi)}.",
                     TextToSpeech.QUEUE_FLUSH, null, "rfwatch-law",
@@ -279,6 +281,8 @@ class AlertManager(private val context: Context) : TextToSpeech.OnInitListener {
         const val PREF_FLASH_SCREEN = "flash_screen"
         const val PREF_FLASH_TORCH = "flash_torch"
         const val PREF_EMERGENCY_ALERTS = "emergency_alerts"
+        private const val NEUTRAL_TITLE = "Reminder"
+        private const val NEUTRAL_TEXT = "Open the app for details"
         private const val LAW_NOTIFICATION_ID = 4242
     }
 }

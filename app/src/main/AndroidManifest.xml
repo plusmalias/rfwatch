@@ -63,12 +63,34 @@
             android:name=".MainActivity"
             android:exported="true"
             android:launchMode="singleTask"
-            android:theme="@style/Theme.RFWatch">
+            android:theme="@style/Theme.RFWatch" />
+
+        <!-- Launcher entries. Discreet mode swaps which alias is enabled so the app appears as
+             "Calculator" in the app drawer (see discreet/Discreet.kt). -->
+        <activity-alias
+            android:name=".LauncherDefault"
+            android:enabled="true"
+            android:exported="true"
+            android:label="@string/app_name"
+            android:icon="@mipmap/ic_launcher"
+            android:targetActivity=".MainActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-        </activity>
+        </activity-alias>
+        <activity-alias
+            android:name=".LauncherCalculator"
+            android:enabled="false"
+            android:exported="true"
+            android:label="Calculator"
+            android:icon="@mipmap/ic_calc"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
 
         <provider
             android:name="androidx.core.content.FileProvider"

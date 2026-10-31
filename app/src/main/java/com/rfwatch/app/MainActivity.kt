@@ -7,7 +7,6 @@ import android.location.LocationManager
 import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
-import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
@@ -73,15 +72,34 @@ private enum class Tab(val label: String) {
     CELL("Cell"), ROOM("Room"), LOG("Log"), SETTINGS("Settings"), SKIMMER("Skimmer"), STALKERWARE("Stalkerware")
 }
 
-class MainActivity : ComponentActivity() {
+class MainActivity : androidx.fragment.app.FragmentActivity() {
+
+    /** Discreet-mode lock: true while the calculator lock screen is shown. */
+    private val locked = androidx.compose.runtime.mutableStateOf(false)
+    private var backgroundAtMs = 0L
+    private var shakeListener: android.hardware.SensorEventListener? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        locked.value = com.rfwatch.app.discreet.Discreet.lockEnabled(this)
+        applySecureFlag()
 
         val repo = (application as RfWatchApp).container.repository
 
         setContent {
             RfWatchTheme {
+                if (locked.value) {
+                    val discreet = com.rfwatch.app.discreet.Discreet
+                    val credential = discreet.biometricLock(this@MainActivity)
+                    androidx.compose.runtime.LaunchedEffect(Unit) {
+                        if (!discreet.hasPin(this@MainActivity) && credential) promptDeviceCredential()
+                    }
+                    com.rfwatch.app.ui.CalculatorLockScreen(
+                        checkPin = { discreet.verifyPin(this@MainActivity, it) },
+                        onUnlocked = { locked.value = false },
+                        onBiometric = if (credential) ({ promptDeviceCredential() }) else null,
+                    )
+                } else {
                 val vm: RfWatchViewModel = viewModel(factory = RfWatchViewModel.Factory(repo))
 
                 val permLauncher = rememberLauncherForActivityResult(
@@ -204,6 +222,7 @@ class MainActivity : ComponentActivity() {
                 }
                     com.rfwatch.app.ui.AlertFlashOverlay((application as RfWatchApp).container.alertManager.flashes)
                 }
+                            }
             }
         }
     }
@@ -219,6 +238,80 @@ class MainActivity : ComponentActivity() {
                 Settings.Secure.LOCATION_MODE_OFF,
             ) != Settings.Secure.LOCATION_MODE_OFF
         }
+    }
+
+    override fun onStart() {
+        super.onStart()
+        val d = com.rfwatch.app.discreet.Discreet
+        if (backgroundAtMs > 0 && d.lockEnabled(this) &&
+            (d.isDisguised(this) || System.currentTimeMillis() - backgroundAtMs > RELOCK_AFTER_MS)
+        ) locked.value = true
+        applySecureFlag()
+    }
+
+    override fun onStop() {
+        super.onStop()
+        backgroundAtMs = System.currentTimeMillis()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        if (!com.rfwatch.app.discreet.Discreet.shakeToHide(this)) return
+        val sm = getSystemService(Context.SENSOR_SERVICE) as android.hardware.SensorManager
+        val accel = sm.getDefaultSensor(android.hardware.Sensor.TYPE_ACCELEROMETER) ?: return
+        var lastSpikeMs = 0L
+        val listener = object : android.hardware.SensorEventListener {
+            override fun onSensorChanged(e: android.hardware.SensorEvent) {
+                val g = kotlin.math.sqrt(e.values[0] * e.values[0] + e.values[1] * e.values[1] + e.values[2] * e.values[2]) / 9.81f
+                if (g < SHAKE_G) return
+                val now = System.currentTimeMillis()
+                if (now - lastSpikeMs in 120..800) hideNow() else lastSpikeMs = now
+            }
+            override fun onAccuracyChanged(s: android.hardware.Sensor?, a: Int) = Unit
+        }
+        sm.registerListener(listener, accel, android.hardware.SensorManager.SENSOR_DELAY_GAME)
+        shakeListener = listener
+    }
+
+    override fun onPause() {
+        super.onPause()
+        shakeListener?.let { (getSystemService(Context.SENSOR_SERVICE) as android.hardware.SensorManager).unregisterListener(it) }
+        shakeListener = null
+    }
+
+    /** Shake-to-hide: lock and remove the app from Recents immediately. */
+    private fun hideNow() {
+        if (com.rfwatch.app.discreet.Discreet.lockEnabled(this)) locked.value = true
+        finishAndRemoveTask()
+    }
+
+    /** Block screenshots and Recents thumbnails while any discreet option is on. */
+    private fun applySecureFlag() {
+        val d = com.rfwatch.app.discreet.Discreet
+        if (d.isDisguised(this) || d.neutralNotifications(this) || d.lockEnabled(this)) {
+            window.setFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE, android.view.WindowManager.LayoutParams.FLAG_SECURE)
+        } else window.clearFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE)
+    }
+
+    /** Unlock with the phone's own PIN / pattern / password (or fingerprint where present). */
+    private fun promptDeviceCredential() {
+        val auth = androidx.biometric.BiometricManager.Authenticators.BIOMETRIC_WEAK or
+            androidx.biometric.BiometricManager.Authenticators.DEVICE_CREDENTIAL
+        if (androidx.biometric.BiometricManager.from(this).canAuthenticate(auth) != androidx.biometric.BiometricManager.BIOMETRIC_SUCCESS) return
+        val prompt = androidx.biometric.BiometricPrompt(
+            this, androidx.core.content.ContextCompat.getMainExecutor(this),
+            object : androidx.biometric.BiometricPrompt.AuthenticationCallback() {
+                override fun onAuthenticationSucceeded(result: androidx.biometric.BiometricPrompt.AuthenticationResult) { locked.value = false }
+            },
+        )
+        prompt.authenticate(
+            androidx.biometric.BiometricPrompt.PromptInfo.Builder().setTitle("Unlock").setAllowedAuthenticators(auth).build(),
+        )
+    }
+
+    private companion object {
+        const val RELOCK_AFTER_MS = 30_000L
+        const val SHAKE_G = 2.6f
     }
 
     private fun requiredPermissions(): Array<String> = buildList {
