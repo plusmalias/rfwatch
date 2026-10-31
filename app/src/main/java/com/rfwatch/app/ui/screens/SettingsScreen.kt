@@ -16,6 +16,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -94,6 +95,25 @@ fun SettingsScreen(modifier: Modifier = Modifier) {
                 lawSpeak = it; prefs.edit().putBoolean(AlertManager.PREF_LAW_SPEAK, it).apply()
             })
         }
+
+        val repo = remember { (context.applicationContext as RfWatchApp).container.repository }
+        val home by repo.homeStatus.collectAsState()
+        var homeMessage by remember { mutableStateOf<String?>(null) }
+        Text("Home watch", fontSize = 14.sp, modifier = Modifier.padding(top = 20.dp))
+        Text(
+            if (!home.isSet) "Set Home while you're there. RFWatch learns the devices normally around it, then alerts when a new tracker, GPS tracker, camera, drone, police device or Wi-Fi network keeps showing up at home."
+            else if (!home.mature) "Learning: ${home.visitsLearned} of ${com.rfwatch.core.cs.Baseline.MIN_SESSIONS} home visits (20+ min each) recorded. Alerts start after that." +
+                (if (home.inside) " You're home now." else "")
+            else "Watching: ${home.visitsLearned} home visits learned." + (if (home.inside) " You're home now." else ""),
+            fontSize = 12.sp, color = Color(0xFF9CA3AF),
+        )
+        Row(horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 6.dp)) {
+            Button(onClick = { scope.launch { homeMessage = if (repo.setHomeHere()) "Home set here." else "Need a GPS fix (±100 m) — go outside or wait a moment." } }) {
+                Text(if (home.isSet) "Move Home here" else "Set Home here")
+            }
+            if (home.isSet) TextButton(onClick = { scope.launch { repo.clearHome(); homeMessage = "Home cleared." } }) { Text("Clear Home") }
+        }
+        homeMessage?.let { Text(it, fontSize = 12.sp, color = OkGreen) }
 
         Button(
             onClick = { confirmWipe = true },

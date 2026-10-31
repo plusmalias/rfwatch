@@ -96,6 +96,16 @@ data class DroneTrack(
     val source: String,
 )
 
+/** Home-watch state for Settings and the Radar banner. */
+data class HomeStatus(
+    val isSet: Boolean = false,
+    val visitsLearned: Int = 0,
+    val inside: Boolean = false,
+    val newDevices: List<String> = emptyList(),
+) {
+    val mature: Boolean get() = visitsLearned >= com.rfwatch.core.cs.Baseline.MIN_SESSIONS
+}
+
 /** One GPS-tagged hearing of a device, for the per-device locate chart. */
 data class DeviceSighting(val lat: Double, val lon: Double, val rssi: Int, val timestampMs: Long, val accuracyM: Double)
 
@@ -284,6 +294,100 @@ class RfWatchRepository(
         FollowerScorer.score(deviceId, sightings, userTrack, exclusion)
     }
 
+    // ---- Home watch: learn the devices normally around home, flag concerning newcomers ----
+    private var homeFence: com.rfwatch.app.data.GeofenceEntity? = null
+    private var homeBaseline = HashMap<String, Int>()
+    private var homeVisits = 0
+    private var insideHome = false
+    private var visitStartMs = 0L
+    private val visitDevices = HashMap<String, Pair<Long, Int>>() // id -> (first heard ms, hits)
+    private val lastHomeAlertMs = HashMap<String, Long>()
+    private val _home = MutableStateFlow(HomeStatus())
+    val homeStatus: StateFlow<HomeStatus> = _home.asStateFlow()
+
+    private suspend fun loadHome() {
+        homeFence = database.geofenceDao().all().firstOrNull { it.id == HOME_ID }
+        val rows = database.baselineDao().forGeofence(HOME_ID)
+        homeVisits = rows.firstOrNull { it.deviceId == VISITS_KEY }?.sessionsPresent ?: 0
+        homeBaseline = HashMap(rows.filter { it.deviceId != VISITS_KEY }.associate { it.deviceId to it.sessionsPresent })
+        publishHome()
+    }
+
+    private fun publishHome(newDevice: String? = null) {
+        _home.value = HomeStatus(
+            isSet = homeFence != null, visitsLearned = homeVisits, inside = insideHome,
+            newDevices = (if (newDevice != null) listOf(newDevice) else emptyList()) + _home.value.newDevices.take(9),
+        )
+    }
+
+    /** Set Home at the current GPS fix. Returns false without a usable fix. */
+    suspend fun setHomeHere(): Boolean = withContext(ingestDispatcher) {
+        val fix = fixHolder.current ?: return@withContext false
+        if (fix.accuracyM > MAX_FIX_ACCURACY_M) return@withContext false
+        val fence = com.rfwatch.app.data.GeofenceEntity(HOME_ID, "Home", fix.lat, fix.lon, HOME_RADIUS_M)
+        database.geofenceDao().upsert(fence)
+        homeFence = fence; insideHome = true; visitStartMs = System.currentTimeMillis(); visitDevices.clear()
+        publishHome()
+        true
+    }
+
+    suspend fun clearHome() = withContext(ingestDispatcher) {
+        database.geofenceDao().delete(HOME_ID)
+        homeFence = null; homeBaseline.clear(); homeVisits = 0; insideHome = false; visitDevices.clear()
+        _home.value = HomeStatus()
+    }
+
+    private suspend fun onHomeFix(fix: GpsFix) {
+        val fence = homeFence ?: return
+        val inside = haversineM(fix.lat, fix.lon, fence.lat, fence.lon) <= fence.radiusM + fix.accuracyM.coerceAtMost(50.0)
+        val now = System.currentTimeMillis()
+        if (inside && !insideHome) { visitStartMs = now; visitDevices.clear() }
+        if ((!inside && insideHome) || (inside && now - visitStartMs >= HOME_VISIT_ROLL_MS)) closeHomeVisit(now)
+        if (inside && visitStartMs == 0L) visitStartMs = now
+        if (inside != insideHome) { insideHome = inside; publishHome() }
+    }
+
+    /** A home visit of ≥ [HOME_MIN_VISIT_MS] becomes one baseline session. */
+    private suspend fun closeHomeVisit(now: Long) {
+        if (now - visitStartMs >= HOME_MIN_VISIT_MS) {
+            homeVisits++
+            database.baselineDao().upsert(com.rfwatch.app.data.BaselineEntity(HOME_ID, VISITS_KEY, homeVisits))
+            visitDevices.filterValues { it.second >= HOME_BASELINE_MIN_HITS }.keys.forEach { id ->
+                val n = (homeBaseline[id] ?: 0) + 1
+                homeBaseline[id] = n
+                database.baselineDao().upsert(com.rfwatch.app.data.BaselineEntity(HOME_ID, id, n))
+            }
+            publishHome()
+        }
+        visitStartMs = now
+        visitDevices.clear()
+    }
+
+    private suspend fun onHomeDevice(id: String, device: DeviceEntity, rssi: Int, ts: Long) {
+        if (!insideHome || homeFence == null) return
+        val (first, hits) = visitDevices[id] ?: (ts to 0)
+        visitDevices[id] = first to hits + 1
+        if (homeVisits < com.rfwatch.core.cs.Baseline.MIN_SESSIONS) return
+        if (hits + 1 < HOME_ALERT_MIN_HITS || ts - first < HOME_ALERT_MIN_SPAN_MS || rssi < HOME_ALERT_MIN_RSSI) return
+        if (device.isOwnDevice || device.isAllowlisted) return
+        val known = (homeBaseline[id] ?: 0).toDouble() / homeVisits >= 0.2
+        if (known) return
+        val kind = runCatching { com.rfwatch.core.id.DeviceKind.valueOf(device.kind ?: "") }.getOrNull()
+        val stableWifi = device.band == Band.WIFI.name &&
+            id.substringBefore(':').toIntOrNull(16)?.let { !com.rfwatch.core.id.VendorDb.isLocallyAdministered(it) } == true
+        val concerning = kind in HOME_CONCERNING_KINDS || stableWifi || device.trackerType != null
+        if (!concerning) return
+        if (ts - (lastHomeAlertMs[id] ?: 0L) < HOME_ALERT_COOLDOWN_MS) return
+        lastHomeAlertMs[id] = ts
+        val what = listOfNotNull(device.displayName, device.brand, device.model ?: device.category).distinct().joinToString(" · ").ifBlank { id }
+        val detail = "$what — new at home, heard ${hits + 1}× over ${(ts - first) / 60_000} min (${rssi} dBm). " +
+            "Not seen in ${homeVisits} earlier home visits."
+        alertManager.raise(AlertType.NEW_AT_HOME, "New device at home", detail, null, 0.0)
+        database.alertDao().insert(com.rfwatch.app.data.AlertEntity(type = AlertType.NEW_AT_HOME.name, timestampMs = ts, deviceId = id, message = detail))
+        database.eventDao().insert(com.rfwatch.app.data.EventEntity(kind = "NEW_AT_HOME", timestampMs = ts, deviceId = id, detail = detail, lat = homeFence?.lat, lon = homeFence?.lon))
+        publishHome(what)
+    }
+
     private val _followers = MutableStateFlow<Map<String, FollowerScore>>(emptyMap())
     /** Devices currently judged to be travelling with the user (background check). */
     val followers: StateFlow<Map<String, FollowerScore>> = _followers.asStateFlow()
@@ -422,6 +526,7 @@ class RfWatchRepository(
 
     private suspend fun runMonitoring(scope: CoroutineScope) {
         ensureDeviceCache()
+        runCatching { loadHome() }
         loadActiveSession()
         scope.launch {
             try {
@@ -456,6 +561,7 @@ class RfWatchRepository(
                 fixHolder.update(fix)
                 _userLocation.value = fix
                 headingProvider.updateFix(fix)
+                runCatching { onHomeFix(fix) }
             }
         }
         scope.launch {
@@ -604,6 +710,7 @@ class RfWatchRepository(
             )
         deviceCache[id] = updated
         dirtyDevices[id] = updated
+        onHomeDevice(id, updated, rssi, ts)
         if (recordObservation) {
             lastObservationMs[id] = ts
             pendingObservations += ObservationEntity(
@@ -812,12 +919,15 @@ class RfWatchRepository(
                 roomMap.clear(); roomLastSeenMs.clear()
                 trackerAlertGate.reset()
                 lawTracker.reset()
+                homeFence = null; homeBaseline.clear(); homeVisits = 0; insideHome = false; visitDevices.clear()
+                lastHomeAlertMs.clear(); lastFollowerAlertMs.clear(); lastDroneAlertMs.clear()
                 lastAlertMs.clear()
                 database.clearAllTables()
             }
             _contacts.value = emptyMap()
             _room.value = emptyList()
             _lawEncounter.value = null
+            _home.value = HomeStatus(); _followers.value = emptyMap(); _drones.value = emptyMap()
         }
     }
 
@@ -950,6 +1060,21 @@ class RfWatchRepository(
         private const val LAW_TICK_MS = 5_000L
         private const val POSITION_DEVICE_LIMIT = 80
         private const val DRONE_TTL_MS = 5 * 60_000L
+        private const val HOME_ID = "home"
+        private const val VISITS_KEY = "__visits__"
+        private const val HOME_RADIUS_M = 150.0
+        private const val HOME_MIN_VISIT_MS = 20 * 60_000L
+        private const val HOME_VISIT_ROLL_MS = 6 * 60 * 60_000L
+        private const val HOME_BASELINE_MIN_HITS = 3
+        private const val HOME_ALERT_MIN_HITS = 6
+        private const val HOME_ALERT_MIN_SPAN_MS = 10 * 60_000L
+        private const val HOME_ALERT_MIN_RSSI = -88
+        private const val HOME_ALERT_COOLDOWN_MS = 24 * 60 * 60_000L
+        private val HOME_CONCERNING_KINDS = setOf(
+            com.rfwatch.core.id.DeviceKind.TRACKER, com.rfwatch.core.id.DeviceKind.FLEET,
+            com.rfwatch.core.id.DeviceKind.CAMERA_IOT, com.rfwatch.core.id.DeviceKind.LAW_ENFORCEMENT,
+            com.rfwatch.core.id.DeviceKind.DRONE, com.rfwatch.core.id.DeviceKind.HOTSPOT,
+        )
         private const val FOLLOWER_CHECK_INTERVAL_MS = 2 * 60_000L
         private const val FOLLOWER_WINDOW_MS = 3 * 60 * 60_000L
         private const val FOLLOWER_MIN_HITS = 3
