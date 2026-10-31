@@ -106,6 +106,10 @@
         </provider>
 
         <receiver
+            android:name=".alerts.MarkMineReceiver"
+            android:exported="false" />
+
+        <receiver
             android:name=".widget.StatusWidget"
             android:exported="false">
             <intent-filter>

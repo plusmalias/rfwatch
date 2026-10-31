@@ -384,7 +384,7 @@ class RfWatchRepository(
         val what = listOfNotNull(device.displayName, device.brand, device.model ?: device.category).distinct().joinToString(" · ").ifBlank { id }
         val detail = "$what — new at home, heard ${hits + 1}× over ${(ts - first) / 60_000} min (${rssi} dBm). " +
             "Not seen in ${homeVisits} earlier home visits."
-        alertManager.raise(AlertType.NEW_AT_HOME, "New device at home", detail, null, 0.0)
+        alertManager.raise(AlertType.NEW_AT_HOME, "New device at home", detail, null, 0.0, deviceId = id)
         database.alertDao().insert(com.rfwatch.app.data.AlertEntity(type = AlertType.NEW_AT_HOME.name, timestampMs = ts, deviceId = id, message = detail))
         database.eventDao().insert(com.rfwatch.app.data.EventEntity(kind = "NEW_AT_HOME", timestampMs = ts, deviceId = id, detail = detail, lat = homeFence?.lat, lon = homeFence?.lon))
         publishHome(what)
@@ -423,7 +423,7 @@ class RfWatchRepository(
             val what = listOfNotNull(device?.displayName, device?.brand, device?.model ?: device?.category).distinct().joinToString(" · ").ifBlank { row.deviceId }
             val detail = "$what — heard at ${score.distinctLocations} places ${"%.1f".format(score.maxSeparationM / 1000)} km apart over " +
                 "${score.spanMs / 60_000} min while you travelled ${"%.1f".format(score.userTravelM / 1000)} km. If it's yours, mark it Mine."
-            alertManager.raise(type, titleFor(type), detail, null, score.score)
+            alertManager.raise(type, titleFor(type), detail, null, score.score, deviceId = row.deviceId)
             database.alertDao().insert(com.rfwatch.app.data.AlertEntity(type = type.name, timestampMs = nowMs, deviceId = row.deviceId, message = detail, confidence = score.score))
             val last = score.timeline.lastOrNull()
             database.eventDao().insert(com.rfwatch.app.data.EventEntity(kind = "FOLLOWER", timestampMs = nowMs, deviceId = row.deviceId, detail = detail, lat = last?.lat, lon = last?.lon))
@@ -884,7 +884,7 @@ class RfWatchRepository(
         if ((now - (lastAlertMs[id] ?: 0)) < cooldown) return
         val contact = _contacts.value[id] ?: liveContacts[id]
         val confidence = contact?.estimate?.confidence ?: 0.0
-        alertManager.raise(type, titleFor(type), contact?.label, relBearing, confidence, speak = type != AlertType.TRACKER_FOLLOWING)
+        alertManager.raise(type, titleFor(type), contact?.label, relBearing, confidence, speak = type != AlertType.TRACKER_FOLLOWING, deviceId = id)
         lastAlertMs[id] = now
         database.alertDao().insert(
             com.rfwatch.app.data.AlertEntity(
@@ -923,7 +923,7 @@ class RfWatchRepository(
         val device = deviceCache[id]
         if (device?.isOwnDevice == true || device?.isAllowlisted == true) return
         val detail = "$label · $id · $rssi dBm (~${com.rfwatch.core.df.RssiCentroidLocator.rssiRangeM(rssi).toInt()} m) · matched on $evidence"
-        alertManager.raise(AlertType.ATTACK_TOOL, titleFor(AlertType.ATTACK_TOOL), detail, null, 0.0)
+        alertManager.raise(AlertType.ATTACK_TOOL, titleFor(AlertType.ATTACK_TOOL), detail, null, 0.0, deviceId = id)
         database.alertDao().insert(com.rfwatch.app.data.AlertEntity(type = AlertType.ATTACK_TOOL.name, timestampMs = ts, deviceId = id, message = detail))
         val fix = fixHolder.current
         database.eventDao().insert(com.rfwatch.app.data.EventEntity(kind = "ATTACK_TOOL", timestampMs = ts, deviceId = id, detail = detail, lat = fix?.lat, lon = fix?.lon))
@@ -939,7 +939,7 @@ class RfWatchRepository(
         if (ts - (lastEmergencyAlertMs[id] ?: 0L) < EMERGENCY_ALERT_COOLDOWN_MS) return
         lastEmergencyAlertMs[id] = ts
         val detail = "${hit.label} · ${device.displayName ?: id} · $rssi dBm (${hit.matchedOn})"
-        alertManager.raise(AlertType.EMERGENCY_VEHICLE, titleFor(AlertType.EMERGENCY_VEHICLE), detail, null, 0.0)
+        alertManager.raise(AlertType.EMERGENCY_VEHICLE, titleFor(AlertType.EMERGENCY_VEHICLE), detail, null, 0.0, deviceId = id)
         database.alertDao().insert(com.rfwatch.app.data.AlertEntity(type = AlertType.EMERGENCY_VEHICLE.name, timestampMs = ts, deviceId = id, message = detail))
         val fix = fixHolder.current
         database.eventDao().insert(com.rfwatch.app.data.EventEntity(kind = "EMERGENCY", timestampMs = ts, deviceId = id, detail = detail, lat = fix?.lat, lon = fix?.lon))

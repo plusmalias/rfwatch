@@ -53,6 +53,8 @@ class AlertManager(private val context: Context) : TextToSpeech.OnInitListener {
         relativeBearingDeg: Double?,
         confidence: Double,
         speak: Boolean = true,
+        /** When set, the notification gets an "It's mine" action that marks this device as the user's own. */
+        deviceId: String? = null,
     ): String {
         val phrase = AlertPhrasing.phrase(type, relativeBearingDeg, confidence)
         val discreet = com.rfwatch.app.discreet.Discreet.neutralNotifications(context)
@@ -66,6 +68,19 @@ class AlertManager(private val context: Context) : TextToSpeech.OnInitListener {
             .setPriority(if (type == AlertType.TRACKER_FOLLOWING) NotificationCompat.PRIORITY_LOW else NotificationCompat.PRIORITY_HIGH)
             .setCategory(NotificationCompat.CATEGORY_ALARM)
             .setAutoCancel(true)
+            .setContentIntent(openAppIntent())
+            .apply {
+                if (deviceId != null && type in MARK_MINE_TYPES) {
+                    val mine = android.app.PendingIntent.getBroadcast(
+                        context, deviceId.hashCode(),
+                        android.content.Intent(context, MarkMineReceiver::class.java)
+                            .putExtra(MarkMineReceiver.EXTRA_DEVICE_ID, deviceId)
+                            .putExtra(MarkMineReceiver.EXTRA_NOTIFICATION_ID, type.ordinal + 1000),
+                        android.app.PendingIntent.FLAG_IMMUTABLE or android.app.PendingIntent.FLAG_UPDATE_CURRENT,
+                    )
+                    addAction(0, "It's mine", mine)
+                }
+            }
             .build()
         nm.notify(type.ordinal + 1000, n)
         if (type != AlertType.TRACKER_FOLLOWING) flash(type, if (discreet) "" else title)
@@ -281,6 +296,10 @@ class AlertManager(private val context: Context) : TextToSpeech.OnInitListener {
         const val PREF_FLASH_SCREEN = "flash_screen"
         const val PREF_FLASH_TORCH = "flash_torch"
         const val PREF_EMERGENCY_ALERTS = "emergency_alerts"
+        private val MARK_MINE_TYPES = setOf(
+            AlertType.ATTACK_TOOL, AlertType.CAMERA_IOT_SIGNATURE, AlertType.TRACKER_FOLLOWING, AlertType.POSSIBLE_FOLLOWER,
+            AlertType.NEW_AT_HOME, AlertType.EMERGENCY_VEHICLE, AlertType.PRIORITY_NEARBY,
+        )
         private const val NEUTRAL_TITLE = "Reminder"
         private const val NEUTRAL_TEXT = "Open the app for details"
         private const val LAW_NOTIFICATION_ID = 4242
