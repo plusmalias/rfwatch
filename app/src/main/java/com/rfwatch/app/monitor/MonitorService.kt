@@ -20,23 +20,39 @@ class MonitorService : LifecycleService() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         super.onStartCommand(intent, flags, startId)
-        startForegroundCompat()
+        if (!startForegroundCompat()) {
+            // Android 14 refuses a location-type foreground service started from the background
+            // (e.g. a sticky restart) unless background location is granted. Stop instead of
+            // crashing; the activity starts monitoring again when it is next opened.
+            stopSelf()
+            return START_NOT_STICKY
+        }
+        // onStartCommand runs again for every start request; the repository ignores repeats
+        // while its collectors on this service's scope are still active.
         val repo = (application as RfWatchApp).container.repository
         repo.startMonitoring(lifecycleScope)
         return START_STICKY
     }
 
-    private fun startForegroundCompat() {
+    /** Returns false when the system does not allow this foreground start. */
+    private fun startForegroundCompat(): Boolean {
         val n: Notification = NotificationCompat.Builder(this, AlertManager.MONITOR_CHANNEL)
             .setSmallIcon(android.R.drawable.ic_menu_mylocation)
             .setContentTitle("RFWatch monitoring")
             .setContentText("Scanning for trackers and priority devices")
             .setOngoing(true)
             .build()
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            startForeground(NOTIF_ID, n, ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION)
-        } else {
-            startForeground(NOTIF_ID, n)
+        return try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                startForeground(NOTIF_ID, n, ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION)
+            } else {
+                startForeground(NOTIF_ID, n)
+            }
+            true
+        } catch (e: SecurityException) {
+            false
+        } catch (e: IllegalStateException) { // ForegroundServiceStartNotAllowedException (API 31+)
+            false
         }
     }
 

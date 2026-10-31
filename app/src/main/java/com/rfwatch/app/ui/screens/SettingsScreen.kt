@@ -17,6 +17,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -24,7 +25,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.rfwatch.app.RfWatchApp
 import com.rfwatch.core.data.RetentionPolicy
+import kotlinx.coroutines.launch
 
 /**
  * Settings (step 11): retention window with auto-purge, biometric app-lock preference, and
@@ -40,6 +43,7 @@ fun SettingsScreen(modifier: Modifier = Modifier) {
     }
     var appLock by remember { mutableStateOf(prefs.getBoolean("app_lock", false)) }
     var confirmWipe by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
 
     Column(modifier.fillMaxSize().padding(16.dp)) {
         Text("Settings", fontSize = 20.sp)
@@ -82,7 +86,10 @@ fun SettingsScreen(modifier: Modifier = Modifier) {
             text = { Text("This permanently deletes every device, observation, alert and baseline. It cannot be undone.") },
             confirmButton = {
                 TextButton(onClick = {
-                    context.deleteDatabase("rfwatch.db")
+                    // Clear through the repository: deleting the file under an open Room
+                    // connection left the live database (and the device cache) intact.
+                    val repo = (context.applicationContext as RfWatchApp).container.repository
+                    scope.launch { repo.wipeAllData() }
                     confirmWipe = false
                 }) { Text("Wipe") }
             },

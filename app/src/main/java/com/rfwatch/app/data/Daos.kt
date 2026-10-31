@@ -10,6 +10,8 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface DeviceDao {
     @Upsert suspend fun upsert(device: DeviceEntity)
+    @Upsert suspend fun upsertAll(devices: List<DeviceEntity>)
+    @Query("SELECT * FROM devices") suspend fun all(): List<DeviceEntity>
     // Keep rows in discovery order: lastSeenMs changes on every scan and makes a live list jump under taps.
     @Query("SELECT * FROM devices ORDER BY firstSeenMs DESC, id ASC") fun observeAll(): Flow<List<DeviceEntity>>
     @Query("SELECT * FROM devices WHERE id = :id") suspend fun byId(id: String): DeviceEntity?
@@ -25,6 +27,7 @@ interface DeviceDao {
 @Dao
 interface ObservationDao {
     @Insert(onConflict = OnConflictStrategy.IGNORE) suspend fun insert(obs: ObservationEntity): Long
+    @Insert(onConflict = OnConflictStrategy.IGNORE) suspend fun insertAll(obs: List<ObservationEntity>)
     @Query("SELECT * FROM observations WHERE deviceId = :id ORDER BY timestampMs") suspend fun forDevice(id: String): List<ObservationEntity>
     @Query("SELECT * FROM observations WHERE deviceId = :id ORDER BY timestampMs DESC, rowId DESC LIMIT :limit")
     suspend fun recentForDevice(id: String, limit: Int = 60): List<ObservationEntity>

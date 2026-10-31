@@ -67,7 +67,18 @@ data class RuleHit(
  */
 class RuleEngine(private val packs: List<RulePack>) {
 
-    private fun norm(s: String) = s.lowercase().replace(Regex("[^0-9a-z]"), "")
+    private val nonAlnum = Regex("[^0-9a-z]")
+
+    // SSID patterns are compiled once: evaluate() runs for every scan result, and compiling a
+    // Regex per rule per advertisement dominated ingest cost. Invalid patterns never match.
+    private val ssidRegexes: Map<String, Regex> = packs.asSequence()
+        .flatMap { it.rules.asSequence() }
+        .flatMap { it.ssidPatterns.asSequence() }
+        .distinct()
+        .mapNotNull { p -> runCatching { p to Regex(p, RegexOption.IGNORE_CASE) }.getOrNull() }
+        .toMap()
+
+    private fun norm(s: String) = s.lowercase().replace(nonAlnum, "")
 
     fun evaluate(facts: DeviceFacts): List<RuleHit> {
         val hits = ArrayList<RuleHit>()
@@ -87,9 +98,8 @@ class RuleEngine(private val packs: List<RulePack>) {
                 ?.let { return "OUI $it" }
         }
         facts.ssid?.let { ssid ->
-            rule.ssidPatterns.firstOrNull {
-                runCatching { Regex(it, RegexOption.IGNORE_CASE).containsMatchIn(ssid) }.getOrDefault(false)
-            }?.let { return "SSID ~ /$it/" }
+            rule.ssidPatterns.firstOrNull { ssidRegexes[it]?.containsMatchIn(ssid) == true }
+                ?.let { return "SSID ~ /$it/" }
         }
         facts.name?.let { name ->
             rule.nameSubstrings.firstOrNull { name.contains(it, ignoreCase = true) }

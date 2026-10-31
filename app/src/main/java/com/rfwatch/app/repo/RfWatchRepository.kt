@@ -36,7 +36,16 @@ import com.rfwatch.core.model.SensorAccuracy
 import com.rfwatch.core.rules.DeviceFacts
 import com.rfwatch.core.rules.RuleEngine
 import com.rfwatch.core.rules.Threat
+import androidx.room.withTransaction
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -74,6 +83,25 @@ class RfWatchRepository(
     private val headingProvider: HeadingProvider,
     private val locationProvider: LocationProvider,
 ) {
+    // All scan ingestion runs on one background thread: the caches below are plain maps
+    // touched only from this dispatcher, and the main thread never parses adverts.
+    @OptIn(ExperimentalCoroutinesApi::class)
+    private val ingestDispatcher = Dispatchers.Default.limitedParallelism(1)
+    @Volatile private var monitorJob: Job? = null
+
+    // Write-behind device cache: adverts arrive several times a second per device, so rows are
+    // updated in memory and flushed in one transaction every FLUSH_INTERVAL_MS.
+    private val deviceCache = HashMap<String, DeviceEntity>()
+    private var deviceCacheLoaded = false
+    private val dirtyDevices = LinkedHashMap<String, DeviceEntity>()
+    private val pendingObservations = ArrayList<ObservationEntity>()
+    private val lastObservationMs = HashMap<String, Long>()
+    // Radar contacts are rebuilt here and published at most every CONTACT_PUBLISH_INTERVAL_MS.
+    private val liveContacts = HashMap<String, LiveContact>()
+    private var contactsDirty = false
+
+    private val writeMutex = Mutex()
+
     private val stingray = StingrayDetector()
     private val trackerAlertGate = TrackerAlertGate()
     private val fixHolder = LocationFixHolder()
@@ -122,13 +150,41 @@ class RfWatchRepository(
             val estimate = DriveByEstimator.estimate(
                 observations, fixHolder.current, System.currentTimeMillis(), previous.estimate,
             )
-            _contacts.value = _contacts.value.toMutableMap().apply {
-                put(device.id, previous.copy(estimate = estimate))
+            _contacts.update { current ->
+                val contact = current[device.id] ?: return@update current
+                current + (device.id to contact.copy(estimate = estimate))
             }
         }
     }
 
+    /**
+     * Starts the scan collectors on [scope]. Repeated calls (every service start request)
+     * are ignored while the previous collectors are still running; once that scope is
+     * cancelled a later call starts afresh.
+     */
     fun startMonitoring(scope: CoroutineScope) {
+        if (monitorJob?.isActive == true) return
+        monitorJob = scope.launch(ingestDispatcher) { runMonitoring(this) }
+    }
+
+    private suspend fun runMonitoring(scope: CoroutineScope) {
+        ensureDeviceCache()
+        scope.launch {
+            try {
+                while (isActive) {
+                    delay(FLUSH_INTERVAL_MS)
+                    flushPending()
+                }
+            } finally {
+                withContext(NonCancellable) { flushPending() }
+            }
+        }
+        scope.launch {
+            while (isActive) {
+                delay(CONTACT_PUBLISH_INTERVAL_MS)
+                publishContacts()
+            }
+        }
         scope.launch {
             locationProvider.fixes().collect { fix ->
                 fixHolder.update(fix)
@@ -233,9 +289,8 @@ class RfWatchRepository(
             val age = System.currentTimeMillis() - it.timestampMs
             age in 0..MAX_FIX_AGE_MS && it.accuracyM <= MAX_FIX_ACCURACY_M
         }
-        val previous = database.deviceDao().byId(id)
-        database.deviceDao().upsert(
-            DeviceEntity(
+        val previous = deviceCache[id]
+        val updated = DeviceEntity(
                 id = id, band = band.name, displayName = name, lastMac = id,
                 firstSeenMs = previous?.firstSeenMs ?: ts, lastSeenMs = ts, lastRssi = rssi,
                 classification = classification, trackerType = match?.type?.name,
@@ -250,14 +305,18 @@ class RfWatchRepository(
                 observedAtMs = fix?.timestampMs ?: previous?.observedAtMs,
                 radioDetails = radioDetails ?: previous?.radioDetails,
             )
-        )
-        database.observationDao().insert(
-            ObservationEntity(
+        deviceCache[id] = updated
+        dirtyDevices[id] = updated
+        // One stored observation per device per OBSERVATION_MIN_INTERVAL_MS keeps drive-by and
+        // follower history dense enough (≈30 m apart at 60 km/h) without a row per advert.
+        if (ts - (lastObservationMs[id] ?: Long.MIN_VALUE / 2) >= OBSERVATION_MIN_INTERVAL_MS) {
+            lastObservationMs[id] = ts
+            pendingObservations += ObservationEntity(
                 deviceId = id, band = band.name, rssi = rssi, timestampMs = ts,
                 lat = fix?.lat, lon = fix?.lon, gpsAccuracyM = fix?.accuracyM,
                 headingDeg = _heading.value.deg,
             )
-        )
+        }
 
         // Passive radio candidates on BLE and Wi-Fi. A nameless BLE beacon alone is too common
         // to treat as a hidden-camera finding, so BLE contributes only explicit camera/IoT rules.
@@ -281,16 +340,15 @@ class RfWatchRepository(
             }
         }
 
-        // Radar contact.
-        _contacts.value = _contacts.value.toMutableMap().apply {
-            val prev = this[id]
-            put(id, (prev ?: LiveContact(id, band, name ?: id, classification)).copy(
-                label = name ?: id, classification = classification,
-                trackerType = match?.type, lastRssi = rssi, lastSeenMs = ts,
-                brand = identity.brand ?: prev?.brand,
-                category = identity.category,
-            ))
-        }
+        // Radar contact (published by the throttled publisher).
+        val prevContact = liveContacts[id]
+        liveContacts[id] = (prevContact ?: LiveContact(id, band, name ?: id, classification)).copy(
+            label = name ?: id, classification = classification,
+            trackerType = match?.type, lastRssi = rssi, lastSeenMs = ts,
+            brand = identity.brand ?: prevContact?.brand,
+            category = identity.category,
+        )
+        contactsDirty = true
 
         val trackerAlertConfirmed = match?.let {
             trackerAlertGate.shouldAlert(id, ts, it.confidence)
@@ -326,7 +384,7 @@ class RfWatchRepository(
             classification == "PRIORITY" -> AlertType.PRIORITY_NEARBY
             else -> return
         }
-        val contact = _contacts.value[id]
+        val contact = _contacts.value[id] ?: liveContacts[id]
         val confidence = contact?.estimate?.confidence ?: 0.0
         alertManager.raise(type, titleFor(type), contact?.label, relBearing, confidence, speak = type != AlertType.TRACKER_FOLLOWING)
         lastAlertMs[id] = now
@@ -345,6 +403,70 @@ class RfWatchRepository(
         val absBearing = _contacts.value[id]?.estimate?.bearingFromUserDeg ?: return null
         val facing = _heading.value.deg ?: return null
         return ((absBearing - facing) % 360.0 + 360.0) % 360.0
+    }
+
+    private suspend fun ensureDeviceCache() {
+        if (deviceCacheLoaded) return
+        database.deviceDao().all().forEach { deviceCache[it.id] = it }
+        deviceCacheLoaded = true
+    }
+
+    /** Writes cached device changes and buffered observations in one transaction. */
+    private suspend fun flushPending() = writeMutex.withLock {
+        if (dirtyDevices.isEmpty() && pendingObservations.isEmpty()) return@withLock
+        val devices = dirtyDevices.values.toList()
+        val observations = pendingObservations.toList()
+        dirtyDevices.clear()
+        pendingObservations.clear()
+        database.withTransaction {
+            if (devices.isNotEmpty()) database.deviceDao().upsertAll(devices)
+            if (observations.isNotEmpty()) database.observationDao().insertAll(observations)
+        }
+    }
+
+    /**
+     * Sets the user's own-device / trusted (allowlist) flags. Goes through the device cache so
+     * the next write-behind flush cannot overwrite the change with a stale row.
+     */
+    suspend fun setDeviceFlags(id: String, own: Boolean? = null, trusted: Boolean? = null) {
+        withContext(ingestDispatcher) {
+            ensureDeviceCache()
+            val current = deviceCache[id] ?: return@withContext
+            val updated = current.copy(
+                isOwnDevice = own ?: current.isOwnDevice,
+                ownDeviceConfirmed = own ?: current.ownDeviceConfirmed,
+                isAllowlisted = trusted ?: current.isAllowlisted,
+            )
+            deviceCache[id] = updated
+            dirtyDevices[id] = updated
+            flushPending()
+        }
+    }
+
+    /** Deletes every stored record and the in-memory caches built from them. */
+    suspend fun wipeAllData() {
+        withContext(ingestDispatcher) {
+            writeMutex.withLock {
+                deviceCache.clear(); dirtyDevices.clear(); pendingObservations.clear()
+                lastObservationMs.clear(); liveContacts.clear(); contactsDirty = false
+                roomMap.clear(); roomLastSeenMs.clear()
+                trackerAlertGate.reset()
+                lastAlertMs.clear()
+                database.clearAllTables()
+            }
+            _contacts.value = emptyMap()
+            _room.value = emptyList()
+        }
+    }
+
+    /** Publishes radar contacts, keeping any direction-finding estimate set from the UI side. */
+    private fun publishContacts() {
+        if (!contactsDirty) return
+        contactsDirty = false
+        val snapshot = HashMap(liveContacts)
+        _contacts.update { current ->
+            snapshot.mapValues { (id, contact) -> contact.copy(estimate = current[id]?.estimate) }
+        }
     }
 
     // ---- Sweep (step 2) ----
@@ -374,8 +496,9 @@ class RfWatchRepository(
             nowMs = System.currentTimeMillis(),
             previousEstimate = _contacts.value[deviceId]?.estimate,
         )
-        _contacts.value = _contacts.value.toMutableMap().apply {
-            this[deviceId]?.let { put(deviceId, it.copy(estimate = estimate)) }
+        _contacts.update { current ->
+            val contact = current[deviceId] ?: return@update current
+            current + (deviceId to contact.copy(estimate = estimate))
         }
         if (estimate.status == EstimateStatus.LOCATED) {
             database.eventDao().insert(
@@ -414,6 +537,9 @@ class RfWatchRepository(
 
     companion object {
         private const val ALERT_DEBOUNCE_MS = 60_000L
+        private const val FLUSH_INTERVAL_MS = 3_000L
+        private const val OBSERVATION_MIN_INTERVAL_MS = 2_000L
+        private const val CONTACT_PUBLISH_INTERVAL_MS = 1_000L
         private const val CELL_SCAN_INTERVAL_MS = 6_000L
         private const val MAX_FIX_AGE_MS = 120_000L
         private const val MAX_FIX_ACCURACY_M = 100.0

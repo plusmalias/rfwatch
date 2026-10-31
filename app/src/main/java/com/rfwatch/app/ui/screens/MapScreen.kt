@@ -25,7 +25,9 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -43,6 +45,7 @@ import com.rfwatch.core.df.EmitterEstimate
 import com.rfwatch.core.df.EstimateStatus
 import com.rfwatch.core.model.GpsFix
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.conflate
 import org.maplibre.android.camera.CameraUpdateFactory
 import org.maplibre.android.geometry.LatLng
 import org.maplibre.android.geometry.LatLngBounds
@@ -54,7 +57,10 @@ import org.maplibre.android.style.layers.PropertyFactory.circleColor
 import org.maplibre.android.style.layers.PropertyFactory.circleRadius
 import org.maplibre.android.style.layers.PropertyFactory.circleStrokeColor
 import org.maplibre.android.style.layers.PropertyFactory.circleStrokeWidth
+import org.maplibre.android.style.layers.PropertyFactory.textAllowOverlap
 import org.maplibre.android.style.layers.PropertyFactory.textColor
+import org.maplibre.android.style.layers.PropertyFactory.textFont
+import org.maplibre.android.style.layers.PropertyFactory.textIgnorePlacement
 import org.maplibre.android.style.layers.PropertyFactory.textField
 import org.maplibre.android.style.layers.PropertyFactory.textHaloColor
 import org.maplibre.android.style.layers.PropertyFactory.textHaloWidth
@@ -72,11 +78,17 @@ import java.util.Locale
 
 private const val RADIO_SOURCE = "rfwatch-radio-source"
 private const val USER_SOURCE = "rfwatch-user-source"
+private const val RADIO_LABEL_SOURCE = "rfwatch-radio-label-source"
+private const val USER_LABEL_SOURCE = "rfwatch-user-label-source"
 private const val RADIO_LAYER = "rfwatch-radio-points"
 private const val CLUSTER_LAYER = "rfwatch-radio-clusters"
 private const val CLUSTER_COUNT_LAYER = "rfwatch-cluster-count"
 private const val USER_LAYER = "rfwatch-user-point"
 private const val USER_LABEL_LAYER = "rfwatch-user-label"
+private const val RADIO_UPDATE_INTERVAL_MS = 1_000L
+
+// Bundled with the mapsOnline flavor (assets/glyphs, ASCII range only) so labels need no font host.
+private val MAP_LABEL_FONT = arrayOf("Noto Sans Bold")
 
 private data class MappedDevice(
     val entity: DeviceEntity,
@@ -189,15 +201,16 @@ private fun OnlineDeviceMap(
             map.setTileCacheEnabled(true)
             map.uiSettings.isAttributionEnabled = false // a visible attribution chip is drawn below.
             map.setStyle(Style.Builder().fromJson(OSM_RASTER_STYLE)) { style ->
-                android.util.Log.i("RFWatchMap", "OSM style loaded")
                 val empty = FeatureCollection.fromFeatures(emptyArray<Feature>())
-                val radios = GeoJsonSource(
-                    RADIO_SOURCE,
-                    empty,
-                    GeoJsonOptions().withCluster(true).withClusterRadius(42).withClusterMaxZoom(15),
-                )
-                style.addSource(radios)
+                val clusterOptions = { GeoJsonOptions().withCluster(true).withClusterRadius(42).withClusterMaxZoom(15) }
+                // Text labels live in their own sources. A symbol layer makes MapLibre wait for
+                // glyphs before it finishes a source's tiles; sharing a source with the circle
+                // layers meant a missing/slow glyph range hid every marker. Separate label
+                // sources keep the markers independent of font loading.
+                style.addSource(GeoJsonSource(RADIO_SOURCE, empty, clusterOptions()))
+                style.addSource(GeoJsonSource(RADIO_LABEL_SOURCE, empty, clusterOptions()))
                 style.addSource(GeoJsonSource(USER_SOURCE, empty))
+                style.addSource(GeoJsonSource(USER_LABEL_SOURCE, empty))
 
                 val clustered = Expression.has("point_count")
                 style.addLayer(
@@ -211,12 +224,6 @@ private fun OnlineDeviceMap(
                             ),
                         ),
                         circleStrokeColor("#F8FAFC"), circleStrokeWidth(1.5f),
-                    ),
-                )
-                style.addLayer(
-                    SymbolLayer(CLUSTER_COUNT_LAYER, RADIO_SOURCE).withFilter(clustered).withProperties(
-                        textField("{point_count_abbreviated}"), textSize(11f), textColor("#08212A"),
-                        textHaloColor("#E0F7FA"), textHaloWidth(0.5f),
                     ),
                 )
                 style.addLayer(
@@ -234,9 +241,17 @@ private fun OnlineDeviceMap(
                     ),
                 )
                 style.addLayer(
-                    SymbolLayer(USER_LABEL_LAYER, USER_SOURCE).withProperties(
-                        textField("YOU"), textSize(10f), textColor("#08212A"),
+                    SymbolLayer(CLUSTER_COUNT_LAYER, RADIO_LABEL_SOURCE).withFilter(clustered).withProperties(
+                        textField("{point_count_abbreviated}"), textFont(MAP_LABEL_FONT), textSize(11f),
+                        textColor("#08212A"), textHaloColor("#E0F7FA"), textHaloWidth(0.5f),
+                        textAllowOverlap(true), textIgnorePlacement(true),
+                    ),
+                )
+                style.addLayer(
+                    SymbolLayer(USER_LABEL_LAYER, USER_LABEL_SOURCE).withProperties(
+                        textField("YOU"), textFont(MAP_LABEL_FONT), textSize(10f), textColor("#08212A"),
                         textHaloColor("#F8FAFC"), textHaloWidth(1f), textOffset(arrayOf(0f, 1.8f)),
+                        textAllowOverlap(true), textIgnorePlacement(true),
                     ),
                 )
                 styleReady.value = true
@@ -263,29 +278,33 @@ private fun OnlineDeviceMap(
         }
     }
 
-    LaunchedEffect(mapped, styleReady.value) {
-        android.util.Log.i("RFWatchMap", "radio effect ready=${styleReady.value} count=${mapped.size}")
+    // Devices/contacts re-emit several times a second while scanning. Keying an effect on
+    // `mapped` with a delay inside restarts (cancels) it on every emission, so it never
+    // reaches setGeoJson. Instead collect the latest value, conflated: the first update is
+    // immediate and later ones are applied at most once per RADIO_UPDATE_INTERVAL_MS.
+    val latestMapped by rememberUpdatedState(mapped)
+    LaunchedEffect(styleReady.value) {
         if (!styleReady.value) return@LaunchedEffect
-        delay(600L) // coalesce scan DB emissions on older phones.
-        val features = mapped.map { item ->
-            Feature.fromGeometry(Point.fromLngLat(item.longitude, item.latitude)).apply {
-                addStringProperty("deviceId", item.entity.id)
-                addStringProperty("label", item.entity.displayName ?: item.entity.id)
-                addStringProperty("band", item.entity.band)
-                addNumberProperty("rssi", item.entity.lastRssi)
-                addStringProperty("category", item.entity.category ?: item.entity.band)
-                addStringProperty("motion", item.motionLabel)
-                addStringProperty("basis", item.locationBasis)
-                addStringProperty("markerColor", item.markerColor)
-                addStringProperty("motionColor", item.motionColor)
+        snapshotFlow { latestMapped }.conflate().collect { current ->
+            val features = current.map { item ->
+                Feature.fromGeometry(Point.fromLngLat(item.longitude, item.latitude)).apply {
+                    addStringProperty("deviceId", item.entity.id)
+                    addStringProperty("label", item.entity.displayName ?: item.entity.id)
+                    addStringProperty("band", item.entity.band)
+                    addNumberProperty("rssi", item.entity.lastRssi)
+                    addStringProperty("category", item.entity.category ?: item.entity.band)
+                    addStringProperty("motion", item.motionLabel)
+                    addStringProperty("basis", item.locationBasis)
+                    addStringProperty("markerColor", item.markerColor)
+                    addStringProperty("motionColor", item.motionColor)
+                }
             }
-        }
-        android.util.Log.i("RFWatchMap", "built radio features=${features.size}")
-        val data = FeatureCollection.fromFeatures(features)
-        mapRef.value?.getStyle { style ->
-            val source = style.getSource(RADIO_SOURCE) as? GeoJsonSource
-            android.util.Log.i("RFWatchMap", "radio features=${features.size} source=${source != null}")
-            source?.setGeoJson(data)
+            val data = FeatureCollection.fromFeatures(features)
+            mapRef.value?.getStyle { style ->
+                (style.getSource(RADIO_SOURCE) as? GeoJsonSource)?.setGeoJson(data)
+                (style.getSource(RADIO_LABEL_SOURCE) as? GeoJsonSource)?.setGeoJson(data)
+            }
+            delay(RADIO_UPDATE_INTERVAL_MS)
         }
     }
 
@@ -299,9 +318,8 @@ private fun OnlineDeviceMap(
         val collection = userFeature?.let { FeatureCollection.fromFeature(it) }
             ?: FeatureCollection.fromFeatures(emptyArray<Feature>())
         mapRef.value?.getStyle { style ->
-            val source = style.getSource(USER_SOURCE) as? GeoJsonSource
-            android.util.Log.i("RFWatchMap", "user feature=${userFeature != null} source=${source != null}")
-            source?.setGeoJson(collection)
+            (style.getSource(USER_SOURCE) as? GeoJsonSource)?.setGeoJson(collection)
+            (style.getSource(USER_LABEL_SOURCE) as? GeoJsonSource)?.setGeoJson(collection)
         }
     }
 
@@ -422,6 +440,7 @@ private fun colorHex(color: Color): String = "#%06X".format(Locale.US, color.toA
 private const val OSM_RASTER_STYLE = """
 {
   "version": 8,
+  "glyphs": "asset://glyphs/{fontstack}/{range}.pbf",
   "sources": {
     "openstreetmap": {
       "type": "raster",

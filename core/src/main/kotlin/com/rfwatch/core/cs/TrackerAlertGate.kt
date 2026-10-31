@@ -37,6 +37,14 @@ class TrackerAlertGate(
         return true
     }
 
+    /** Forgets all candidates and cooldowns (used when the user wipes their data). */
+    @Synchronized
+    fun reset() {
+        candidates.clear()
+        lastAlertByDevice.clear()
+        lastGlobalAlertMs = 0L
+    }
+
     companion object {
         private const val MIN_CONFIDENCE = 0.8
         private const val CANDIDATE_TTL_MS = 10 * 60_000L

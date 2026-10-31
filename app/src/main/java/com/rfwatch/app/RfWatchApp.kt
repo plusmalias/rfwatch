@@ -16,19 +16,14 @@ class RfWatchApp : Application() {
         super.onCreate()
         if (BuildConfig.FLAVOR == "mapsOnline") {
             MapLibre.getInstance(this)
+            // The OSM tile usage policy requires an identifying User-Agent.
             val identifiedMapClient = OkHttpClient.Builder()
                 .addInterceptor { chain ->
-                    val request = chain.request().newBuilder()
-                        .header("User-Agent", "RFWatch/0.2.0 (Android; com.rfwatch.app)")
-                        .build()
-                    try {
-                        chain.proceed(request).also { response ->
-                            android.util.Log.i("RFWatchMapHttp", "${request.url.host} response=${response.code}")
-                        }
-                    } catch (error: java.io.IOException) {
-                        android.util.Log.e("RFWatchMapHttp", "${request.url.host} ${error.javaClass.simpleName}")
-                        throw error
-                    }
+                    chain.proceed(
+                        chain.request().newBuilder()
+                            .header("User-Agent", "RFWatch/${BuildConfig.VERSION_NAME} (Android; com.rfwatch.app)")
+                            .build()
+                    )
                 }
                 .build()
             HttpRequestUtil.setOkHttpClient(identifiedMapClient)

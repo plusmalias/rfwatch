@@ -161,3 +161,6 @@ currently viewed OpenStreetMap tiles. It keeps radio/device data on the phone. T
 distinguishes estimated fixed-source locations from the phone GPS location where a signal
 was heard; mobile candidates are only flagged when the drive-by estimator has enough
 GPS-tagged observations. See the [OpenStreetMap tile policy](https://operations.osmfoundation.org/policies/tiles/).
+Map label glyphs ("YOU", cluster counts; Noto Sans Bold, ASCII range, OFL-1.1) are bundled in
+`app/src/mapsOnline/assets/glyphs`, so no font server is contacted. Labels use their own GeoJSON
+sources, so a glyph problem can never hide the device or user markers.

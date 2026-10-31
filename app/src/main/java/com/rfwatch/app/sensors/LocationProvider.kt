@@ -5,6 +5,7 @@ import android.content.Context
 import android.location.Location
 import android.location.LocationListener
 import android.location.LocationManager
+import android.os.Looper
 import com.rfwatch.core.model.GpsFix
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
@@ -27,7 +28,8 @@ class LocationProvider(context: Context) {
             if (lm.isProviderEnabled(LocationManager.GPS_PROVIDER)) add(LocationManager.GPS_PROVIDER)
             if (lm.isProviderEnabled(LocationManager.NETWORK_PROVIDER)) add(LocationManager.NETWORK_PROVIDER)
         }
-        providers.forEach { lm.requestLocationUpdates(it, minIntervalMs, minDistanceM, listener) }
+        // Explicit main looper: the flow is collected on a background ingest thread, which has none.
+        providers.forEach { lm.requestLocationUpdates(it, minIntervalMs, minDistanceM, listener, Looper.getMainLooper()) }
         awaitClose { lm.removeUpdates(listener) }
     }
 
