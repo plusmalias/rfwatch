@@ -134,7 +134,7 @@ private fun AppRiskCard(a: AppAssessment, now: Long) {
             Text(f.packageName, fontSize = 11.sp, color = ConsoleMuted)
             (if (expanded) a.reasons else a.reasons.take(2)).forEach { Text(it, fontSize = 11.sp) }
             androidx.compose.material3.TextButton(onClick = { expanded = !expanded }) {
-                Text(if (expanded) "Hide details" else "Show all ${a.reasons.size} reasons & details", fontSize = 12.sp)
+                Text(if (expanded) "Hide details" else if (a.reasons.size > 2) "Show all ${a.reasons.size} reasons & details" else "Show details", fontSize = 12.sp)
             }
             if (expanded) Text(
                 "Installer: ${f.installer ?: "none / sideloaded"} · ${if (f.isSystem) "system app" else "user app"} · " +
