@@ -71,7 +71,7 @@ fun SettingsScreen(modifier: Modifier = Modifier) {
         )
 
         Row(Modifier.fillMaxWidth().padding(top = 16.dp), verticalAlignment = Alignment.CenterVertically) {
-            Column(Modifier.weight(1f)) {
+            Column(Modifier.weight(1f).padding(end = 12.dp)) {
                 Text("Lock with phone PIN / pattern", fontSize = 14.sp)
                 Text("Ask for your phone's PIN / pattern (or fingerprint, if the phone has one) to open RFWatch.", fontSize = 12.sp, color = Color(0xFF9CA3AF))
             }
@@ -84,8 +84,9 @@ fun SettingsScreen(modifier: Modifier = Modifier) {
             })
         }
 
+        SettingsSection("Alerts")
         Row(Modifier.fillMaxWidth().padding(top = 16.dp), verticalAlignment = Alignment.CenterVertically) {
-            Column(Modifier.weight(1f)) {
+            Column(Modifier.weight(1f).padding(end = 12.dp)) {
                 Text("Police equipment alerts", fontSize = 14.sp)
                 Text("Live heads-up notification while possible law-enforcement radio signatures (Axon, agency vehicle routers, public-safety radios, ALPR) are nearby.", fontSize = 12.sp, color = Color(0xFF9CA3AF))
             }
@@ -94,7 +95,7 @@ fun SettingsScreen(modifier: Modifier = Modifier) {
             })
         }
         Row(Modifier.fillMaxWidth().padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-            Column(Modifier.weight(1f)) {
+            Column(Modifier.weight(1f).padding(end = 12.dp)) {
                 Text("Speak police alerts", fontSize = 14.sp)
                 Text("Say \"Possible police equipment…\" when an encounter starts.", fontSize = 12.sp, color = Color(0xFF9CA3AF))
             }
@@ -109,7 +110,7 @@ fun SettingsScreen(modifier: Modifier = Modifier) {
         var shake by remember { mutableStateOf(discreet.shakeToHide(context)) }
         var hasPin by remember { mutableStateOf(discreet.hasPin(context)) }
         var pinInput by remember { mutableStateOf("") }
-        Text("Discreet mode", fontSize = 14.sp, modifier = Modifier.padding(top = 20.dp))
+        SettingsSection("Discreet mode")
         Text(
             "For when your phone may be checked by someone else. With a PIN set, opening the app shows a working calculator — " +
                 "type the PIN and press = to get in. Screenshots and the Recents preview are blocked while any of these are on.",
@@ -127,21 +128,21 @@ fun SettingsScreen(modifier: Modifier = Modifier) {
             if (hasPin) TextButton(onClick = { discreet.setPin(context, null); hasPin = false; if (disguise) { discreet.setDisguised(context, false); disguise = false } }) { Text("Remove PIN") }
         }
         Row(Modifier.fillMaxWidth().padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-            Column(Modifier.weight(1f)) {
+            Column(Modifier.weight(1f).padding(end = 12.dp)) {
                 Text("Disguise as \"Calculator\"", fontSize = 14.sp)
                 Text(if (hasPin) "App drawer shows a Calculator icon instead of RFWatch; locks every time you leave." else "Set a PIN first so you can get back in.", fontSize = 12.sp, color = Color(0xFF9CA3AF))
             }
             Switch(checked = disguise, enabled = hasPin || disguise, onCheckedChange = { discreet.setDisguised(context, it); disguise = it })
         }
         Row(Modifier.fillMaxWidth().padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-            Column(Modifier.weight(1f)) {
+            Column(Modifier.weight(1f).padding(end = 12.dp)) {
                 Text("Neutral notifications", fontSize = 14.sp)
                 Text("Alerts show only \"Reminder · Open the app for details\", no spoken alerts (always on while disguised).", fontSize = 12.sp, color = Color(0xFF9CA3AF))
             }
             Switch(checked = neutral || disguise, enabled = !disguise, onCheckedChange = { neutral = it; prefs.edit().putBoolean(discreet.PREF_NEUTRAL_NOTIFICATIONS, it).apply() })
         }
         Row(Modifier.fillMaxWidth().padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-            Column(Modifier.weight(1f)) {
+            Column(Modifier.weight(1f).padding(end = 12.dp)) {
                 Text("Shake to hide", fontSize = 14.sp)
                 Text("A hard double shake closes RFWatch instantly and removes it from Recents (locks if a lock is set).", fontSize = 12.sp, color = Color(0xFF9CA3AF))
             }
@@ -151,7 +152,7 @@ fun SettingsScreen(modifier: Modifier = Modifier) {
         val repo = remember { (context.applicationContext as RfWatchApp).container.repository }
         val home by repo.homeStatus.collectAsState()
         var homeMessage by remember { mutableStateOf<String?>(null) }
-        Text("Home watch", fontSize = 14.sp, modifier = Modifier.padding(top = 20.dp))
+        SettingsSection("Home watch")
         Text(
             if (!home.isSet) "Set Home while you're there. RFWatch learns the devices normally around it, then alerts when a new tracker, GPS tracker, camera, drone, police device or Wi-Fi network keeps showing up at home."
             else if (!home.mature) "Learning: ${home.visitsLearned} of ${com.rfwatch.core.cs.Baseline.MIN_SESSIONS} home visits (20+ min each) recorded. Alerts start after that." +
@@ -167,22 +168,23 @@ fun SettingsScreen(modifier: Modifier = Modifier) {
         }
         homeMessage?.let { Text(it, fontSize = 12.sp, color = OkGreen) }
 
+        SettingsSection("Alert style")
         Row(Modifier.fillMaxWidth().padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-            Column(Modifier.weight(1f)) {
+            Column(Modifier.weight(1f).padding(end = 12.dp)) {
                 Text("Ambulance / fire alerts", fontSize = 14.sp)
                 Text("Alert when ambulance or fire-crew equipment is heard (defibrillators, stretchers, breathing apparatus, fire apparatus).", fontSize = 12.sp, color = Color(0xFF9CA3AF))
             }
             Switch(checked = emergencyAlerts, onCheckedChange = { emergencyAlerts = it; prefs.edit().putBoolean(AlertManager.PREF_EMERGENCY_ALERTS, it).apply() })
         }
         Row(Modifier.fillMaxWidth().padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-            Column(Modifier.weight(1f)) {
+            Column(Modifier.weight(1f).padding(end = 12.dp)) {
                 Text("Flash screen on alerts", fontSize = 14.sp)
                 Text("Pulse the whole screen in the alert colour while it dings (when RFWatch is open).", fontSize = 12.sp, color = Color(0xFF9CA3AF))
             }
             Switch(checked = flashScreen, onCheckedChange = { flashScreen = it; prefs.edit().putBoolean(AlertManager.PREF_FLASH_SCREEN, it).apply() })
         }
         Row(Modifier.fillMaxWidth().padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-            Column(Modifier.weight(1f)) {
+            Column(Modifier.weight(1f).padding(end = 12.dp)) {
                 Text("Flash torch on alerts", fontSize = 14.sp)
                 Text("Strobe the camera flash LED for police, drone, follower and camera alerts — works with the screen off.", fontSize = 12.sp, color = Color(0xFF9CA3AF))
             }
@@ -198,9 +200,12 @@ fun SettingsScreen(modifier: Modifier = Modifier) {
             modifier = Modifier.padding(top = 8.dp),
         ) { Text("Test alert (sound, vibration, flash)") }
 
-        Button(
+        SettingsSection("Data")
+        androidx.compose.material3.OutlinedButton(
             onClick = { confirmWipe = true },
-            modifier = Modifier.padding(top = 24.dp),
+            border = androidx.compose.foundation.BorderStroke(1.dp, com.rfwatch.app.ui.theme.DangerRed),
+            colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(contentColor = com.rfwatch.app.ui.theme.DangerRed),
+            modifier = Modifier.padding(top = 4.dp),
         ) { Text("Wipe all data") }
 
         Text(
@@ -226,5 +231,14 @@ fun SettingsScreen(modifier: Modifier = Modifier) {
             },
             dismissButton = { TextButton(onClick = { confirmWipe = false }) { Text("Cancel") } },
         )
+    }
+}
+
+/** Console-style section label used to break the long settings list into groups. */
+@Composable
+private fun SettingsSection(title: String) {
+    Column(Modifier.fillMaxWidth().padding(top = 24.dp, bottom = 4.dp)) {
+        androidx.compose.material3.HorizontalDivider(color = com.rfwatch.app.ui.theme.ConsoleOutline)
+        Text(title.uppercase(), fontSize = 11.sp, color = OkGreen, letterSpacing = 1.3.sp, modifier = Modifier.padding(top = 10.dp))
     }
 }
