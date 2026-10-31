@@ -39,7 +39,12 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
+import com.rfwatch.app.ui.BandFilter
+import com.rfwatch.app.ui.DeviceFilter
+import com.rfwatch.app.ui.DeviceSort
 import com.rfwatch.app.ui.RfWatchViewModel
+import com.rfwatch.app.ui.StatusFilter
+import com.rfwatch.app.ui.TimeWindow
 import com.rfwatch.app.ui.theme.ConsoleOutline
 import com.rfwatch.app.ui.theme.ConsolePanel
 import com.rfwatch.app.ui.theme.ConsolePanelRaised
@@ -50,73 +55,104 @@ import com.rfwatch.core.cs.FollowerScore
 import java.util.Date
 import java.util.Locale
 
-/** Full device inventory in stable discovery order; the selected device stays pinned above live rows. */
+/**
+ * Full device inventory. Filtering/sorting runs in the ViewModel off the main thread; the
+ * selected device stays pinned above the live rows even when filters would hide it.
+ */
 @Composable
 fun DevicesScreen(vm: RfWatchViewModel, modifier: Modifier = Modifier, onRoom: () -> Unit = {}) {
     val devices by vm.devices.collectAsState()
+    val view by vm.deviceView.collectAsState()
+    val filter by vm.deviceFilter.collectAsState()
     var selectedId by remember { mutableStateOf<String?>(null) }
-    var query by remember { mutableStateOf("") }
-    var categoryFilter by remember { mutableStateOf(FILTER_ALL) }
-    var sortMode by remember { mutableStateOf("Discovery") }
-    val selected = devices.firstOrNull { it.id == selectedId }
-    val visibleDevices = devices.filter { device ->
-        val text = listOf(device.displayName, device.id, device.lastMac, device.brand, device.category, device.band, device.trackerType, device.model, device.effectiveKind().label)
-            .filterNotNull().joinToString(" ").lowercase()
-        val matchesQuery = query.isBlank() || text.contains(query.trim().lowercase())
-        val matchesCategory = when (categoryFilter) {
-            FILTER_ALL -> true
-            FILTER_WIFI -> device.band == "WIFI"
-            FILTER_BLE -> device.band == "BLE"
-            else -> device.effectiveKind().name == categoryFilter
-        }
-        matchesQuery && matchesCategory
-    }.let { filtered ->
-        when (sortMode) {
-            "Strongest", "Approx. closest" -> filtered.sortedByDescending { it.lastRssi }
-            else -> filtered
-        }
-    }
+    var sortMenu by remember { mutableStateOf(false) }
+    val selected = selectedId?.let { id -> devices.firstOrNull { it.id == id } }
     Column(modifier.fillMaxSize().padding(12.dp)) {
-        Row(Modifier.fillMaxWidth().padding(bottom = 8.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        Row(Modifier.fillMaxWidth().padding(bottom = 6.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 Text("SIGNAL INVENTORY", fontSize = 10.sp, color = ConsoleMuted, letterSpacing = 1.2.sp)
-                Text("${visibleDevices.size} / ${devices.size} devices", fontSize = 18.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold)
+                Text("${view.visible.size} / ${view.total} devices", fontSize = 18.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold)
             }
-            Button(onClick = onRoom) { Text("Room sweep") }
+            if (!filter.isDefault) {
+                TextButton(onClick = { vm.updateDeviceFilter { DeviceFilter(sort = it.sort) } }) { Text("Clear") }
+            }
+            androidx.compose.foundation.layout.Box {
+                OutlinedButton(onClick = { sortMenu = true }) { Text("${filter.sort.label} ▾", fontSize = 12.sp) }
+                androidx.compose.material3.DropdownMenu(expanded = sortMenu, onDismissRequest = { sortMenu = false }) {
+                    DeviceSort.entries.forEach { option ->
+                        androidx.compose.material3.DropdownMenuItem(
+                            text = { Text((if (option == filter.sort) "● " else "") + option.label) },
+                            onClick = { vm.updateDeviceFilter { it.copy(sort = option) }; sortMenu = false },
+                        )
+                    }
+                }
+            }
+            Button(onClick = onRoom, modifier = Modifier.padding(start = 6.dp)) { Text("Room sweep") }
         }
         OutlinedTextField(
-            value = query, onValueChange = { query = it }, singleLine = true,
+            value = filter.query, onValueChange = { q -> vm.updateDeviceFilter { it.copy(query = q) } }, singleLine = true,
             modifier = Modifier.fillMaxWidth().padding(bottom = 4.dp),
-            placeholder = { Text("Search name, brand, ID, category") },
+            placeholder = { Text("Search name, brand, model, ID") },
+            trailingIcon = if (filter.query.isNotEmpty()) {
+                { TextButton(onClick = { vm.updateDeviceFilter { it.copy(query = "") } }) { Text("✕") } }
+            } else null,
         )
-        // Category chips with live counts; empty categories are hidden except Axon / law.
-        val kindCounts = devices.groupingBy { it.effectiveKind() }.eachCount()
-        val chips = buildList {
-            add(FILTER_ALL to "All ${devices.size}")
-            add(DeviceKind.LAW_ENFORCEMENT.name to "${DeviceKind.LAW_ENFORCEMENT.label} ${kindCounts[DeviceKind.LAW_ENFORCEMENT] ?: 0}")
-            DeviceKind.entries.filter { it != DeviceKind.LAW_ENFORCEMENT && (kindCounts[it] ?: 0) > 0 }
-                .forEach { add(it.name to "${it.label} ${kindCounts[it]}") }
-            add(FILTER_WIFI to "Wi-Fi ${devices.count { it.band == "WIFI" }}")
-            add(FILTER_BLE to "BLE ${devices.count { it.band == "BLE" }}")
-        }
-        Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            chips.forEach { (key, label) ->
-                FilterChip(selected = categoryFilter == key, onClick = { categoryFilter = key }, label = { Text(label) })
+        // Row 1: time window + status filters (status chips combine with AND).
+        Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+            TimeWindow.entries.forEach { w ->
+                FilterChip(selected = filter.window == w, onClick = { vm.updateDeviceFilter { it.copy(window = w) } }, label = { Text(w.label) })
+            }
+            Text("|", color = ConsoleMuted)
+            StatusFilter.entries.forEach { st ->
+                val count = view.statusCounts[st] ?: 0
+                val on = st in filter.status
+                FilterChip(
+                    selected = on,
+                    onClick = { vm.updateDeviceFilter { it.copy(status = if (on) it.status - st else it.status + st) } },
+                    label = { Text(if (st == StatusFilter.HIDE_MINE) st.label else "${st.label} $count",
+                        color = if (st == StatusFilter.THREATS && count > 0 && !on) com.rfwatch.app.ui.theme.WarnAmber else Color.Unspecified) },
+                )
             }
         }
-        Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            listOf("Discovery", "Strongest", "Approx. closest").forEach { option ->
-                FilterChip(selected = sortMode == option, onClick = { sortMode = option }, label = { Text(option) })
+        // Row 2: device kinds (multi-select) + band. Empty kinds hide, except Axon / law and any selected kind.
+        Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+            FilterChip(selected = filter.kinds.isEmpty(), onClick = { vm.updateDeviceFilter { it.copy(kinds = emptySet()) } },
+                label = { Text("All kinds") })
+            DeviceKind.entries
+                .filter { it == DeviceKind.LAW_ENFORCEMENT || (view.kindCounts[it] ?: 0) > 0 || it in filter.kinds }
+                .sortedWith(compareBy<DeviceKind> { it != DeviceKind.LAW_ENFORCEMENT }.thenByDescending { view.kindCounts[it] ?: 0 })
+                .forEach { k ->
+                    val on = k in filter.kinds
+                    FilterChip(selected = on,
+                        onClick = { vm.updateDeviceFilter { it.copy(kinds = if (on) it.kinds - k else it.kinds + k) } },
+                        label = { Text("${k.label} ${view.kindCounts[k] ?: 0}") })
+                }
+            Text("|", color = ConsoleMuted)
+            BandFilter.entries.forEach { b ->
+                val on = filter.band == b
+                FilterChip(selected = on, onClick = { vm.updateDeviceFilter { it.copy(band = if (on) null else b) } },
+                    label = { Text("${b.label} ${view.bandCounts[b] ?: 0}") })
             }
         }
-        LazyColumn(Modifier.fillMaxWidth().weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        LazyColumn(Modifier.fillMaxWidth().weight(1f).padding(top = 4.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             if (selected != null) {
                 item(key = "selected-${selected.id}") {
                     DeviceCard(selected, selected = true, vm = vm) { selectedId = null }
                 }
             }
-            items(visibleDevices.filterNot { it.id == selectedId }, key = { it.id }) { d ->
+            items(view.visible.filterNot { it.id == selectedId }, key = { it.id }) { d ->
                 DeviceCard(d, selected = false, vm = vm) { selectedId = d.id }
+            }
+            if (view.visible.isEmpty()) {
+                item(key = "empty") {
+                    Column(Modifier.fillMaxWidth().padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(if (view.total == 0) "No devices heard yet. Start scanning on Radar." else "No devices match these filters.",
+                            fontSize = 13.sp, color = ConsoleMuted)
+                        if (view.total > 0 && !filter.isDefault) {
+                            TextButton(onClick = { vm.updateDeviceFilter { DeviceFilter(sort = it.sort) } }) { Text("Clear filters") }
+                        }
+                    }
+                }
             }
         }
     }
@@ -276,10 +312,6 @@ private fun RssiSparkline(samples: List<Int>, color: Color) {
         drawPath(path, color, style = Stroke(width = 2f))
     }
 }
-
-private const val FILTER_ALL = "ALL"
-private const val FILTER_WIFI = "WIFI"
-private const val FILTER_BLE = "BLE"
 
 /** Stored kind, or one inferred from the legacy category text for rows saved before v4. */
 internal fun com.rfwatch.app.data.DeviceEntity.effectiveKind(): DeviceKind {

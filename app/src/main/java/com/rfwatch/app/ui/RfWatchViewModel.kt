@@ -9,8 +9,17 @@ import com.rfwatch.app.data.ObservationEntity
 import com.rfwatch.core.cs.FollowerScore
 import com.rfwatch.core.df.EmitterEstimate
 import com.rfwatch.core.df.SweepResult
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.conflate
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 /** Exposes repository state to Compose and forwards user-driven DF actions. */
@@ -47,6 +56,24 @@ class RfWatchViewModel(private val repo: RfWatchRepository) : ViewModel() {
     val scanSession = repo.scanSession
 
     val devices = repo.deviceFlow.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    /** Devices-tab filter; lives here so it survives tab switches. */
+    private val _deviceFilter = MutableStateFlow(DeviceFilter())
+    val deviceFilter: StateFlow<DeviceFilter> = _deviceFilter
+    fun updateDeviceFilter(change: (DeviceFilter) -> DeviceFilter) = _deviceFilter.update(change)
+
+    /** Re-evaluates time windows while no new rows arrive (e.g. scanning stopped). */
+    private val filterClock = flow { while (true) { emit(System.currentTimeMillis()); delay(15_000) } }
+
+    /** Filtered, sorted Devices-tab page, computed off the main thread. */
+    val deviceView: StateFlow<DeviceListView> =
+        combine(devices, _deviceFilter, filterClock) { list, filter, _ ->
+            applyDeviceFilter(list, filter, System.currentTimeMillis())
+        }
+            .conflate()
+            .flowOn(Dispatchers.Default)
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), DeviceListView())
+
     val alerts = repo.alertFlow.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
     val events = repo.eventFlow.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
