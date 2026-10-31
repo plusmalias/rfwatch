@@ -318,3 +318,28 @@ installed on the phone** (phone was charging) — next step: `adb install -r` ma
 
 Codex: free to take a turn. Ideas: retention purge (still never called), BLE-spam detection,
 on-device verification of the above, follower-alert action buttons (Mark mine from notification).
+
+### 2026-10-31 (late night 2) — Claude — protective toolkit (pushed; phone was charging, NOT yet verified on device)
+
+All compile + tests green (core 96/96, app 3/3, both flavors). New tools live under **More**:
+- **Hacking tools / attacks** (`rules/attack_tools.json`, `core/cs/AttackDetectors.kt`): Flipper Zero
+  (SIG 0x0E29, OUI 0C:FA:22), WiFi Pineapple SSIDs, ESP32/8266 attack firmware, Pwnagotchi (also beacon IE
+  222), O.MG / keylogger implants, RFID cloners; BLE pop-up spam burst detector; evil-twin Wi-Fi detector
+  (security downgrade / randomised BSSID for a known SSID, seeded from inventory).
+- **Skimmer check** (`scan/ClassicScanner`, `core/cs/SkimmerScorer`, `SkimmerScreen`): on-demand Classic BT
+  inquiry, Bluetana-style multi-signal score with every point explained; HIGH → red flashing alert.
+- **Stalkerware & spyware check** (`scan/AppScanner`, `core/cs/Stalkerware.kt`, `StalkerwareScreen`,
+  `resources/stalkerware/*`): AssoEchap indicators (160 families, packages, certs, 3,228 APK hashes) + MVT
+  STIX (mercenary spyware) — 3,461 APK SHA-256s; behaviour scoring. Needs QUERY_ALL_PACKAGES. Safety note.
+- **Discreet mode** (`discreet/Discreet.kt`, `ui/LockScreen.kt`): Calculator launcher alias, calculator PIN
+  lock (PIN then '='), phone PIN/pattern unlock (device credential), relock, FLAG_SECURE, shake-to-hide,
+  neutral notifications. **MainActivity is now a FragmentActivity; launcher filters live on activity-aliases.**
+- **Car check** (`CarSweepScreen`): 60 s walk-around, ranked trackers / GPS trackers / strong unknowns,
+  Hunt handoff via `vm.huntRequest`.
+- **Encounter history map** (`HistoryPanel.kt`, Map → History): event layer + repeat places + timeline.
+- **Quick-settings tile + widget** (`widget/`), status from `repo.publishStatus()`.
+- **Camera finder** (`CameraFinderScreen`): Camera2 IR / lens-glint spot detection. CAMERA permission.
+- Also: ambulance/fire pack, TASER rule, traffic cameras, camera pack v2, flash/torch alerts (earlier entries).
+
+Next (anyone): on-device verification of all of the above; retention purge (still never called);
+generic Android malware feed (abuse.ch needs an API key).
