@@ -2,6 +2,9 @@ package com.rfwatch.app.ui.screens
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.material3.FilterChip
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -90,6 +93,8 @@ private const val CLUSTER_LAYER = "rfwatch-radio-clusters"
 private const val CLUSTER_COUNT_LAYER = "rfwatch-cluster-count"
 private const val USER_LAYER = "rfwatch-user-point"
 private const val USER_LABEL_LAYER = "rfwatch-user-label"
+private const val HISTORY_SOURCE = "rfwatch-history-source"
+private const val HISTORY_LAYER = "rfwatch-history-points"
 private const val RADIO_UPDATE_INTERVAL_MS = 1_000L
 
 // Bundled with the mapsOnline flavor (assets/glyphs, ASCII range only) so labels need no font host.
@@ -128,7 +133,8 @@ fun MapScreen(vm: RfWatchViewModel, modifier: Modifier = Modifier) {
     if (BuildConfig.FLAVOR == "mapsOnline") {
         OnlineDeviceMap(devices, contacts, userLocation, vm, modifier)
     } else {
-        OfflineDeviceMap(devices, modifier)
+        val events by vm.events.collectAsState()
+        OfflineDeviceMap(devices, events, modifier)
     }
 }
 
@@ -152,6 +158,10 @@ private fun OnlineDeviceMap(
     val cameraPositioned = remember { mutableStateOf(false) }
     var selectedId by remember { mutableStateOf<String?>(null) }
     var mapError by remember { mutableStateOf(false) }
+    val events by vm.events.collectAsState()
+    var showHistory by remember { mutableStateOf(false) }
+    var selectedEvent by remember { mutableStateOf<com.rfwatch.app.data.EventEntity?>(null) }
+    val latestEvents by rememberUpdatedState(events)
 
     val mapped = remember(devices, contacts) {
         devices.mapNotNull { device ->
@@ -261,11 +271,23 @@ private fun OnlineDeviceMap(
                         textAllowOverlap(true), textIgnorePlacement(true),
                     ),
                 )
+                style.addSource(GeoJsonSource(HISTORY_SOURCE, empty))
+                style.addLayer(
+                    CircleLayer(HISTORY_LAYER, HISTORY_SOURCE).withProperties(
+                        circleColor(Expression.toColor(Expression.get("color"))), circleRadius(9f),
+                        circleStrokeColor("#FFFFFF"), circleStrokeWidth(2f),
+                    ),
+                )
                 styleReady.value = true
                 mapError = false
             }
             map.addOnMapClickListener { latLng ->
                 val pixel = map.projection.toScreenLocation(latLng)
+                map.queryRenderedFeatures(pixel, HISTORY_LAYER).firstOrNull()?.let { h ->
+                    val rowId = h.getNumberProperty("rowId")?.toLong()
+                    selectedEvent = latestEvents.firstOrNull { it.rowId == rowId }
+                    return@addOnMapClickListener true
+                }
                 val hit = map.queryRenderedFeatures(pixel, RADIO_LAYER, CLUSTER_LAYER).firstOrNull()
                 if (hit == null) {
                     selectedId = null
@@ -340,10 +362,35 @@ private fun OnlineDeviceMap(
         }
     }
 
-    Column(modifier.fillMaxSize().padding(horizontal = 10.dp, vertical = 8.dp)) {
+    // History layer: plot logged surveillance events; hide device markers while it is shown.
+    LaunchedEffect(styleReady.value, showHistory, events) {
+        if (!styleReady.value) return@LaunchedEffect
+        val features = if (!showHistory) emptyList() else events.filter { it.isMappableHistory() }.map { e ->
+            Feature.fromGeometry(Point.fromLngLat(e.lon!!, e.lat!!)).apply {
+                addNumberProperty("rowId", e.rowId)
+                addStringProperty("color", HISTORY_KINDS[e.kind]?.first ?: "#94A3B8")
+            }
+        }
+        mapRef.value?.getStyle { style ->
+            (style.getSource(HISTORY_SOURCE) as? GeoJsonSource)?.setGeoJson(FeatureCollection.fromFeatures(features))
+            val vis = org.maplibre.android.style.layers.PropertyFactory.visibility(
+                if (showHistory) org.maplibre.android.style.layers.Property.NONE else org.maplibre.android.style.layers.Property.VISIBLE,
+            )
+            listOf(RADIO_LAYER, CLUSTER_LAYER, CLUSTER_COUNT_LAYER).forEach { style.getLayer(it)?.setProperties(vis) }
+        }
+    }
+
+    Column(
+        modifier.fillMaxSize().padding(horizontal = 10.dp, vertical = 8.dp)
+            .then(if (showHistory) Modifier.verticalScroll(rememberScrollState()) else Modifier),
+    ) {
+        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            FilterChip(selected = !showHistory, onClick = { showHistory = false }, label = { Text("Devices") })
+            FilterChip(selected = showHistory, onClick = { showHistory = true; selectedId = null }, label = { Text("History ${events.count { it.isMappableHistory() }}") })
+        }
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
             Column(Modifier.weight(1f)) {
-                Text("LIVE DEVICE MAP", fontSize = 10.sp, color = MaterialTheme.colorScheme.primary, letterSpacing = 1.2.sp)
+                Text(if (showHistory) "ENCOUNTER HISTORY" else "LIVE DEVICE MAP", fontSize = 10.sp, color = MaterialTheme.colorScheme.primary, letterSpacing = 1.2.sp)
                 Text("${mapped.size} located records", fontSize = 16.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold)
                 Text(
                     "${mapped.size} mapped · $locatedCount located · $movingCount moving · ${mapped.size - locatedCount - movingCount} heard-only",
@@ -365,7 +412,7 @@ private fun OnlineDeviceMap(
                 "Estimates need ≥${DriveByEstimator.MIN_SAMPLES} GPS-tagged hearings spread over ≥${DriveByEstimator.MIN_SPREAD_M.toInt()} m — walk or drive past; standing still keeps everything grey.",
             fontSize = 10.sp, color = Color(0xFF9CA3AF), modifier = Modifier.padding(bottom = 5.dp),
         )
-        Box(Modifier.fillMaxWidth().weight(1f)) {
+        Box(if (showHistory) Modifier.fillMaxWidth().height(380.dp) else Modifier.fillMaxWidth().weight(1f)) {
             AndroidView(factory = { mapView }, modifier = Modifier.fillMaxSize())
             if (mapError) {
                 Card(Modifier.align(Alignment.Center).padding(20.dp), colors = CardDefaults.cardColors(containerColor = ConsolePanel), border = androidx.compose.foundation.BorderStroke(1.dp, ConsoleOutline)) {
@@ -383,7 +430,13 @@ private fun OnlineDeviceMap(
             )
         }
         Text("Online map tiles reveal the visible area requested; radio records stay on-device.", Modifier.padding(top = 4.dp), fontSize = 9.sp, color = Color(0xFF9CA3AF))
-        selected?.let { item ->
+        if (showHistory) {
+            HistoryPanel(events, selectedEvent) { e ->
+                selectedEvent = e
+                if (e.lat != null && e.lon != null) mapRef.value?.animateCamera(CameraUpdateFactory.newLatLngZoom(LatLng(e.lat!!, e.lon!!), 16.0), 350)
+            }
+        }
+        if (!showHistory) selected?.let { item ->
             Card(Modifier.fillMaxWidth().padding(top = 5.dp), colors = CardDefaults.cardColors(containerColor = ConsolePanel), border = androidx.compose.foundation.BorderStroke(1.dp, ConsoleOutline)) {
                 Column(Modifier.padding(9.dp)) {
                     Text(item.entity.displayName ?: item.entity.id, fontSize = 13.sp)
@@ -412,7 +465,8 @@ private fun fitMapToDevices(map: MapLibreMap?, devices: List<MappedDevice>, user
 }
 
 @Composable
-private fun OfflineDeviceMap(devices: List<DeviceEntity>, modifier: Modifier) {
+private fun OfflineDeviceMap(devices: List<DeviceEntity>, events: List<com.rfwatch.app.data.EventEntity>, modifier: Modifier) {
+    var selectedEvent by remember { mutableStateOf<com.rfwatch.app.data.EventEntity?>(null) }
     val mapped = devices.filter { it.observedLat != null && it.observedLon != null }
     Column(modifier.fillMaxSize().padding(12.dp)) {
         Text("DEVICE MAP", fontSize = 10.sp, color = MaterialTheme.colorScheme.primary, letterSpacing = 1.2.sp)
@@ -438,6 +492,7 @@ private fun OfflineDeviceMap(devices: List<DeviceEntity>, modifier: Modifier) {
             }
         }
         LazyColumn(Modifier.weight(0.58f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            if (events.any { it.isMappableHistory() }) item(key = "history") { HistoryPanel(events, selectedEvent) { selectedEvent = it } }
             items(mapped, key = { it.id }) { item ->
                 Text(
                     "${item.displayName ?: item.id} · ${item.band} ${item.lastRssi} dBm · ${String.format(Locale.US, "%.5f, %.5f", item.observedLat, item.observedLon)}",
