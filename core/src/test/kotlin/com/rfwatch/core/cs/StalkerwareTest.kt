@@ -50,4 +50,31 @@ class StalkerwareTest {
         assertEquals(AppRisk.CRITICAL, a.risk)
         assertTrue(a.reasons.first().contains("APK file SHA-256"))
     }
+
+    @Test fun ctsShimSignedWithPublicTestKeyIsNotStalkerware() {
+        // Seen on a ZTE P660: system CTS shims in /apex signed with the AOSP testkey, which the
+        // indicator list also has for AllTracker.
+        val a = StalkerwareScorer.assess(
+            AppFacts("com.android.cts.ctsshim", "com.android.cts.ctsshim", certSha1 = listOf("61ED377E85D386A8DFEE6B864BD85B0BFAA5AF81"),
+                isSystem = true, hasLauncherIcon = false), now,
+        )
+        assertEquals(AppRisk.LOW, a.risk)
+        assertTrue(a.reasons.any { it.contains("public") })
+    }
+
+    @Test fun systemAppPermissionsAreNotCountedButUserGrantedPowersAre() {
+        val shell = AppFacts("com.android.shell", "Shell", isSystem = true, hasLauncherIcon = false,
+            grantedPermissions = setOf("android.permission.READ_SMS", "android.permission.READ_CALL_LOG", "android.permission.RECORD_AUDIO"))
+        assertEquals(AppRisk.LOW, StalkerwareScorer.assess(shell, now).risk)
+        val sysWithAccessibility = shell.copy(packageName = "com.vendor.sys", accessibilityEnabled = true, deviceAdminActive = true, notificationListenerEnabled = true)
+        assertEquals(AppRisk.HIGH, StalkerwareScorer.assess(sysWithAccessibility, now).risk)
+    }
+
+    @Test fun userAppWithPublicKeyStillScoredOnBehaviour() {
+        val a = StalkerwareScorer.assess(
+            AppFacts("com.x.spy", "System Service", certSha1 = listOf("61ED377E85D386A8DFEE6B864BD85B0BFAA5AF81"),
+                hasLauncherIcon = false, accessibilityEnabled = true, grantedPermissions = setOf("android.permission.READ_SMS")), now,
+        )
+        assertEquals(AppRisk.HIGH, a.risk)
+    }
 }

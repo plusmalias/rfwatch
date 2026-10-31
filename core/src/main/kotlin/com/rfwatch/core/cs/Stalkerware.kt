@@ -75,6 +75,12 @@ object StalkerwareScorer {
             "|(service|services|update|updater|sync|framework|manager|helper|core)$",
         RegexOption.IGNORE_CASE,
     )
+    /** Android's published sample signing certificates (SHA-1). Anyone can sign with these. */
+    private val PUBLIC_AOSP_KEYS = mapOf(
+        "61ED377E85D386A8DFEE6B864BD85B0BFAA5AF81" to "AOSP 'testkey'",
+        "27196E386B875E76ADF700E7EA84E4C6EEE33DFA" to "AOSP 'platform' test key",
+    )
+
     private val STORES = setOf("com.android.vending", "com.amazon.venezia", "com.huawei.appmarket", "com.sec.android.app.samsungapps", "com.xiaomi.market", "org.fdroid.fdroid")
 
     private val PERMISSION_POINTS = listOf(
@@ -101,20 +107,39 @@ object StalkerwareScorer {
             add(100, "package ${f.packageName} is a known ${it.type} app: ${it.name}" + if (it.aliases.isNotBlank()) " (also sold as ${it.aliases})" else "")
         } ?: f.apkSha256?.let { h -> StalkerwareDb.byApkSha256(h)?.also {
             add(100, "APK file SHA-256 $h exactly matches a known ${it.type} sample: ${it.name}" + if (it.aliases.isNotBlank()) " (indicator source: ${it.aliases})" else "")
-        } } ?: f.certSha1.firstNotNullOfOrNull { sha -> StalkerwareDb.byCertSha1(sha)?.also {
-            add(100, "signed with certificate $sha belonging to known ${it.type}: ${it.name}")
-        } }
+        } } ?: f.certSha1.firstNotNullOfOrNull { sha ->
+            val fam = StalkerwareDb.byCertSha1(sha) ?: return@firstNotNullOfOrNull null
+            when {
+                // Android's published sample keys: some stalkerware was signed with them, but so are
+                // parts of many phone ROMs. A shared public key proves nothing about the app.
+                sha.uppercase() in PUBLIC_AOSP_KEYS -> {
+                    reasons += "±0 signed with Android's public ${PUBLIC_AOSP_KEYS[sha.uppercase()]} ($sha) — also used by ${fam.name}, but anyone can sign with it, so this is not evidence"
+                    null
+                }
+                // Preinstalled system-image components are judged on package / APK-hash matches only.
+                f.isSystem -> {
+                    reasons += "±0 preinstalled system app whose certificate also appears for ${fam.name} — not counted (system image)"
+                    null
+                }
+                else -> fam.also { add(100, "signed with certificate $sha belonging to known ${it.type}: ${it.name}") }
+            }
+        }
 
         if (f.accessibilityEnabled) add(30, "Accessibility service is ON — it can read everything on screen and what you type")
         if (f.deviceAdminActive) add(25, "is an active device administrator — harder to uninstall, can lock/wipe the phone")
         if (f.notificationListenerEnabled) add(20, "reads all your notifications (messages, 2FA codes)")
-        if (!f.hasLauncherIcon && !f.isSystem) add(20, "has no app-drawer icon (hidden from you)")
-        if (!f.isSystem && (f.installer == null || f.installer !in STORES)) {
-            add(10, "installed outside an app store (installer: ${f.installer ?: "unknown / sideloaded"})")
+        if (f.isSystem) {
+            // System apps hold sensitive permissions by design; only user-granted powers above count.
+            if (reasons.isEmpty()) reasons += "±0 preinstalled system app — normal system permissions are not counted"
+        } else {
+            if (!f.hasLauncherIcon) add(20, "has no app-drawer icon (hidden from you)")
+            if (f.installer == null || f.installer !in STORES) {
+                add(10, "installed outside an app store (installer: ${f.installer ?: "unknown / sideloaded"})")
+            }
+            if (SYSTEM_SOUNDING.containsMatchIn(f.label)) add(15, "name \"${f.label}\" imitates a system component")
+            PERMISSION_POINTS.forEach { (perm, pr) -> if (perm in f.grantedPermissions && pr.first > 0) add(pr.first, pr.second) }
+            if (f.firstInstallMs > 0 && nowMs - f.firstInstallMs < 30L * 24 * 3600_000) add(5, "installed in the last 30 days")
         }
-        if (SYSTEM_SOUNDING.containsMatchIn(f.label) && !f.isSystem) add(15, "name \"${f.label}\" imitates a system component")
-        PERMISSION_POINTS.forEach { (perm, pr) -> if (perm in f.grantedPermissions && pr.first > 0) add(pr.first, pr.second) }
-        if (f.firstInstallMs > 0 && nowMs - f.firstInstallMs < 30L * 24 * 3600_000) add(5, "installed in the last 30 days")
 
         val risk = when {
             family != null -> AppRisk.CRITICAL
