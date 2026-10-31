@@ -180,6 +180,10 @@ class RfWatchRepository(
     // Live room-sweep candidates, keyed by radio address and finding reason.
     private val roomMap = HashMap<String, com.rfwatch.core.cs.SweepFinding>()
     private val roomLastSeenMs = HashMap<String, Long>()
+    private var roomDirty = false
+    /** Last parse per BLE address, reused while the advert payload is byte-identical. */
+    private class BleParse(val key: String, val match: TrackerMatch?, val fingerprint: com.rfwatch.core.id.Fingerprint)
+    private val bleParseCache = HashMap<String, BleParse>()
     private val _room = MutableStateFlow<List<com.rfwatch.core.cs.SweepFinding>>(emptyList())
     val roomFindings: StateFlow<List<com.rfwatch.core.cs.SweepFinding>> = _room.asStateFlow()
 
@@ -599,6 +603,7 @@ class RfWatchRepository(
             while (isActive) {
                 delay(CONTACT_PUBLISH_INTERVAL_MS)
                 publishContacts()
+                publishRoom(System.currentTimeMillis())
             }
         }
         scope.launch {
@@ -628,7 +633,11 @@ class RfWatchRepository(
         scope.launch {
             bleScanner.scan().collect { sighting ->
                 val adv = sighting.advertisement
-                val match = TrackerParser.parse(adv)
+                // Most adverts repeat byte-for-byte; reuse the parse/fingerprint/details from the
+                // last identical advert of this address and only rebuild when the payload changes.
+                val parseKey = "${sighting.rawAdvertisingHex}|${sighting.deviceName}|${sighting.connectable}|${sighting.legacyAdvertisement}"
+                val cachedParse = bleParseCache[adv.address]?.takeIf { it.key == parseKey }
+                val match = if (cachedParse != null) cachedParse.match else TrackerParser.parse(adv)
                 val facts = DeviceFacts(
                     mac = adv.address,
                     ssid = null,
@@ -637,20 +646,26 @@ class RfWatchRepository(
                     serviceUuids = adv.serviceUuids16,
                     rssi = adv.rssi,
                 )
-                val addressType = runCatching {
-                    val firstOctet = adv.address.substringBefore(':').toInt(16)
-                    if ((firstOctet and 0x02) != 0) "Locally administered address (may be private/rotating)" else "Globally administered address"
-                }.getOrDefault("Address type unavailable")
-                val manufacturerData = adv.manufacturerData.toSortedMap().map { (companyId, bytes) ->
-                    "0x${companyId.toString(16).uppercase().padStart(4, '0')}=${bytes.joinToString("") { "%02X".format(it.toInt() and 0xFF) }}"
-                }
-                val fingerprint = com.rfwatch.core.id.BleFingerprinter.fingerprint(adv, sighting.deviceName)
                 com.rfwatch.core.cs.BleSpamDetector.popupType(adv)?.let { type ->
                     bleSpam.onPopupAdvert(adv.address, type, adv.rssi, adv.timestampMs)?.let { onBleSpam(it, adv.timestampMs) }
                 }
                 adv.serviceData16[com.rfwatch.core.id.RemoteIdParser.BLE_SERVICE_UUID]
                     ?.let { com.rfwatch.core.id.RemoteIdParser.parseBleServiceData(it) }
                     ?.let { onDrone(adv.address, it, adv.rssi, adv.timestampMs, "Bluetooth Remote ID") }
+                if (cachedParse != null) {
+                    // Unchanged payload: previous radioDetails stay on the row (null = keep).
+                    onDevice(adv.address, Band.BLE, sighting.deviceName, adv.rssi, adv.timestampMs, facts, match, null, cachedParse.fingerprint)
+                    return@collect
+                }
+                val addressType = runCatching {
+                    val firstOctet = adv.address.substringBefore(':').toInt(16)
+                    if ((firstOctet and 0x02) != 0) "Locally administered address (may be private/rotating)" else "Globally administered address"
+                }.getOrDefault("Address type unavailable")
+                val manufacturerData = adv.manufacturerData.toSortedMap().map { (companyId, bytes) ->
+                    "0x${companyId.toString(16).uppercase().padStart(4, '0')}=${com.rfwatch.core.math.Hex.upper(bytes)}"
+                }
+                val fingerprint = com.rfwatch.core.id.BleFingerprinter.fingerprint(adv, sighting.deviceName)
+                bleParseCache[adv.address] = BleParse(parseKey, match, fingerprint)
                 val radioDetails = buildList {
                     add("BLE address ${adv.address}")
                     add(addressType)
@@ -789,18 +804,14 @@ class RfWatchRepository(
 
         // Passive radio candidates on BLE and Wi-Fi. A nameless BLE beacon alone is too common
         // to treat as a hidden-camera finding, so BLE contributes only explicit camera/IoT rules.
-        val findings = com.rfwatch.core.cs.RoomSweep.analyze(listOf(facts), ruleEngine)
+        val findings = com.rfwatch.core.cs.RoomSweep.analyze(facts, hits)
             .filter { band == Band.WIFI || it.reason == com.rfwatch.core.cs.SweepReason.CAMERA_IOT_SIGNATURE }
         findings.forEach {
             val findingKey = it.key + ":" + it.reason.name
             roomMap[findingKey] = it
             roomLastSeenMs[findingKey] = ts
         }
-        val stale = roomLastSeenMs.filterValues { ts - it > ROOM_FINDING_TTL_MS }.keys
-        stale.forEach { roomLastSeenMs.remove(it); roomMap.remove(it) }
-        if (findings.isNotEmpty() || stale.isNotEmpty()) {
-            _room.value = roomMap.values.sortedByDescending { it.threat.ordinal }
-        }
+        if (findings.isNotEmpty()) roomDirty = true
 
         if (huntTargetId == id) _hunt.value = HuntSample(rssi, ts)
 
@@ -1078,7 +1089,7 @@ class RfWatchRepository(
                 lastObservationMs.clear(); liveContacts.clear(); contactsDirty = false
                 activeSessionId = null
                 _scanSession.value = ScanSessionStatus()
-                roomMap.clear(); roomLastSeenMs.clear()
+                roomMap.clear(); roomLastSeenMs.clear(); bleParseCache.clear()
                 trackerAlertGate.reset()
                 lawTracker.reset()
                 homeFence = null; homeBaseline.clear(); homeVisits = 0; insideHome = false; visitDevices.clear()
@@ -1091,6 +1102,18 @@ class RfWatchRepository(
             _lawEncounter.value = null
             _home.value = HomeStatus(); _followers.value = emptyMap(); _drones.value = emptyMap()
         }
+    }
+
+    /** Drops room findings not heard for ROOM_FINDING_TTL_MS and publishes the rest (≤1/s, not per advert). */
+    private fun publishRoom(nowMs: Long) {
+        val it = roomLastSeenMs.entries.iterator()
+        while (it.hasNext()) {
+            val e = it.next()
+            if (nowMs - e.value > ROOM_FINDING_TTL_MS) { roomMap.remove(e.key); it.remove(); roomDirty = true }
+        }
+        if (!roomDirty) return
+        roomDirty = false
+        _room.value = roomMap.values.sortedByDescending { it.threat.ordinal }
     }
 
     /** Publishes radar contacts, keeping any direction-finding estimate set from the UI side. */

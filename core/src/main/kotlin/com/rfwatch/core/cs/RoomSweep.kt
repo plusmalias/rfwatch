@@ -35,27 +35,25 @@ object RoomSweep {
 
     fun analyze(devices: List<DeviceFacts>, engine: RuleEngine): List<SweepFinding> {
         val out = ArrayList<SweepFinding>()
-        for (d in devices) {
-            val key = d.mac ?: d.ssid ?: d.name ?: continue
-
-            engine.evaluate(d)
-                .filter { it.category == com.rfwatch.core.rules.RuleCategory.CAMERA_IOT }
-                .forEach {
-                    out.add(SweepFinding(key, SweepReason.CAMERA_IOT_SIGNATURE, it.threat,
-                        "${it.label} (${it.matchedOn})", d.rssi))
-                }
-
-            if (d.hiddenSsid) {
-                out.add(SweepFinding(key, SweepReason.HIDDEN_SSID, Threat.NOTABLE,
-                    "Access point hiding its SSID", d.rssi))
-            }
-
-            val nameless = d.ssid.isNullOrBlank() && d.name.isNullOrBlank()
-            if (d.rssi >= STRONG_RSSI && (nameless || d.hiddenSsid)) {
-                out.add(SweepFinding(key, SweepReason.STRONG_SOURCELESS, Threat.PRIORITY,
-                    "Strong signal (${d.rssi} dBm) with no visible source", d.rssi))
-            }
-        }
+        for (d in devices) out += analyze(d, engine.evaluate(d))
         return out.sortedByDescending { it.threat.ordinal * 1000 + (it.rssi + 100) }
+    }
+
+    /** Findings for one device from rule [hits] the caller already evaluated (no second rule pass). */
+    fun analyze(d: DeviceFacts, hits: List<com.rfwatch.core.rules.RuleHit>): List<SweepFinding> {
+        val key = d.mac ?: d.ssid ?: d.name ?: return emptyList()
+        val out = ArrayList<SweepFinding>(2)
+        hits.filter { it.category == com.rfwatch.core.rules.RuleCategory.CAMERA_IOT }.forEach {
+            out.add(SweepFinding(key, SweepReason.CAMERA_IOT_SIGNATURE, it.threat, "${it.label} (${it.matchedOn})", d.rssi))
+        }
+        if (d.hiddenSsid) {
+            out.add(SweepFinding(key, SweepReason.HIDDEN_SSID, Threat.NOTABLE, "Access point hiding its SSID", d.rssi))
+        }
+        val nameless = d.ssid.isNullOrBlank() && d.name.isNullOrBlank()
+        if (d.rssi >= STRONG_RSSI && (nameless || d.hiddenSsid)) {
+            out.add(SweepFinding(key, SweepReason.STRONG_SOURCELESS, Threat.PRIORITY,
+                "Strong signal (${d.rssi} dBm) with no visible source", d.rssi))
+        }
+        return out
     }
 }
