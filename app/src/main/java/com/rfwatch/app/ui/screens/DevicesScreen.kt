@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -184,6 +185,8 @@ fun DevicesScreen(vm: RfWatchViewModel, modifier: Modifier = Modifier, onRoom: (
 private fun DeviceCard(d: com.rfwatch.app.data.DeviceEntity, selected: Boolean, vm: RfWatchViewModel, onClick: () -> Unit) {
     var rssiHistory by remember(d.id) { mutableStateOf(emptyList<Int>()) }
     var showRawAdvertisement by remember(d.id) { mutableStateOf(false) }
+    var sameHints by remember(d.id) { mutableStateOf<List<Pair<com.rfwatch.core.cs.SameDeviceHint, com.rfwatch.app.data.DeviceEntity>>>(emptyList()) }
+    LaunchedEffect(d.id, selected) { sameHints = if (selected) vm.sameDeviceHints(d.id) else emptyList() }
     var followerScore by remember(d.id) { mutableStateOf<FollowerScore?>(null) }
     var renaming by remember(d.id) { mutableStateOf(false) }
     if (renaming) {
@@ -278,6 +281,7 @@ private fun DeviceCard(d: com.rfwatch.app.data.DeviceEntity, selected: Boolean, 
                                     )
                                 }
                             }
+                            if (sameHints.isNotEmpty()) SameDeviceSection(sameHints) { vm.openDevice(it, com.rfwatch.app.ui.DeviceDest.DETAILS) }
                             com.rfwatch.app.ui.DeviceLinks(vm, d.id, here = com.rfwatch.app.ui.DeviceDest.DETAILS)
                             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                                 OutlinedButton(onClick = { vm.setDeviceFlags(d.id, own = !d.isOwnDevice) }) {
@@ -381,5 +385,33 @@ internal fun com.rfwatch.app.data.DeviceEntity.effectiveKind(): DeviceKind {
         "fleet" in c || "vehicle" in c -> DeviceKind.FLEET
         band == "WIFI" -> DeviceKind.NETWORK
         else -> DeviceKind.UNKNOWN
+    }
+}
+
+/** "Probably the same device" hints: other rows that look like this device under another address. Display only. */
+@Composable
+private fun SameDeviceSection(
+    hints: List<Pair<com.rfwatch.core.cs.SameDeviceHint, com.rfwatch.app.data.DeviceEntity>>,
+    open: (String) -> Unit,
+) {
+    Column(
+        Modifier.fillMaxWidth().padding(vertical = 4.dp)
+            .border(1.dp, com.rfwatch.app.ui.theme.RadarCyan.copy(alpha = 0.35f), androidx.compose.foundation.shape.RoundedCornerShape(8.dp))
+            .padding(8.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        Text("MAY BE THE SAME DEVICE", fontSize = 10.sp, color = com.rfwatch.app.ui.theme.RadarCyan, letterSpacing = 1.sp)
+        hints.sortedBy { it.first.strength }.forEach { (h, other) ->
+            Column(Modifier.fillMaxWidth().clickable { open(other.id) }) {
+                Text(
+                    (if (h.strength == com.rfwatch.core.cs.HintStrength.PROBABLY) "Probably: " else "Possibly: ") +
+                        com.rfwatch.app.ui.friendlyName(other.nickname, other.displayName, other.brand, other.effectiveKind(), other.id) + "  ›",
+                    fontSize = 13.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
+                    color = if (h.strength == com.rfwatch.core.cs.HintStrength.PROBABLY) Color.White else Color(0xFFCBD5E1),
+                )
+                Text(h.reason, fontSize = 10.sp, color = ConsoleMuted)
+            }
+        }
+        Text("A hint, not proof — records are kept separate. Tap one to open it.", fontSize = 9.sp, color = ConsoleMuted)
     }
 }

@@ -492,3 +492,16 @@ ESP32 sensors for real live yard tracking.
 
 Adding (1) "probably same device" hints (BLE address rotations, router multi-radio BSSIDs) — display-only,
 no merging, not fed into alerts; (2) on-demand ultrasonic beacon check (mic, Protect hub, 17–22 kHz).
+
+### 2026-11-01 (evening) — Claude — DONE: "may be the same device" hints (display only)
+
+- `core/cs/SameDeviceHints`: BLE address rotations linked only when **mutual and unique** (same signature with
+  ≥2 of brand/model/kind/name, next address starts ≤5 min after the last went quiet — ≤2 min and ≤8 dB for
+  generic "Apple · phone"-type signatures — up to 60 s overlap, signal step ≤12 dB using the next row's FIRST
+  RSSI via `ObservationDao.firstRssi`). Wi-Fi: derived/same-first-5-octet BSSIDs; same (normalised -5G/_EXT)
+  SSID → probably, other SSID only when the tail is ≤16 apart → possibly.
+- Device details card: "MAY BE THE SAME DEVICE" section with tappable links. Records are NOT merged and hints
+  are NOT used by follower / home / alerts.
+- Measured on the ZTE (debug `RFWatchDup` line "SAME-DEVICE hints"): first cut gave 839 pairs (730 vague);
+  tightened → 286 (BLE 25 — matches the ~25 rotation rows measured before; Wi-Fi 261 multi-radio routers).
+- Tests: core 130/130 (+12), app 15/15, both APKs, offline no INTERNET. Next: ultrasonic check (still Claude).

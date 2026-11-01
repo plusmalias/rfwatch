@@ -587,12 +587,45 @@ class RfWatchRepository(
         )
     }
 
+    private fun DeviceEntity.summary() = com.rfwatch.core.cs.DeviceSummary(
+        id = id, band = band, mac = lastMac ?: id, name = displayName, brand = brand, model = model, kind = kind,
+        firstSeenMs = firstSeenMs, lastSeenMs = lastSeenMs, lastRssi = lastRssi,
+    )
+
+    /** "Probably the same device as …" hints for one device (display only — nothing is merged). */
+    suspend fun sameDeviceHints(id: String): List<Pair<com.rfwatch.core.cs.SameDeviceHint, DeviceEntity>> {
+        val devices = withContext(ingestDispatcher) { flushPending(); ensureDeviceCache(); deviceCache.values.toList() }
+        val byId = devices.associateBy { it.id }
+        val target = byId[id]?.summary() ?: return emptyList()
+        val all = devices.map { it.summary() }
+        val firsts = com.rfwatch.core.cs.SameDeviceHints.rotationCandidates(target, all)
+            .associateWith { database.observationDao().firstRssi(it) }
+        return com.rfwatch.core.cs.SameDeviceHints.forDevice(target, all) { firsts[it] }
+            .mapNotNull { h -> byId[h.otherId]?.let { h to it } }
+    }
+
+    /** Debug: how many same-device hint pairs the whole inventory produces (sanity check vs rotations measured). */
+    private suspend fun sameDeviceHintCounts(devices: List<DeviceEntity>): String {
+        val all = devices.map { it.summary() }
+        val firstCache = HashMap<String, Int?>()
+        var probably = 0; var possibly = 0; var ble = 0; var wifi = 0
+        for (t in all) {
+            com.rfwatch.core.cs.SameDeviceHints.rotationCandidates(t, all).forEach { if (it !in firstCache) firstCache[it] = database.observationDao().firstRssi(it) }
+            com.rfwatch.core.cs.SameDeviceHints.forDevice(t, all) { firstCache[it] }.filter { it.otherId > t.id }.forEach {
+                if (it.strength == com.rfwatch.core.cs.HintStrength.PROBABLY) probably++ else possibly++
+                if (t.band == "BLE") ble++ else wifi++
+            }
+        }
+        return "SAME-DEVICE hints: ${probably + possibly} pairs ($probably probably, $possibly possibly; BLE $ble, Wi-Fi $wifi) over ${all.size} devices"
+    }
+
     /** Debug diagnostic (logcat tag RFWatchDup): where Map/Locate duplicates come from. Counts only. */
     suspend fun logDuplicateReport() {
         val devices = withContext(ingestDispatcher) { flushPending(); ensureDeviceCache(); deviceCache.values.toList() }
         val sample = devices.sortedByDescending { it.seenCount }.take(5)
         val locate = sample.associateWith { database.observationDao().recentGeoForDevice(it.id, LOCATE_SAMPLE_LIMIT) }
         DuplicateReport.analyze(devices, locate).lines().forEach { android.util.Log.i("RFWatchDup", it) }
+        android.util.Log.i("RFWatchDup", sameDeviceHintCounts(devices))
     }
 
     /** Debug diagnostic (logcat tag RFWatchRadar): which gate keeps each Radar device off the plot. */

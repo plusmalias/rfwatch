@@ -34,6 +34,8 @@ interface ObservationDao {
     @Query("SELECT * FROM observations WHERE deviceId = :id AND lat IS NOT NULL ORDER BY timestampMs") suspend fun geoForDevice(id: String): List<ObservationEntity>
     @Query("SELECT * FROM observations WHERE deviceId = :id AND lat IS NOT NULL AND lon IS NOT NULL ORDER BY timestampMs DESC, rowId DESC LIMIT :limit")
     suspend fun recentGeoForDevice(id: String, limit: Int = 500): List<ObservationEntity>
+    @Query("SELECT rssi FROM observations WHERE deviceId = :id ORDER BY timestampMs, rowId LIMIT 1")
+    suspend fun firstRssi(id: String): Int?
     @Query("SELECT * FROM observations WHERE deviceId = :id AND lat IS NOT NULL AND lon IS NOT NULL AND timestampMs >= :since ORDER BY timestampMs")
     suspend fun geoForDeviceSince(id: String, since: Long): List<ObservationEntity>
     @Query("SELECT gpsAccuracyM FROM observations WHERE lat IS NOT NULL AND gpsAccuracyM IS NOT NULL AND timestampMs >= :since")
