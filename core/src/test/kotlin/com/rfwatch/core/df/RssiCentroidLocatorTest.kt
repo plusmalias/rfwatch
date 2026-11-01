@@ -54,4 +54,21 @@ class RssiCentroidLocatorTest {
         }
         assertFalse(RssiCentroidLocator.estimate(samples)!!.directional)
     }
+
+    @Test fun oneBadFixFarAwayIsNotMistakenForMovement() {
+        // Seen on the phone 2026-11-01: 7 sightings at home plus one ±80 m network-style fix 56 m away
+        // produced "56 m spread" in 34 s and a fake dot. Poor fixes must not create spread.
+        val home = List(7) { obs(0.3 * (it % 3), 0.2 * (it % 2), -62 - it % 4) }
+        val (lat, lon) = frame.toLatLon(56.0, 0.0)
+        val glitch = RadioObservation("d", Band.BLE, -70, 0, fix = GpsFix(lat, lon, 80.0, 0))
+        assertFalse(RssiCentroidLocator.estimate(home + glitch)!!.directional)
+    }
+
+    @Test fun onlyPoorFixesGiveANonDirectionalEstimate() {
+        val poor = (0..9).map { i ->
+            val (lat, lon) = frame.toLatLon(i * 10.0, 0.0)
+            RadioObservation("d", Band.BLE, -60 - i, 0, fix = GpsFix(lat, lon, 60.0, 0))
+        }
+        assertFalse(RssiCentroidLocator.estimate(poor)!!.directional)
+    }
 }

@@ -595,6 +595,25 @@ class RfWatchRepository(
         DuplicateReport.analyze(devices, locate).lines().forEach { android.util.Log.i("RFWatchDup", it) }
     }
 
+    /** Debug diagnostic (logcat tag RFWatchRadar): which gate keeps each Radar device off the plot. */
+    @Volatile private var radarReportLogged = false
+
+    suspend fun logRadarReport(ids: List<String>) {
+        if (radarReportLogged || ids.isEmpty()) return
+        radarReportLogged = true
+        withContext(ingestDispatcher) { flushPending(); ensureDeviceCache() }
+        val since = System.currentTimeMillis() - 12 * 60 * 60_000L
+        val good = 20.0
+        val rows = ids.mapIndexed { i, id ->
+            val dev = deviceCache[id]
+            val window = database.observationDao().recentGeoForDevice(id, POSITION_SAMPLE_LIMIT).map { it.toRadioObservation() }
+            val day = database.observationDao().geoForDeviceSince(id, since).map { it.toRadioObservation() }
+            val label = dev?.nickname ?: dev?.displayName ?: listOfNotNull(dev?.brand, dev?.kind).joinToString(" ").ifBlank { id.takeLast(5) }
+            RadarReport.row(label, dev?.band ?: "?", i >= POSITION_DEVICE_LIMIT, window, day, good)
+        }
+        RadarReport.lines(rows, database.observationDao().geoAccuraciesSince(since), good).forEach { android.util.Log.i("RFWatchRadar", it) }
+    }
+
     /** Refresh a bounded set of live motion/location fits while the online map is visible. */
     suspend fun refreshMapEstimates() {
         val candidates = database.deviceDao().recentMapped(MAP_ESTIMATE_DEVICE_LIMIT)

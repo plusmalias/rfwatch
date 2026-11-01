@@ -40,10 +40,18 @@ object RssiCentroidLocator {
     /** Movement must also exceed this multiple of the typical GPS error, or it is just jitter. */
     const val SPREAD_OVER_ACCURACY = 3.0
     const val WINDOW_DB = 12.0
+    /** Fixes reporting worse accuracy than this are ignored for position and spread. */
+    const val MAX_FIX_ACCURACY_M = 20.0
 
     fun estimate(observations: List<RadioObservation>): CentroidEstimate? {
-        val geo = observations.filter { it.fix != null }
-        if (geo.size < MIN_SAMPLES) return null
+        val all = observations.filter { it.fix != null }
+        if (all.size < MIN_SAMPLES) return null
+        // Poor fixes (network location, GPS warm-up) land tens of metres off and would fake "spread"
+        // on their own, so direction is judged from good fixes only. Without enough of them the
+        // estimate is still returned, but never directional.
+        val good = all.filter { it.fix!!.accuracyM <= MAX_FIX_ACCURACY_M }
+        val enoughGood = good.size >= MIN_SAMPLES
+        val geo = if (enoughGood) good else all
         val maxRssi = geo.maxOf { it.rssi }
         val near = geo.filter { it.rssi >= maxRssi - WINDOW_DB }
         val frame = LocalFrame(near.map { it.fix!!.lat }.average(), near.map { it.fix!!.lon }.average())
@@ -60,7 +68,7 @@ object RssiCentroidLocator {
         val allEnu = geo.map { frame.toEnu(it.fix!!.lat, it.fix.lon) }
         val spread = hypot(allEnu.maxOf { it.east } - allEnu.minOf { it.east }, allEnu.maxOf { it.north } - allEnu.minOf { it.north })
         val typicalAccuracy = geo.map { it.fix!!.accuracyM }.sorted()[geo.size / 2]
-        val directional = spread >= MIN_SPREAD_M && spread >= SPREAD_OVER_ACCURACY * typicalAccuracy
+        val directional = enoughGood && spread >= MIN_SPREAD_M && spread >= SPREAD_OVER_ACCURACY * typicalAccuracy
         // Without spread the device could be anywhere around the spot at roughly the RSSI range.
         val rangeFloor = rssiRangeM(maxRssi)
         val radius = if (directional) max(scatter + gpsAcc, rangeFloor * 0.5) else max(rangeFloor, gpsAcc)

@@ -464,4 +464,26 @@ Keeping Codex's single Radar lazy scroll, compact session row and collapsible fi
   within 64. A derived address no longer counts as "randomised" evidence. **A security drop still
   always alerts**, and unrelated randomised BSSIDs still alert. Tests use changed addresses.
 - Verified: core 110/110, app 15/15, both APKs build, offline APK has no INTERNET.
-- Next (Claude, in progress): Radar dots rarely appear after walking — measuring with a debug report first.
+
+### 2026-11-01 (afternoon) — Claude — DONE (Codex's turn): Radar dots readable + no fake "located"
+
+**Measured first** (new debug-only `RadarReport`, logcat tag `RFWatchRadar`, once per process when Radar
+opens; counts/distances only): today's fixes median 2 m, p90 6 m, 2 % worse than 20 m — GPS quality and
+the 120-sample window were NOT the problem ("whole day" tally = "now" tally). Real causes:
+1. A single poor fix (~56 m away, ±80–100 m) inflated min/max spread → 23 of 27 devices "located" while
+   standing at home (e.g. 7 sightings in 34 s with "56 m spread").
+2. The plot zoomed to fit uncertainty circles (50 m scale) and drew every circle → dots piled in a few
+   metres under ~20 overlapping rings; looked like "no dots".
+
+**Fix:** `RssiCentroidLocator` ignores fixes worse than 20 m (`MAX_FIX_ACCURACY_M`) for centroid, spread and
+median accuracy; if fewer than 3 good fixes remain the estimate is returned but never directional (global
+`MAX_FIX_ACCURACY_M = 100` for stored observations unchanged — follower/home/Map still use them).
+Location scope zooms to the 80th-percentile dot distance (min 20 m), pins farther dots hollow on the rim in
+their direction, and draws the uncertainty circle only for the selected device. On the ZTE: 27 → "7 located ·
+13 by distance", dots separated on a 20 m scale. Tests: core 112/112 (+2 locator), app 15/15, both APKs,
+offline has no INTERNET.
+
+**Known limit (told Jorden):** a weighted centroid can only put a dot on the path walked, where that device
+was loudest. Live position of a moving phone in the yard is not possible from one phone (no direction, RSSI
+±50–100 %, MAC rotation). Ideas offered: "approaching" trend alert for unknown devices at home; multi-node
+ESP32 sensors for real live yard tracking.

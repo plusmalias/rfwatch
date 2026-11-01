@@ -115,6 +115,9 @@ fun RadarScreen(vm: RfWatchViewModel, modifier: Modifier = Modifier) {
     }
     val latestIds by androidx.compose.runtime.rememberUpdatedState(filtered.map { it.id })
     LaunchedEffect(Unit) {
+        if (com.rfwatch.app.BuildConfig.DEBUG) { kotlinx.coroutines.delay(10_000); vm.logRadarReport(latestIds) }
+    }
+    LaunchedEffect(Unit) {
         while (true) {
             vm.refreshPositions(latestIds)
             kotlinx.coroutines.delay(5_000)

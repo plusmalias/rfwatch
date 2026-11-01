@@ -124,6 +124,7 @@ class RfWatchViewModel(private val repo: RfWatchRepository) : ViewModel() {
         repo.recentObservations(deviceId)
 
     suspend fun refreshMapEstimates() = repo.refreshMapEstimates()
+    fun logRadarReport(ids: List<String>) { viewModelScope.launch { runCatching { repo.logRadarReport(ids) }.onFailure { android.util.Log.e("RFWatchRadar", "report failed", it) } } }
     fun logDuplicateReport() { viewModelScope.launch { runCatching { repo.logDuplicateReport() } } }
 
     fun startScanSession() {

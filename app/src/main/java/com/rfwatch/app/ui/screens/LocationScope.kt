@@ -128,8 +128,12 @@ internal fun LocationScopePanel(
         val far = unplaced.sortedByDescending { it.lastRssi }.take(MAX_RANGE_RINGS).maxOf { rssiDistanceEstimateMeters(it.lastRssi) }
         listOf(3.0, 5.0, 10.0, 20.0, 30.0, 50.0, 100.0).firstOrNull { it >= far * 1.15 } ?: 100.0
     } else niceRange(
-        (placed.map { hypot(it.east, it.north) + it.radiusM * 0.5 } +
-            droneMarks.flatMap { listOfNotNull(hypot(it.east, it.north), it.opEast?.let { e -> hypot(e, it.opNorth ?: 0.0) }) }).maxOrNull() ?: 20.0,
+        // Fit the dots themselves (not their uncertainty circles), ignoring the farthest 20 %:
+        // outliers are pinned to the rim instead of shrinking the cluster near you to a blob.
+        maxOf(
+            placed.map { hypot(it.east, it.north) }.sorted().let { d -> if (d.isEmpty()) 0.0 else d[((d.size - 1) * 0.8).toInt()] * 1.15 },
+            droneMarks.flatMap { listOfNotNull(hypot(it.east, it.north), it.opEast?.let { e -> hypot(e, it.opNorth ?: 0.0) }) }.maxOrNull() ?: 0.0,
+        ).takeIf { it > 0 } ?: 20.0,
     )
     Card(
         Modifier.fillMaxWidth(),
@@ -146,11 +150,13 @@ internal fun LocationScopePanel(
                     detectTapGestures { tap ->
                         val cx = size.width / 2f; val cy = size.height / 2f
                         val scale = min(cx, cy) * 0.92f / rangeM.toFloat()
+                        val maxR = min(cx, cy) * 0.92f
                         placed.minByOrNull { p ->
-                            hypot((cx + p.east.toFloat() * scale - tap.x).toDouble(), (cy - p.north.toFloat() * scale - tap.y).toDouble())
+                            val o = plotOffset(p, cx, cy, scale, maxR)
+                            hypot((o.x - tap.x).toDouble(), (o.y - tap.y).toDouble())
                         }?.let { p ->
-                            val d = hypot((cx + p.east.toFloat() * scale - tap.x).toDouble(), (cy - p.north.toFloat() * scale - tap.y).toDouble())
-                            if (d < 60) onSelect(p.contact.id)
+                            val o = plotOffset(p, cx, cy, scale, maxR)
+                            if (hypot((o.x - tap.x).toDouble(), (o.y - tap.y).toDouble()) < 60) onSelect(p.contact.id)
                         }
                     }
                 },
@@ -327,17 +333,30 @@ private fun DrawScope.drawLocationScope(
         }
     }
     placed.sortedBy { it.contact.id == selectedId }.forEach { p ->
-        val px = cx + (p.east * scale).toFloat()
-        val py = cy - (p.north * scale).toFloat()
+        val o = plotOffset(p, cx, cy, scale, maxR)
+        val pinned = hypot(p.east, p.north) * scale > maxR - 8f
         val color = deviceCategoryColor(p.contact.category, p.contact.classification)
         val selected = p.contact.id == selectedId
-        val r = (p.radiusM * scale).toFloat().coerceIn(6f, maxR * 0.6f)
-        if (selected) drawCircle(color.copy(alpha = 0.20f), r, Offset(px, py))
-        drawCircle(color.copy(alpha = if (selected) 0.8f else 0.25f), r, Offset(px, py), style = Stroke(if (selected) 2f else 1f))
-        if (p.driveBy) drawCircle(OkGreen, 11f, Offset(px, py), style = Stroke(2.5f))
-        if (selected) drawCircle(Color.White, 14f, Offset(px, py), style = Stroke(2.5f))
-        drawCircle(color, if (selected) 8f else 6f, Offset(px, py))
+        // Uncertainty only for the selected device — twenty overlapping circles hide every dot.
+        if (selected && !pinned) {
+            val r = (p.radiusM * scale).toFloat().coerceIn(6f, maxR * 0.6f)
+            drawCircle(color.copy(alpha = 0.20f), r, o)
+            drawCircle(color.copy(alpha = 0.8f), r, o, style = Stroke(2f))
+        }
+        if (p.driveBy) drawCircle(OkGreen, 11f, o, style = Stroke(2.5f))
+        if (selected) drawCircle(Color.White, 14f, o, style = Stroke(2.5f))
+        // Off-scale devices sit on the rim in their true direction, drawn hollow.
+        if (pinned) drawCircle(color, if (selected) 8f else 6f, o, style = Stroke(3f))
+        else drawCircle(color, if (selected) 8f else 6f, o)
     }
+}
+
+/** Screen position of a placed device; anything beyond the range is pinned to the rim in its direction. */
+private fun plotOffset(p: Placed, cx: Float, cy: Float, scale: Float, maxR: Float): Offset {
+    val dist = hypot(p.east, p.north)
+    val px = (dist * scale).toFloat()
+    val k = if (px > maxR - 8f && dist > 0) (maxR - 8f) / px else 1f
+    return Offset(cx + (p.east * scale).toFloat() * k, cy - (p.north * scale).toFloat() * k)
 }
 
 private fun niceRange(m: Double): Double {
