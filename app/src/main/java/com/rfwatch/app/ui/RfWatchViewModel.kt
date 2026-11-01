@@ -78,6 +78,7 @@ class RfWatchViewModel(private val repo: RfWatchRepository) : ViewModel() {
     /** Map shows only what the Devices filters let through (shared filter) when true. */
     val mapUsesDeviceFilter = MutableStateFlow(false)
 
+    fun logUltrasonicCheck(r: com.rfwatch.core.cs.UltrasonicResult) { viewModelScope.launch { repo.logUltrasonicCheck(r) } }
     fun logCarSweep(lines: List<String>, heard: Int) { viewModelScope.launch { repo.logCarSweep(lines, heard) } }
 
     /** Build an evidence report and hand back the share-sheet intent. */

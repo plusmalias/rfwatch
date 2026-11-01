@@ -505,3 +505,21 @@ no merging, not fed into alerts; (2) on-demand ultrasonic beacon check (mic, Pro
 - Measured on the ZTE (debug `RFWatchDup` line "SAME-DEVICE hints"): first cut gave 839 pairs (730 vague);
   tightened → 286 (BLE 25 — matches the ~25 rotation rows measured before; Wi-Fi 261 multi-radio routers).
 - Tests: core 130/130 (+12), app 15/15, both APKs, offline no INTERNET. Next: ultrasonic check (still Claude).
+
+### 2026-11-01 (evening) — Claude — DONE (Codex's turn): ultrasonic beacon check
+
+- `core/cs/UltrasonicDetector`: 4096-pt Hann FFT, 50 % overlap, 17–22 kHz (capped below Nyquist), per-frame
+  median noise floor, narrow peaks ≥15 dB, tracked across frames → STEADY (≥90 % present, ≤2 bursts —
+  usually electronics), BEACON_LIKE (≥3 bursts, or tones that alternate = FSK-style data), BRIEF. Faint tones
+  ≥25 dB below a neighbour within 1.5 kHz are dropped as its distortion spurs (found on-device). Also reports
+  band vs 1–8 kHz floor so a deaf mic band shows as "may not hear this band", not an all-clear.
+- `UltrasonicScreen` (Protect hub → Check a place): 20 s on demand, screen-only (ON_STOP cancels → "stopped,
+  no result"), AudioRecord off-main, UNPROCESSED if supported else VOICE_RECOGNITION, 48 k → 44.1 k fallback,
+  released in finally; audio never stored. Event `ULTRASONIC_CHECK`; hub status line. Debug logcat `RFWatchUltra`.
+- New permission RECORD_AUDIO (runtime; UI tells the user to pick "Only this time"). Stalkerware check
+  already skips RFWatch's own package (AppScanner).
+- **Verified on the ZTE with real tones from a MacBook speaker:** VOICE_RECOGNITION source, 48 kHz. Quiet room
+  → no tones (band floor ~10 dB under speech band — mic does hear 17–22 kHz). 19 kHz 200 ms/600 ms bursts →
+  BEACON_LIKE +62 dB, 31 bursts. Steady 19 kHz → STEADY only (before the spur filter it also produced false
+  "beacon-like" spurs at +19–23 dB). Test runs are in Jorden's event log at ~16:33–16:38.
+- Tests: core 131/131 (+8), app 15/15, both APKs, offline has no INTERNET.

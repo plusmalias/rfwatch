@@ -559,6 +559,16 @@ class RfWatchRepository(
     }
 
     /** Logs a car sweep's findings (with location) to the event log. */
+    suspend fun logUltrasonicCheck(r: com.rfwatch.core.cs.UltrasonicResult) {
+        val fix = fixHolder.current
+        database.eventDao().insert(
+            com.rfwatch.app.data.EventEntity(
+                kind = "ULTRASONIC_CHECK", timestampMs = System.currentTimeMillis(),
+                detail = "Ultrasonic check: " + r.summary(), lat = fix?.lat, lon = fix?.lon,
+            )
+        )
+    }
+
     suspend fun logCarSweep(lines: List<String>, heard: Int) {
         val fix = fixHolder.current
         database.eventDao().insert(

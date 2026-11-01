@@ -18,6 +18,7 @@ import androidx.compose.material.icons.filled.CellTower
 import androidx.compose.material.icons.filled.CreditCard
 import androidx.compose.material.icons.filled.DirectionsCar
 import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.PhoneAndroid
 import androidx.compose.material.icons.filled.Settings
@@ -54,7 +55,7 @@ import java.util.Date
 import java.util.Locale
 
 /** Destinations the hub can open (routed to tabs by MainActivity). */
-enum class HubDest { STALKERWARE, CAMERA_FINDER, ROOM, SKIMMER, CAR, CELL, LOG, SETTINGS }
+enum class HubDest { STALKERWARE, CAMERA_FINDER, ROOM, SKIMMER, CAR, CELL, LOG, SETTINGS, ULTRASONIC }
 
 private data class HubTool(val dest: HubDest, val title: String, val icon: ImageVector, val status: String, val tone: Color)
 
@@ -77,6 +78,9 @@ fun ProtectHub(vm: RfWatchViewModel, modifier: Modifier = Modifier, open: (HubDe
     val stalkerFlagged = stalker?.detail?.let { Regex("(\\d+) critical/high").find(it)?.groupValues?.get(1)?.toIntOrNull() } ?: 0
     val skimmer = last("SKIMMER_CHECK")
     val skimmerHigh = skimmer?.detail?.let { Regex("(\\d+) high").find(it)?.groupValues?.get(1)?.toIntOrNull() } ?: 0
+    val ultra = last("ULTRASONIC_CHECK")
+    val ultraBeacon = ultra?.detail?.contains("Beacon-like ultrasonic signal found") == true
+    val ultraSteady = ultra?.detail?.contains("Steady ultrasonic tone") == true
     val car = last("CAR_SWEEP")
     val carFindings = car?.detail?.let { Regex("(\\d+) to check").find(it)?.groupValues?.get(1)?.toIntOrNull() } ?: 0
     val historyCount = events.count { it.isMappableHistory() }
@@ -103,6 +107,12 @@ fun ProtectHub(vm: RfWatchViewModel, modifier: Modifier = Modifier, open: (HubDe
                 HubDest.SKIMMER, "Skimmer check", Icons.Filled.CreditCard,
                 skimmer?.let { if (skimmerHigh > 0) "Last check ${ago(it)}: $skimmerHigh HIGH — don't use that terminal" else "Last check ${ago(it)}: nothing skimmer-like" } ?: "Run at a fuel pump or ATM",
                 when { skimmer == null -> RadarCyan; skimmerHigh > 0 -> DangerRed; else -> OkGreen },
+            ),
+            HubTool(
+                HubDest.ULTRASONIC, "Ultrasonic beacon check", Icons.Filled.GraphicEq,
+                ultra?.let { "Last check ${ago(it)}: " + when { ultraBeacon -> "beacon-like tone found"; ultraSteady -> "steady tone only (electronics?)"; else -> "nothing beacon-like" } }
+                    ?: "Hidden high-pitched tracking tones · 20 s listen",
+                when { ultra == null -> RadarCyan; ultraBeacon -> DangerRed; ultraSteady -> WarnAmber; else -> OkGreen },
             ),
             HubTool(
                 HubDest.SETTINGS, "Home watch", Icons.Filled.Home,

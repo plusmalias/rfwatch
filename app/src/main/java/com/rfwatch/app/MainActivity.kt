@@ -71,7 +71,7 @@ import com.rfwatch.app.ui.theme.OkGreen
 
 private enum class Tab(val label: String) {
     RADAR("Radar"), DEVICES("Devices"), SWEEP("Find"), MAP("Map"), MORE("Protect"),
-    CELL("Cell"), ROOM("Room"), LOG("Log"), SETTINGS("Settings"), SKIMMER("Skimmer"), STALKERWARE("Stalkerware"), CAR("Car check"), CAMERA_FINDER("Camera finder")
+    CELL("Cell"), ROOM("Room"), LOG("Log"), SETTINGS("Settings"), SKIMMER("Skimmer"), STALKERWARE("Stalkerware"), CAR("Car check"), CAMERA_FINDER("Camera finder"), ULTRASONIC("Ultrasonic")
 }
 
 class MainActivity : androidx.fragment.app.FragmentActivity() {
@@ -224,6 +224,7 @@ class MainActivity : androidx.fragment.app.FragmentActivity() {
                                 Tab.SKIMMER -> com.rfwatch.app.ui.screens.SkimmerScreen(contentModifier)
                                 Tab.STALKERWARE -> com.rfwatch.app.ui.screens.StalkerwareScreen(contentModifier)
                                 Tab.CAMERA_FINDER -> com.rfwatch.app.ui.screens.CameraFinderScreen(contentModifier)
+                                Tab.ULTRASONIC -> com.rfwatch.app.ui.screens.UltrasonicScreen(vm, contentModifier)
                                 Tab.CAR -> com.rfwatch.app.ui.screens.CarSweepScreen(vm, contentModifier) { id -> vm.huntRequest.value = id; tab = Tab.SWEEP }
                                 Tab.MORE -> com.rfwatch.app.ui.screens.ProtectHub(vm, contentModifier) { dest ->
                                     tab = when (dest) {
@@ -235,6 +236,7 @@ class MainActivity : androidx.fragment.app.FragmentActivity() {
                                         com.rfwatch.app.ui.screens.HubDest.CELL -> Tab.CELL
                                         com.rfwatch.app.ui.screens.HubDest.LOG -> Tab.LOG
                                         com.rfwatch.app.ui.screens.HubDest.SETTINGS -> Tab.SETTINGS
+                                        com.rfwatch.app.ui.screens.HubDest.ULTRASONIC -> Tab.ULTRASONIC
                                     }
                                 }
                             }
