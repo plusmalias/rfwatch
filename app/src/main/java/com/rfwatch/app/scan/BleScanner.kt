@@ -44,8 +44,8 @@ enum class BleScanState { SCANNING, BLUETOOTH_OFF, FAILED, STOPPED }
  *  - follows Bluetooth on/off (a scanner obtained while Bluetooth was off, or before a toggle,
  *    is dead — previously that silently ended BLE scanning until the app restarted);
  *  - takes a fresh [BluetoothLeScanner] on every start and retries after [onScanFailed];
- *  - restarts every [REFRESH_MS], because Android downgrades unfiltered scans running longer
- *    than 30 minutes to opportunistic (almost no results);
+ *  - restarts every [REFRESH_MS] (4 min): Android downgrades unfiltered scans running longer
+ *    than 30 minutes to opportunistic, and some chipsets stall sooner (see below);
  *  - watchdog: restarts a scan that has delivered nothing for [STALL_MS] while Bluetooth is on.
  *    Measured on the ZTE P660 (Android 14): a LOW_LATENCY scan listed as ongoing stopped
  *    receiving results ~5 min after starting (system result count frozen) until restarted —
@@ -160,7 +160,12 @@ class BleScanner(private val context: Context) {
     }
 
     private companion object {
-        const val REFRESH_MS = 25 * 60_000L
+        /**
+         * Proactive restart period. Android downgrades unfiltered scans after 30 min, and on the ZTE
+         * P660 a scan stops delivering results ~5 min after each start — so restart just before that.
+         * One start per 4 min is far below Android's 5-starts-per-30-s limit.
+         */
+        const val REFRESH_MS = 4 * 60_000L
         const val STALL_MS = 20_000L
         const val MIN_RESTART_MS = 30_000L
         const val WATCHDOG_TICK_MS = 5_000L

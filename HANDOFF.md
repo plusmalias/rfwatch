@@ -557,3 +557,6 @@ no merging, not fed into alerts; (2) on-demand ultrasonic beacon check (mic, Pro
 - Tried and removed: an address-filtered hunt-only scan — no more target hits than the main scan, and while it
   ran the main scan only reported the target (controller filter applied globally).
 - Debug logcat `RFWatchHunt` (10 s BLE callback/address counts, hunt gaps) and `RFWatchBle` (watchdog).
+- Follow-up: proactive scan restart every 4 min (was 25) — the ZTE stalls ~5 min after each start. 9-min
+  test after the change: 55 windows, 0 empty, 0 watchdog restarts (before: a stall every ~5 min). Watchdog
+  kept as the safety net. Radar redesign in progress (uncommitted, Claude).
