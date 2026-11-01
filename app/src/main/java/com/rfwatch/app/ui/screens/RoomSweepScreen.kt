@@ -41,11 +41,13 @@ fun RoomSweepScreen(vm: RfWatchViewModel, modifier: Modifier = Modifier) {
         Text("Room sweep", fontSize = 20.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold)
         Text(
             "Checks advertised BLE names and Wi-Fi identifiers for camera/IoT signatures. " +
-                "Candidates are not proof; wired, powered-off, and non-broadcasting cameras are invisible to radio scans.",
+                "Candidates are not proof; wired, powered-off, and non-broadcasting cameras are invisible to radio scans. " +
+                "Walk slowly round the room for ~2 min (Wi-Fi scans are rate-limited), then tap Hunt on a finding and follow " +
+                "hotter / colder to the object.",
             fontSize = 12.sp, color = Color(0xFF9CA3AF), modifier = Modifier.padding(bottom = 8.dp),
         )
         if (findings.isEmpty()) {
-            Text("No matching advertised BLE / Wi-Fi patterns yet. Keep scanning active.", fontSize = 13.sp)
+            Text("No matching advertised BLE / Wi-Fi patterns yet. Keep monitoring on and give it ~2 minutes.", fontSize = 13.sp)
         }
         LazyColumn {
             items(findings, key = { "${it.key}:${it.reason}" }) { f ->
@@ -61,9 +63,11 @@ fun RoomSweepScreen(vm: RfWatchViewModel, modifier: Modifier = Modifier) {
                             },
                         )
                         Text(f.detail, fontSize = 12.sp, color = Color(0xFF9CA3AF))
-                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
-                            Text("${f.key} · ${f.rssi} dBm", fontSize = 11.sp, color = Color(0xFF6B7280))
-                            Button(onClick = { vm.estimate(f.key) { estimates[f.key] = it } }) { Text("Locate") }
+                        Text("${f.key} · ${f.rssi} dBm", fontSize = 11.sp, color = Color(0xFF6B7280))
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                            // Hunt (hotter / colder) is what works inside one room; the path-loss Locate fit needs 100 m+ of movement.
+                            Button(onClick = { vm.openDevice(f.key, com.rfwatch.app.ui.DeviceDest.HUNT) }) { Text("Hunt") }
+                            androidx.compose.material3.TextButton(onClick = { vm.estimate(f.key) { estimates[f.key] = it } }) { Text("Locate (outdoors)") }
                         }
                         estimates[f.key]?.let { estimate ->
                             val result = when {

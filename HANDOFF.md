@@ -537,3 +537,11 @@ no merging, not fed into alerts; (2) on-demand ultrasonic beacon check (mic, Pro
   follower, home) — ~2 % of today's sightings had ±100 m network fixes. Stored history unchanged.
 - Tests: core 131/131, app 20/20 (+5 LocationFixHolderTest), both APKs, offline no INTERNET. Installed on the
   ZTE: monitor running, no crashes.
+
+### 2026-11-01 (night) — Claude — Room sweep Hunt button + hunt text fixes (Claude continuing: Hunt reliability)
+
+- Room sweep cards: primary **Hunt** button (`vm.openDevice(key, HUNT)` → Find hot/cold); Locate renamed
+  "Locate (outdoors)" (path-loss fit needs 100 m+). Header explains: walk ~2 min, then Hunt.
+- Hunt panel: "last heard 1793517239 s ago" (lastHeardMs = 0 before first sample) → "Not heard yet…";
+  waiting text no longer 44 sp (overlapped itself).
+- Verified on ZTE: Room sweep → Hunt opens Find with the target. Next: Hunt drop-outs (measuring).

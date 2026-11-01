@@ -339,7 +339,7 @@ private fun HuntPanel(vm: RfWatchViewModel, targetId: String, onChange: () -> Un
     Column(Modifier.fillMaxWidth().padding(top = 10.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(
             if (level == null) "Waiting for the target to advertise…" else "${level.toInt()} dBm",
-            fontSize = 44.sp, color = if (lost) Color(0xFF6B7280) else RadarCyan,
+            fontSize = if (level == null) 22.sp else 44.sp, color = if (lost) Color(0xFF6B7280) else RadarCyan,
         )
         val fraction = level?.let { ((it + 100.0) / 70.0).coerceIn(0.0, 1.0).toFloat() } ?: 0f
         Canvas(Modifier.fillMaxWidth().height(22.dp)) {
@@ -348,6 +348,7 @@ private fun HuntPanel(vm: RfWatchViewModel, targetId: String, onChange: () -> Un
         }
         Text(
             when {
+                lost && lastHeardMs == 0L -> "Not heard yet since you picked it — move around; it may be out of range or not advertising."
                 lost -> "Signal lost — last heard ${((nowMs - lastHeardMs) / 1000).coerceAtLeast(0)} s ago. Go back toward where it was stronger."
                 trend == HuntTone.Proximity.HOTTER -> "HOTTER ↑  getting closer"
                 trend == HuntTone.Proximity.COLDER -> "COLDER ↓  moving away"
