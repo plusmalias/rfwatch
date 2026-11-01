@@ -487,3 +487,8 @@ offline has no INTERNET.
 was loudest. Live position of a moving phone in the yard is not possible from one phone (no direction, RSSI
 ±50–100 %, MAC rotation). Ideas offered: "approaching" trend alert for unknown devices at home; multi-node
 ESP32 sensors for real live yard tracking.
+
+### 2026-11-01 (evening) — Claude — IN PROGRESS (Codex: please hold edits until my next entry)
+
+Adding (1) "probably same device" hints (BLE address rotations, router multi-radio BSSIDs) — display-only,
+no merging, not fed into alerts; (2) on-demand ultrasonic beacon check (mic, Protect hub, 17–22 kHz).
