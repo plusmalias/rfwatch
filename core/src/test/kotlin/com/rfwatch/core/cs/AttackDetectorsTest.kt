@@ -49,6 +49,38 @@ class AttackDetectorsTest {
         assertNull(t.observe("HomeNet", "3C:2E:F9:00:11:33", "WPA2", 20 * 60_000L))
     }
 
+    @Test fun routerDerivedVirtualBssidIsNotFlagged() {
+        // Real false-alarm pattern (2026-11-01, addresses changed): a Telstra (Vantiva) modem's second radio / virtual AP sets the
+        // locally-administered bit (d4 → d6) and bumps the last byte (b9 → c1). Same SSID, same WPA2.
+        val t = EvilTwinDetector()
+        t.learn("Telstra0010B9", "d4:35:1d:00:10:b9", "WPA2", 0)
+        assertNull(t.observe("Telstra0010B9", "d6:35:1d:00:10:c1", "WPA2", 20 * 60_000L))
+    }
+
+    @Test fun routerDerivedBssidThatDropsSecurityIsStillFlagged() {
+        val t = EvilTwinDetector()
+        t.learn("Telstra0010B9", "d4:35:1d:00:10:b9", "WPA2", 0)
+        val det = t.observe("Telstra0010B9", "d6:35:1d:00:10:c1", "Open", 20 * 60_000L)
+        assertNotNull(det)
+        assertTrue(det!!.reasons.any { it.startsWith("security dropped") })
+    }
+
+    @Test fun unrelatedRandomisedBssidIsStillFlagged() {
+        val t = EvilTwinDetector()
+        t.learn("Telstra0010B9", "d4:35:1d:00:10:b9", "WPA2", 0)
+        val det = t.observe("Telstra0010B9", "da:a1:19:42:0e:77", "WPA2", 20 * 60_000L)
+        assertNotNull(det)
+        assertTrue(det!!.reasons.any { it.contains("randomised address") })
+    }
+
+    @Test fun derivedBssidMatching() {
+        assertTrue(EvilTwinDetector.derivedFrom("d6:35:1d:00:10:c1", "d4:35:1d:00:10:b9"))
+        assertTrue(EvilTwinDetector.derivedFrom("3e:2e:f9:00:11:20", "3C:2E:F9:00:11:22"))
+        assertEquals(false, EvilTwinDetector.derivedFrom("d6:35:1d:00:11:c1", "d4:35:1d:00:10:b9")) // tail 0x100+ apart
+        assertEquals(false, EvilTwinDetector.derivedFrom("d6:99:1d:00:10:c1", "d4:35:1d:00:10:b9")) // octet 2 differs
+        assertEquals(false, EvilTwinDetector.derivedFrom("d5:35:1d:00:10:c1", "d4:35:1d:00:10:b9")) // multicast bit
+    }
+
     @Test fun attackToolRules() {
         val engine = RuleEngine(RulePacks.loadBuiltin())
         fun tool(f: DeviceFacts) = engine.evaluate(f).firstOrNull { it.packId == "attack_tools" }?.ruleId

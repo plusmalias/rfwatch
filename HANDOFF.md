@@ -454,3 +454,14 @@ Keeping Codex's single Radar lazy scroll, compact session row and collapsible fi
 - Tab "Sweep" renamed "Find" (tap scripts: label changed); Find has search, trackers/flagged first.
 - Devices: compact rows; opened card has Rename / Close.
 - Tests + both flavours built. Radar/Find new layouts NOT screenshot-reviewed yet (laptop battery).
+
+### 2026-11-01 (afternoon) — Claude — DONE: evil-twin false positive (router-derived BSSIDs)
+
+- Real alert today: a neighbour's Telstra (Vantiva) modem SSID "also broadcast" from a BSSID that is the
+  router's own address with the locally-administered bit set and the last byte +8 (same WPA2) — its
+  second radio / virtual AP, flagged only because the address "looks randomised".
+- `EvilTwinDetector.derivedFrom(bssid, known)`: multicast bit equal, octets 2–3 identical, octets 4–6
+  within 64. A derived address no longer counts as "randomised" evidence. **A security drop still
+  always alerts**, and unrelated randomised BSSIDs still alert. Tests use changed addresses.
+- Verified: core 110/110, app 15/15, both APKs build, offline APK has no INTERNET.
+- Next (Claude, in progress): Radar dots rarely appear after walking — measuring with a debug report first.

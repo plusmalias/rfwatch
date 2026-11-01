@@ -112,15 +112,41 @@ class EvilTwinDetector(private val minKnownAgeMs: Long = 10 * 60_000L) {
         }
         val knownVendors = established.mapNotNull { it.vendor }.toSet()
         val allKnownReal = established.none { it.randomised }
-        if (allKnownReal && rec.randomised) reasons += "known access points use real manufacturer addresses, this one uses a randomised address"
+        // Routers derive extra BSSIDs (5 GHz radio, guest / mesh backhaul) from their own address by setting the
+        // locally-administered bit and bumping the last bytes, so those look "randomised" but are the same box.
+        val derived = aps.keys.any { it != key && derivedFrom(key, it) }
+        if (allKnownReal && rec.randomised && !derived) reasons += "known access points use real manufacturer addresses, this one uses a randomised address"
         if (knownVendors.isNotEmpty() && rec.vendor != null && rec.vendor !in knownVendors) {
             reasons += "different manufacturer (${rec.vendor} vs ${knownVendors.joinToString()})"
         }
         // A different vendor alone is common (extenders); require a security drop or a randomised address too.
-        val strong = reasons.any { it.startsWith("security") } || (rec.randomised && allKnownReal)
+        val strong = reasons.any { it.startsWith("security") } || (rec.randomised && allKnownReal && !derived)
         if (!strong) return null
         alerted += ssid + key
         return EvilTwinDetection(ssid, rec, established, reasons)
+    }
+
+    companion object {
+        /**
+         * True when [bssid] looks like an address the same router derived from [known]: multicast bit equal,
+         * octets 2–3 identical and octets 4–6 within 64 (first octet may differ, e.g. d4 → d6 locally-administered).
+         * A random address matches a given known one by chance about once in 10^9.
+         */
+        fun derivedFrom(bssid: String, known: String): Boolean {
+            val a = octets(bssid) ?: return false
+            val b = octets(known) ?: return false
+            if (((a[0] xor b[0]) and 0x01) != 0) return false
+            if (a[1] != b[1] || a[2] != b[2]) return false
+            val ta = (a[3] shl 16) or (a[4] shl 8) or a[5]
+            val tb = (b[3] shl 16) or (b[4] shl 8) or b[5]
+            return kotlin.math.abs(ta - tb) <= 64
+        }
+
+        private fun octets(mac: String): IntArray? {
+            val parts = mac.split(':', '-')
+            if (parts.size != 6) return null
+            return IntArray(6) { parts[it].toIntOrNull(16) ?: return null }
+        }
     }
 
     private fun record(bssid: String, security: String, ts: Long): ApRecord {
