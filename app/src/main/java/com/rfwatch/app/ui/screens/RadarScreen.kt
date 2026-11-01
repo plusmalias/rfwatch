@@ -82,10 +82,19 @@ fun RadarScreen(vm: RfWatchViewModel, modifier: Modifier = Modifier) {
     // Keep discovery order stable. RSSI fluctuates per packet, so sorting on it makes targets jump.
     val list = contacts.values.toList()
     var selectedContactId by remember { mutableStateOf<String?>(null) }
+    var chartContactId by remember { mutableStateOf<String?>(null) }
+    var showAllNearby by remember { mutableStateOf(false) }
+    var sessionDialog by remember { mutableStateOf(false) }
+    // Contacts are kept for the whole session; "now" means heard within the last minute (Wi-Fi 2.5 min).
+    var nowMs by remember { mutableStateOf(System.currentTimeMillis()) }
+    LaunchedEffect(Unit) { while (true) { kotlinx.coroutines.delay(5_000); nowMs = System.currentTimeMillis() } }
+    val trendTracker = remember { TrendTracker() }
     val context = androidx.compose.ui.platform.LocalContext.current
     val prefs = remember { context.getSharedPreferences("rfwatch_settings", android.content.Context.MODE_PRIVATE) }
     var radarFilter by remember { mutableStateOf(prefs.getString("radar_filter", RADAR_FILTER_ALL) ?: RADAR_FILTER_ALL) }
-    val filtered = list.filter { it.matchesRadarFilter(radarFilter) }
+    val liveNow = list.filter { it.isLiveNow(maxOf(nowMs, System.currentTimeMillis() - 1_000)) }
+    val filtered = liveNow.filter { it.matchesRadarFilter(radarFilter) }
+    val trends = remember(contacts, nowMs) { trendTracker.update(liveNow, System.currentTimeMillis()) }
     val positions by vm.positions.collectAsState()
     val drones by vm.drones.collectAsState()
     val followers by vm.followers.collectAsState()
@@ -98,6 +107,7 @@ fun RadarScreen(vm: RfWatchViewModel, modifier: Modifier = Modifier) {
         val n = nav ?: return@LaunchedEffect
         if (n.dest != com.rfwatch.app.ui.DeviceDest.LOCATE) return@LaunchedEffect
         selectedContactId = n.deviceId
+        chartContactId = n.deviceId
         // Bring the Locate panel into view: walk down until its keyed item is laid out.
         // Consume only afterwards — clearing the request re-keys (cancels) this effect.
         try {
@@ -128,40 +138,39 @@ fun RadarScreen(vm: RfWatchViewModel, modifier: Modifier = Modifier) {
     val session by vm.scanSession.collectAsState()
     var confirmClearSession by remember { mutableStateOf(false) }
 
+    val storedById = devices.associateBy { it.id }
+    val threatIds = liveNow.filter { it.isThreatNow(storedById[it.id]) }.map { it.id }.toSet()
+    Box(modifier.fillMaxSize()) {
     LazyColumn(
-        modifier = modifier.fillMaxSize(),
+        modifier = Modifier.fillMaxSize(),
         state = radarListState,
-        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
+        contentPadding = PaddingValues(start = 12.dp, end = 12.dp, top = 12.dp, bottom = if (selectedContact != null) 190.dp else 12.dp),
     ) {
         item(key = "radar-header") {
             // Same rule as the Devices "Threats" chip, so the two screens never disagree.
             val now = System.currentTimeMillis()
             val toCheck = devices.count { now - it.lastSeenMs < 2 * 60_000L && com.rfwatch.app.ui.isThreat(it, it.effectiveKind()) }
             val liveFilter = com.rfwatch.app.ui.DeviceFilter(window = com.rfwatch.app.ui.TimeWindow.LIVE, status = setOf(com.rfwatch.app.ui.StatusFilter.THREATS))
-            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                Column(Modifier.weight(1f)) {
-                    Text(if (toCheck == 0) "NOTHING FLAGGED RIGHT NOW" else "WORTH A LOOK", fontSize = 10.sp,
-                        color = if (toCheck == 0) OkGreen else WarnAmber, letterSpacing = 1.5.sp)
-                    Text(if (toCheck == 0) "${list.size} signals nearby" else "$toCheck to check · ${list.size} nearby",
-                        fontSize = 20.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold)
-                }
-                if (toCheck > 0) StatusPill("Show $toCheck ›", WarnAmber) { vm.openDevicesWith(liveFilter) }
-            }
+            val health by vm.scanHealth.collectAsState()
+            val ble by vm.bleScanState.collectAsState()
+            val located = liveNow.count { positions[it.id]?.directional == true || it.estimate?.status == EstimateStatus.LOCATED }
+            val trackersNow = liveNow.count { it.kind == com.rfwatch.core.id.DeviceKind.TRACKER || it.trackerType != null }
+            RadarConsole(
+                toCheck = toCheck, nearby = liveNow.size, located = located, trackers = trackersNow,
+                health = health, bleState = ble, gpsAccuracyM = userLocation?.accuracyM, nowMs = maxOf(nowMs, health.updatedMs),
+                session = session, onRec = { sessionDialog = true },
+                onToCheck = { vm.openDevicesWith(liveFilter) },
+                onTrackers = { vm.openDevicesWith(com.rfwatch.app.ui.DeviceFilter(kinds = setOf(com.rfwatch.core.id.DeviceKind.TRACKER), window = com.rfwatch.app.ui.TimeWindow.LIVE)) },
+            )
         }
         item(key = "status-strip") {
             val home by vm.homeStatus.collectAsState()
             val activeLaw = law?.takeIf { it.active }
-            val trackers = list.count { it.kind == com.rfwatch.core.id.DeviceKind.TRACKER || it.trackerType != null }
+            val trackers = liveNow.count { it.kind == com.rfwatch.core.id.DeviceKind.TRACKER || it.trackerType != null }
             val recentDrones = drones.values.count { System.currentTimeMillis() - it.lastSeenMs < 5 * 60_000L }
             val ble by vm.bleScanState.collectAsState()
             Row(Modifier.fillMaxWidth().horizontalScroll(androidx.compose.foundation.rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                when (ble) {
-                    com.rfwatch.app.scan.BleScanState.BLUETOOTH_OFF -> StatusPill("BLE OFF — turn Bluetooth on", DangerRed)
-                    com.rfwatch.app.scan.BleScanState.FAILED -> StatusPill("BLE ERROR — retrying", WarnAmber)
-                    com.rfwatch.app.scan.BleScanState.STOPPED -> StatusPill("BLE stopped", WarnAmber)
-                    com.rfwatch.app.scan.BleScanState.SCANNING -> Unit
-                }
                 val scope = androidx.compose.runtime.rememberCoroutineScope()
                 fun open(kind: com.rfwatch.core.id.DeviceKind, window: com.rfwatch.app.ui.TimeWindow) =
                     vm.openDevicesWith(com.rfwatch.app.ui.DeviceFilter(kinds = setOf(kind), window = window))
@@ -178,22 +187,11 @@ fun RadarScreen(vm: RfWatchViewModel, modifier: Modifier = Modifier) {
                 StatusPill(if (recentDrones > 0) "DRONES $recentDrones" else "No drones", if (recentDrones > 0) Color(0xFFE040FB) else OkGreen) {
                     open(com.rfwatch.core.id.DeviceKind.DRONE, com.rfwatch.app.ui.TimeWindow.TODAY)
                 }
-                StatusPill("Trackers $trackers ›", if (trackers > 0) RadarPink else ConsoleMuted) {
-                    open(com.rfwatch.core.id.DeviceKind.TRACKER, com.rfwatch.app.ui.TimeWindow.LIVE)
-                }
                 StatusPill(
                     when { !home.isSet -> "Home: not set"; !home.mature -> "Home: learning ${home.visitsLearned}/3"; home.inside -> "Home: watching"; else -> "Away" },
                     if (home.isSet) RadarCyan else ConsoleMuted,
                 )
             }
-        }
-        item(key = "scan-session") {
-            ScanSessionCard(
-                status = session,
-                onStart = vm::startScanSession,
-                onSave = { vm.saveScanSession() },
-                onClear = { confirmClearSession = true },
-            )
         }
         law?.let { encounter ->
             if (encounter.active || System.currentTimeMillis() - encounter.lastSeenMs < LAW_BANNER_KEEP_MS) {
@@ -215,7 +213,7 @@ fun RadarScreen(vm: RfWatchViewModel, modifier: Modifier = Modifier) {
                                 "• ${c?.label ?: f.deviceId} · ${c?.kind?.label ?: ""} — ${f.distinctLocations} places, " +
                                     "${"%.1f".format(f.maxSeparationM / 1000)} km apart, ${f.spanMs / 60_000} min",
                                 fontSize = 12.sp,
-                                modifier = Modifier.clickable { selectedContactId = f.deviceId },
+                                modifier = Modifier.clickable { selectedContactId = f.deviceId; chartContactId = f.deviceId },
                             )
                         }
                         Text("Heard at several separate places while you moved. Your own phone/watch/earbuds will show here — mark them Mine in Devices.", fontSize = 10.sp, color = ConsoleMuted)
@@ -223,26 +221,33 @@ fun RadarScreen(vm: RfWatchViewModel, modifier: Modifier = Modifier) {
                 }
             }
         }
-        item(key = "radar-filter") { RadarFilterChips(list, radarFilter) { radarFilter = it; prefs.edit().putString("radar_filter", it).apply() } }
+        item(key = "radar-filter") { RadarFilterChips(liveNow, radarFilter) { radarFilter = it; prefs.edit().putString("radar_filter", it).apply() } }
         item(key = "radar-scope") {
-            LocationScopePanel(filtered, positions, userLocation, selectedContactId, drones.values) { selectedContactId = it }
-        }
-        selectedContact?.let { c ->
-            item(key = "locate-${c.id}") { DeviceLocateChart(vm, c, userLocation) { selectedContactId = null } }
-        }
-        item(key = "live-devices-heading") {
-            Row(Modifier.fillMaxWidth().padding(top = 4.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text("LIVE DETECTIONS", fontSize = 10.sp, color = ConsoleMuted, letterSpacing = 1.sp)
-                Text("${list.size} now · tap to select", fontSize = 10.sp, color = ConsoleMuted)
+            LocationScopePanel(filtered, positions, userLocation, selectedContactId, drones.values, trends, threatIds) {
+                selectedContactId = if (selectedContactId == it) null else it
             }
         }
-        if (list.isEmpty()) {
-            item(key = "no-live-devices") { EmptyConsoleNotice("No live signals yet", "BLE and Wi-Fi detections appear here as the monitors receive them.") }
+        val chartContact = chartContactId?.let { id -> contacts[id] ?: devices.firstOrNull { it.id == id }?.let { vm.contactFor(id) } }
+        chartContact?.let { c ->
+            item(key = "locate-${c.id}") { DeviceLocateChart(vm, c, userLocation) { chartContactId = null } }
         }
-        val storedById = devices.associateBy { it.id }
-        items(filtered, key = { "live-${it.id}" }) { c ->
-            com.rfwatch.app.ui.DeviceRowCompact(c.toRowInfo(storedById[c.id]), selected = selectedContactId == c.id) {
+        item(key = "live-devices-heading") {
+            val label = if (radarFilter == RADAR_FILTER_ALL) null
+                else com.rfwatch.core.id.DeviceKind.entries.firstOrNull { it.name == radarFilter }?.label ?: radarFilter
+            NearbyHeading(filtered.size, label) { radarFilter = RADAR_FILTER_ALL; prefs.edit().putString("radar_filter", RADAR_FILTER_ALL).apply() }
+        }
+        if (filtered.isEmpty()) {
+            item(key = "no-live-devices") { EmptyConsoleNotice("Nothing heard in the last minute", "BLE and Wi-Fi detections appear here as the monitors receive them.") }
+        }
+        val nearby = sortNearby(filtered, storedById)
+        items(if (showAllNearby) nearby else nearby.take(NEARBY_ROWS), key = { "live-${it.id}" }) { c ->
+            NearbyRow(c, storedById[c.id], trends[c.id] ?: com.rfwatch.core.df.RssiTrend.UNKNOWN, selectedContactId == c.id) {
                 selectedContactId = if (selectedContactId == c.id) null else c.id
+            }
+        }
+        if (nearby.size > NEARBY_ROWS) item(key = "nearby-more") {
+            TextButton(onClick = { showAllNearby = !showAllNearby }, modifier = Modifier.fillMaxWidth()) {
+                Text(if (showAllNearby) "Show top $NEARBY_ROWS" else "Show all ${nearby.size} nearby", fontSize = 12.sp)
             }
         }
         item(key = "inventory-link") {
@@ -251,6 +256,30 @@ fun RadarScreen(vm: RfWatchViewModel, modifier: Modifier = Modifier) {
                 Text("All ${devices.size} saved devices → Devices", fontSize = 13.sp)
             }
         }
+    }
+
+    // Pop-up card for the selected device, over the bottom of the screen.
+    selectedContact?.let { c ->
+        Box(Modifier.align(Alignment.BottomCenter).padding(10.dp)) {
+            SelectedDeviceCard(
+                contact = c, stored = storedById[c.id], trend = trends[c.id] ?: com.rfwatch.core.df.RssiTrend.UNKNOWN,
+                recent = trendTracker.history(c.id),
+                positioned = positions[c.id]?.directional == true || c.estimate?.status == EstimateStatus.LOCATED,
+                chartOpen = chartContactId == c.id,
+                onHunt = { vm.openDevice(c.id, com.rfwatch.app.ui.DeviceDest.HUNT) },
+                onChart = { chartContactId = if (chartContactId == c.id) null else c.id },
+                onDetails = { vm.openDevice(c.id, com.rfwatch.app.ui.DeviceDest.DETAILS) },
+                onClose = { selectedContactId = null },
+            )
+        }
+    }
+    }
+
+    if (sessionDialog) {
+        SessionDialog(
+            status = session, onStart = vm::startScanSession, onSave = { vm.saveScanSession() },
+            onClear = { confirmClearSession = true }, onDismiss = { sessionDialog = false },
+        )
     }
 
     if (confirmClearSession) {
@@ -268,53 +297,6 @@ fun RadarScreen(vm: RfWatchViewModel, modifier: Modifier = Modifier) {
             },
             dismissButton = { TextButton(onClick = { confirmClearSession = false }) { Text("Cancel") } },
         )
-    }
-}
-
-@Composable
-private fun ScanSessionCard(
-    status: ScanSessionStatus,
-    onStart: () -> Unit,
-    onSave: () -> Unit,
-    onClear: () -> Unit,
-) {
-    var showHelp by remember { mutableStateOf(false) }
-    Card(
-        Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = ConsolePanel),
-        border = BorderStroke(1.dp, if (status.isActive) RadarCyan.copy(alpha = 0.55f) else ConsoleOutline),
-    ) {
-        Column(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 9.dp), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                Column(Modifier.weight(1f)) {
-                    Row(horizontalArrangement = Arrangement.spacedBy(7.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Text("SESSION", fontSize = 10.sp, color = RadarCyan, letterSpacing = 1.1.sp)
-                        Text(if (status.isActive) "● RECORDING" else "READY", fontSize = 9.sp, color = if (status.isActive) RadarCyan else ConsoleMuted)
-                    }
-                    Text(
-                        if (status.isActive) "${status.observationCount} observations · since ${status.startedAtMs?.let { java.text.DateFormat.getTimeInstance(java.text.DateFormat.SHORT).format(java.util.Date(it)) } ?: "now"}"
-                        else "Capture detections into a saved session",
-                        fontSize = 10.sp, color = ConsoleMuted, maxLines = 1,
-                    )
-                }
-                Row(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
-                if (!status.isActive) {
-                    Button(onClick = onStart, contentPadding = PaddingValues(horizontal = 12.dp, vertical = 7.dp)) { Text("Start") }
-                } else {
-                    Button(onClick = onSave, contentPadding = PaddingValues(horizontal = 12.dp, vertical = 7.dp)) { Text("Save") }
-                    OutlinedButton(onClick = onClear, contentPadding = PaddingValues(horizontal = 10.dp, vertical = 7.dp)) { Text("Clear") }
-                }
-            }
-            }
-            TextButton(onClick = { showHelp = !showHelp }, contentPadding = PaddingValues(horizontal = 0.dp, vertical = 0.dp)) {
-                Text(if (showHelp) "Hide session details" else "Session details", fontSize = 10.sp, color = ConsoleMuted)
-            }
-            if (showHelp) Text(
-                if (status.isActive) "Save ends capture and keeps its observations. Clear removes only this session's observations; the inventory stays."
-                else "Monitoring continues independently. Capture groups detections locally until you save or clear it.",
-                fontSize = 10.sp, color = ConsoleMuted,
-            )
-        }
     }
 }
 
@@ -370,6 +352,7 @@ private fun LegendDot(color: Color, label: String) {
 }
 
 private const val LAW_BANNER_KEEP_MS = 10 * 60_000L
+private const val NEARBY_ROWS = 8
 
 @Composable
 private fun LawBanner(encounter: com.rfwatch.core.alerts.LawEncounter) {

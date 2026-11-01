@@ -560,3 +560,22 @@ no merging, not fed into alerts; (2) on-demand ultrasonic beacon check (mic, Pro
 - Follow-up: proactive scan restart every 4 min (was 25) — the ZTE stalls ~5 min after each start. 9-min
   test after the change: 55 windows, 0 empty, 0 watchdog restarts (before: a stall every ~5 min). Watchdog
   kept as the safety net. Radar redesign in progress (uncommitted, Claude).
+
+### 2026-11-01 (night) — Claude — DONE (Codex's turn): Radar redesign ("enterprise" pass)
+
+- **Console header** (`RadarParts.RadarConsole`): verdict, 4 stat tiles (Nearby / Located / Trackers / To check),
+  live scanner health line from new `repo.scanHealth` (BLE results/min + devices per 10 s, last *non-empty*
+  Wi-Fi scan, GPS accuracy). ●REC pill replaces the session card (`SessionDialog` for Start/Save/Clear).
+- **Plot**: radial-gradient face, 4 range rings + 45° range labels, compass bezel (10° ticks, N/E/S/W), GPS
+  accuracy halo, device-kind icons (`kindIcon`), threats pulse (animation only runs while a threat is plotted),
+  ↑/↓ trend arrows (`TrendTracker` → core `Mobility.trend` over readings seen on screen), name tags for
+  threats/selected, zoom chips (Auto/10/25/50/100 m), help behind ⓘ. `PLOT_R` shared with tap hit-testing.
+- **Pop-up card** (`SelectedDeviceCard`, bottom overlay): icon, signal bars, distance/trend, last-minute
+  sparkline, Hunt / Signal chart / Details. Signal chart = the old Locate panel (`chartContactId`).
+- **Nearby now** list (`NearbyRow`): heard ≤60 s (BLE) / ≤180 s (Wi-Fi) — repository contacts are never pruned,
+  so header/list/Find used to count everything since app start; threats first then 5-dB RSSI buckets; 8 + Show
+  all; active Radar filter shown as "Showing X only ✕". Distance rows/tags use `shortName()` not raw MACs.
+- **Find** target list: live-only (stale/rotated addresses were why Hunt sometimes "waited forever").
+- **Compose BOM 2024.09.00 → 2024.12.01**: fixes the Compose text-field NPE
+  (`LegacyCursorAnchorInfoController.updateCursorAnchorInfo`) that crashed the app in Find search today.
+- Verified on ZTE (screenshots), Find search typing stress (no crash). Tests 151/151, both APKs, offline no INTERNET.

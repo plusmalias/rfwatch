@@ -65,6 +65,9 @@ data class SweepLive(val samples: Int, val stepSamples: Int, val lastRssi: Int?,
 /** One raw RSSI reading from the hunt target (every advert, unthrottled). */
 data class HuntSample(val rssi: Int, val timestampMs: Long)
 
+/** Live scanner health for the Radar header: BLE results/min and distinct devices over the last 10 s, last Wi-Fi scan. */
+data class ScanHealth(val blePerMin: Int = 0, val bleDevices: Int = 0, val lastWifiScanMs: Long = 0, val updatedMs: Long = 0)
+
 /** User-controlled scan capture; observations are tagged only while this session is active. */
 data class ScanSessionStatus(
     val id: Long? = null,
@@ -228,6 +231,10 @@ class RfWatchRepository(
     @Volatile private var huntHits = 0
     @Volatile private var bleCallbacks = 0
     private val bleAddrsWindow = java.util.Collections.newSetFromMap(java.util.concurrent.ConcurrentHashMap<String, Boolean>())
+    private val _scanHealth = MutableStateFlow(ScanHealth())
+    val scanHealth: StateFlow<ScanHealth> = _scanHealth.asStateFlow()
+    private val healthBleCount = java.util.concurrent.atomic.AtomicInteger()
+    private val healthBleAddrs = java.util.concurrent.ConcurrentHashMap.newKeySet<String>()
     private val _hunt = MutableStateFlow<HuntSample?>(null)
     val hunt: StateFlow<HuntSample?> = _hunt.asStateFlow()
 
@@ -758,6 +765,15 @@ class RfWatchRepository(
             headingProvider.headings().collect { _heading.value = it }
         }
         scope.launch {
+            scope.launch {
+                while (true) {
+                    kotlinx.coroutines.delay(10_000)
+                    _scanHealth.value = _scanHealth.value.copy(
+                        blePerMin = healthBleCount.getAndSet(0) * 6, bleDevices = healthBleAddrs.size, updatedMs = System.currentTimeMillis(),
+                    )
+                    healthBleAddrs.clear()
+                }
+            }
             if (com.rfwatch.app.BuildConfig.DEBUG) scope.launch {
                 while (true) {
                     kotlinx.coroutines.delay(10_000)
@@ -768,6 +784,7 @@ class RfWatchRepository(
             }
             bleScanner.scan().collect { sighting ->
                 val adv = sighting.advertisement
+                healthBleCount.incrementAndGet(); healthBleAddrs.add(adv.address)
                 if (com.rfwatch.app.BuildConfig.DEBUG) { bleCallbacks++; bleAddrsWindow.add(adv.address) }
                 // Most adverts repeat byte-for-byte; reuse the parse/fingerprint/details from the
                 // last identical advert of this address and only rebuild when the payload changes.
@@ -819,6 +836,7 @@ class RfWatchRepository(
         }
         scope.launch {
             wifiScanner.scans().collect { list ->
+                if (list.isNotEmpty()) _scanHealth.value = _scanHealth.value.copy(lastWifiScanMs = System.currentTimeMillis())
                 list.forEach { s ->
                     evilTwin.observe(s.facts.ssid, s.bssid, com.rfwatch.core.id.WifiFingerprinter.security(s.capabilities).label, s.timestampMs)
                         ?.let { onEvilTwin(it, s.bssid, s.facts.rssi, s.timestampMs) }

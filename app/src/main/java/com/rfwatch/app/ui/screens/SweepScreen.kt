@@ -143,7 +143,11 @@ fun SweepScreen(vm: RfWatchViewModel, modifier: Modifier = Modifier) {
             // Trackers and flagged devices first, then BLE (updates faster), then strongest.
             val stored = vm.devices.collectAsState().value.associateBy { it.id }
             val q = targetQuery.trim().lowercase()
+            // Only devices heard recently: picking one that's gone (or a phone's old rotated address)
+            // made Hunt wait forever. Contacts are kept for the whole session in the repository.
+            val now = System.currentTimeMillis()
             val candidates = contacts.values
+                .filter { it.isLiveNow(now) }
                 .map { it to it.toRowInfo(stored[it.id]) }
                 .filter { (c, info) -> q.isEmpty() || "${info.title} ${info.subtitle} ${c.id}".lowercase().contains(q) }
                 .sortedWith(compareBy<Pair<LiveContact, com.rfwatch.app.ui.DeviceRowInfo>> { (c, info) ->
@@ -151,7 +155,7 @@ fun SweepScreen(vm: RfWatchViewModel, modifier: Modifier = Modifier) {
                 }.thenBy { it.first.band != Band.BLE }.thenByDescending { it.first.lastRssi })
             androidx.compose.material3.OutlinedTextField(
                 value = targetQuery, onValueChange = { targetQuery = it }, singleLine = true,
-                placeholder = { Text("Search ${contacts.size} nearby devices") }, modifier = Modifier.fillMaxWidth().padding(bottom = 4.dp),
+                placeholder = { Text("Search ${contacts.values.count { it.isLiveNow(System.currentTimeMillis()) }} nearby devices") }, modifier = Modifier.fillMaxWidth().padding(bottom = 4.dp),
             )
             LazyColumn(verticalArrangement = Arrangement.spacedBy(5.dp)) {
                 items(candidates, key = { it.first.id }) { (c, info) ->

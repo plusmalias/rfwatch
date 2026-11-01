@@ -40,6 +40,7 @@ class RfWatchViewModel(private val repo: RfWatchRepository) : ViewModel() {
     val positions = repo.positions
     val drones = repo.drones
     val bleScanState = repo.bleScanState
+    val scanHealth = repo.scanHealth
     val followers = repo.followers
     val homeStatus = repo.homeStatus
 

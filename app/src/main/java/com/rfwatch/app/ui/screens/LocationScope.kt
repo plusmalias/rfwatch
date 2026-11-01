@@ -1,6 +1,9 @@
 package com.rfwatch.app.ui.screens
 
+import androidx.compose.animation.core.animateFloat
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.material.icons.filled.Wifi
+import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.horizontalScroll
@@ -10,6 +13,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -93,7 +97,11 @@ internal fun RadarFilterChips(contacts: List<LiveContact>, filter: String, onFil
         FilterChip(selected = filter == RADAR_FILTER_ALL, onClick = { onFilter(RADAR_FILTER_ALL) }, label = { Text("All ${contacts.size}") })
         val shown = DeviceKind.entries.filter { it == DeviceKind.LAW_ENFORCEMENT || (counts[it] ?: 0) > 0 || it.name == filter }
         shown.forEach { k ->
-            FilterChip(selected = filter == k.name, onClick = { onFilter(k.name) }, label = { Text("${k.label} ${counts[k] ?: 0}") })
+            FilterChip(
+                selected = filter == k.name, onClick = { onFilter(k.name) },
+                label = { Text("${k.label} ${counts[k] ?: 0}") },
+                leadingIcon = { androidx.compose.material3.Icon(kindIcon(k), null, modifier = Modifier.size(16.dp)) },
+            )
         }
     }
 }
@@ -110,9 +118,21 @@ internal fun LocationScopePanel(
     user: GpsFix?,
     selectedId: String?,
     drones: Collection<com.rfwatch.app.repo.DroneTrack> = emptyList(),
+    trends: Map<String, com.rfwatch.core.df.RssiTrend> = emptyMap(),
+    threats: Set<String> = emptySet(),
     onSelect: (String) -> Unit,
 ) {
     val (placed, unplaced) = placeContacts(contacts, positions, user)
+    var zoom by remember { mutableStateOf<Double?>(null) }
+    var help by remember { mutableStateOf(false) }
+    val icons = DeviceKind.entries.associateWith { androidx.compose.ui.graphics.vector.rememberVectorPainter(kindIcon(it)) }
+    val wifiIcon = androidx.compose.ui.graphics.vector.rememberVectorPainter(androidx.compose.material.icons.Icons.Filled.Wifi)
+    // Threats on the plot pulse; the animation only runs while there is one (no idle redraws).
+    val pulse = if (placed.any { it.contact.id in threats }) {
+        androidx.compose.animation.core.rememberInfiniteTransition(label = "threat").animateFloat(
+            0f, 1f, androidx.compose.animation.core.infiniteRepeatable(androidx.compose.animation.core.tween(1200)), label = "pulse",
+        ).value
+    } else 0f
     val droneMarks = if (user == null) emptyList() else drones.mapNotNull { d ->
         val frame = LocalFrame(user.lat, user.lon)
         val lat = d.info.lat; val lon = d.info.lon
@@ -123,7 +143,7 @@ internal fun LocationScopePanel(
             DroneMark(e.east, e.north, op?.east, op?.north)
         }
     }
-    val rangeM = if (placed.isEmpty() && droneMarks.isEmpty() && unplaced.isNotEmpty()) {
+    val autoRange = if (placed.isEmpty() && droneMarks.isEmpty() && unplaced.isNotEmpty()) {
         // Range rings only: zoom to fit them so close signals are distinguishable (no positions are claimed).
         val far = unplaced.sortedByDescending { it.lastRssi }.take(MAX_RANGE_RINGS).maxOf { rssiDistanceEstimateMeters(it.lastRssi) }
         listOf(3.0, 5.0, 10.0, 20.0, 30.0, 50.0, 100.0).firstOrNull { it >= far * 1.15 } ?: 100.0
@@ -135,22 +155,30 @@ internal fun LocationScopePanel(
             droneMarks.flatMap { listOfNotNull(hypot(it.east, it.north), it.opEast?.let { e -> hypot(e, it.opNorth ?: 0.0) }) }.maxOrNull() ?: 0.0,
         ).takeIf { it > 0 } ?: 20.0,
     )
+    val rangeM = zoom ?: autoRange
     Card(
         Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = ConsolePanel),
         border = BorderStroke(1.dp, ConsoleOutline),
     ) {
         Column(Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 Text("LOCATION SCOPE · NORTH UP", fontSize = 10.sp, color = ConsoleMuted, letterSpacing = 1.sp)
-                Text(if (user == null) "NO GPS FIX" else "${placed.size} located · ${unplaced.size} by distance", fontSize = 10.sp, color = RadarCyan)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(if (user == null) "NO GPS FIX" else "${placed.size} located · ${unplaced.size} by distance", fontSize = 10.sp, color = RadarCyan)
+                    Text(
+                        if (help) " ⓘ hide" else " ⓘ",
+                        fontSize = 13.sp, color = if (help) RadarCyan else ConsoleMuted,
+                        modifier = Modifier.padding(start = 6.dp).pointerInput(Unit) { detectTapGestures { help = !help } },
+                    )
+                }
             }
             Canvas(
-                Modifier.fillMaxWidth().height(260.dp).pointerInput(placed, rangeM) {
+                Modifier.fillMaxWidth().height(320.dp).pointerInput(placed, rangeM) {
                     detectTapGestures { tap ->
                         val cx = size.width / 2f; val cy = size.height / 2f
-                        val scale = min(cx, cy) * 0.92f / rangeM.toFloat()
-                        val maxR = min(cx, cy) * 0.92f
+                        val scale = min(cx, cy) * PLOT_R / rangeM.toFloat()
+                        val maxR = min(cx, cy) * PLOT_R
                         placed.minByOrNull { p ->
                             val o = plotOffset(p, cx, cy, scale, maxR)
                             hypot((o.x - tap.x).toDouble(), (o.y - tap.y).toDouble())
@@ -165,12 +193,18 @@ internal fun LocationScopePanel(
                 val rings = unplaced.sortedByDescending { it.lastRssi }.take(MAX_RANGE_RINGS).map {
                     rssiDistanceEstimateMeters(it.lastRssi) to deviceCategoryColor(it.category, it.classification)
                 }
-                drawLocationScope(placed, rangeM, selectedId, droneMarks, rings)
+                drawLocationScope(placed, rangeM, selectedId, droneMarks, rings, PlotStyle(icons, wifiIcon, trends, threats, pulse, user?.accuracyM))
+            }
+            // Zoom: Auto fits the dots; fixed ranges for a closer or wider look.
+            Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                FilterChip(selected = zoom == null, onClick = { zoom = null }, label = { Text(if (zoom == null) "Auto · ${rangeM.toInt()} m" else "Auto", fontSize = 11.sp) })
+                listOf(10.0, 25.0, 50.0, 100.0).forEach { r ->
+                    FilterChip(selected = zoom == r, onClick = { zoom = r }, label = { Text("${r.toInt()} m", fontSize = 11.sp) })
+                }
             }
             if (placed.isEmpty() && unplaced.isNotEmpty()) {
                 Text(
-                    "No directions yet — you haven't moved enough. Dashed rings show how far the ${minOf(unplaced.size, MAX_RANGE_RINGS)} strongest " +
-                        "signals are (direction unknown). Walk 25 m or more — a lap of the house, yard or street — and dots appear where each signal was strongest.",
+                    "No directions yet — walk 25 m+ (a lap of the house or yard) and dots appear. Dashed rings = distance only." + if (help) "" else " ⓘ for more",
                     fontSize = 11.sp, color = com.rfwatch.app.ui.theme.WarnAmber,
                 )
             }
@@ -181,10 +215,11 @@ internal fun LocationScopePanel(
                     fontSize = 11.sp, color = com.rfwatch.app.ui.theme.DangerRed,
                 )
             }
-            Text(
-                "Dots are where each device most likely is, from where its signal was strongest as you moved " +
-                    "(needs 25 m+ of walking/driving; green ring = drive-by fit). Circle = uncertainty. " +
-                    "Tap a dot or row for its own chart.",
+            if (help) Text(
+                "Icons are where each device most likely is: the spot on your path where its signal was strongest " +
+                    "(needs 25 m+ of walking or driving; a dot can only land on the route you took). ↑ getting closer, ↓ moving away " +
+                    "(last minute of signal). Red pulse = worth a look. Hollow icon on the rim = further than the zoom range, in its direction. " +
+                    "Green ring = drive-by fit. Dashed rings = distance-only guesses for devices with no direction yet. Tap an icon for actions.",
                 fontSize = 10.sp, color = Color(0xFF78909A),
             )
             if (unplaced.isNotEmpty()) {
@@ -215,7 +250,7 @@ private fun DistanceBar(c: LiveContact, selected: Boolean, onClick: () -> Unit) 
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        Text(c.label.take(18), fontSize = 11.sp, color = if (selected) RadarCyan else Color.Unspecified, modifier = Modifier.weight(0.42f), maxLines = 1)
+        Text(c.shortName().take(20), fontSize = 11.sp, color = if (selected) RadarCyan else Color.Unspecified, modifier = Modifier.weight(0.42f), maxLines = 1)
         Canvas(Modifier.weight(0.38f).height(8.dp)) {
             drawRect(Color(0xFF123240))
             drawRect(deviceCategoryColor(c.category, c.classification), size = size.copy(width = size.width * fraction))
@@ -294,29 +329,75 @@ private data class DroneMark(val east: Double, val north: Double, val opEast: Do
 
 private const val MAX_RANGE_RINGS = 8
 
+/** What the plot draws per device: kind icons, trend arrows, threat pulse. */
+private class PlotStyle(
+    val icons: Map<DeviceKind, androidx.compose.ui.graphics.painter.Painter>,
+    val wifiIcon: androidx.compose.ui.graphics.painter.Painter,
+    val trends: Map<String, com.rfwatch.core.df.RssiTrend>,
+    val threats: Set<String>,
+    val pulse: Float,
+    val userAccuracyM: Double? = null,
+)
+
+/** Plot radius as a share of the half-size; the rest is the compass bezel. Shared with tap hit-testing. */
+private const val PLOT_R = 0.84f
+
 private fun DrawScope.drawLocationScope(
     placed: List<Placed>, rangeM: Double, selectedId: String?, drones: List<DroneMark> = emptyList(),
     rangeRings: List<Pair<Double, Color>> = emptyList(),
+    style: PlotStyle? = null,
 ) {
     val cx = size.width / 2f; val cy = size.height / 2f
-    val maxR = min(cx, cy) * 0.92f
+    val maxR = min(cx, cy) * PLOT_R
     val scale = maxR / rangeM.toFloat()
-    val grid = Color(0xFF1C4852)
-    for (i in 1..2) drawCircle(grid, maxR * i / 2f, Offset(cx, cy), style = Stroke(1.3f))
-    drawLine(grid, Offset(cx, cy - maxR), Offset(cx, cy + maxR), strokeWidth = 1f)
-    drawLine(grid, Offset(cx - maxR, cy), Offset(cx + maxR, cy), strokeWidth = 1f)
+    val c = Offset(cx, cy)
     val paint = android.graphics.Paint().apply { isAntiAlias = true; textSize = 24f; color = android.graphics.Color.argb(170, 145, 164, 176); textAlign = android.graphics.Paint.Align.CENTER }
-    drawContext.canvas.nativeCanvas.drawText("N", cx, cy - maxR + 22f, paint)
     fun metres(v: Double) = if (v < 10 && v % 1.0 != 0.0) "%.1f m".format(v) else "${v.toInt()} m"
-    drawContext.canvas.nativeCanvas.drawText(metres(rangeM / 2), cx + maxR / 2f + 4f, cy - 6f, paint)
-    drawContext.canvas.nativeCanvas.drawText(metres(rangeM), cx + maxR - 30f, cy - 6f, paint)
+    // Scope face: soft radial glow, four range rings (half and full brighter), crosshair + diagonals.
+    drawCircle(
+        androidx.compose.ui.graphics.Brush.radialGradient(listOf(Color(0xFF0F2C30), Color(0xFF0A161B), Color(0xFF081116)), c, maxR),
+        maxR, c,
+    )
+    val grid = Color(0xFF1C4852)
+    for (i in 1..4) drawCircle(if (i % 2 == 0) grid else grid.copy(alpha = 0.45f), maxR * i / 4f, c, style = Stroke(if (i == 4) 2f else 1.2f))
+    for (deg in 0 until 360 step 45) {
+        val r = Math.toRadians(deg.toDouble())
+        drawLine(grid.copy(alpha = if (deg % 90 == 0) 0.8f else 0.3f), c, Offset(cx + (maxR * kotlin.math.sin(r)).toFloat(), cy - (maxR * kotlin.math.cos(r)).toFloat()), strokeWidth = 1f)
+    }
+    // Compass bezel: a tick every 10°, longer every 30°, cardinal letters outside the scope.
+    val outer = min(cx, cy) * 0.99f
+    for (deg in 0 until 360 step 10) {
+        val r = Math.toRadians(deg.toDouble())
+        val len = if (deg % 30 == 0) 9f else 4.5f
+        val sx = kotlin.math.sin(r).toFloat(); val sy = -kotlin.math.cos(r).toFloat()
+        drawLine(if (deg % 90 == 0) RadarCyan.copy(alpha = 0.9f) else ConsoleMuted.copy(alpha = 0.55f),
+            Offset(cx + (maxR + 3f) * sx, cy + (maxR + 3f) * sy), Offset(cx + (maxR + 3f + len) * sx, cy + (maxR + 3f + len) * sy), strokeWidth = 1.6f)
+    }
+    val cardinal = android.graphics.Paint(paint).apply { textSize = 22f; isFakeBoldText = true }
+    listOf("N" to 0, "E" to 90, "S" to 180, "W" to 270).forEach { (t, deg) ->
+        val r = Math.toRadians(deg.toDouble())
+        cardinal.color = if (t == "N") android.graphics.Color.rgb(77, 226, 197) else android.graphics.Color.argb(190, 145, 164, 176)
+        val rr = (maxR + outer) / 2f + 6f
+        drawContext.canvas.nativeCanvas.drawText(t, cx + rr * kotlin.math.sin(r).toFloat(), cy - rr * kotlin.math.cos(r).toFloat() + 8f, cardinal)
+    }
+    // Range labels on the half and full rings, at 45° so they never sit on the crosshair.
+    val label = android.graphics.Paint(paint).apply { textSize = 20f; color = android.graphics.Color.argb(200, 160, 180, 190) }
+    listOf(0.5f to rangeM / 2, 1f to rangeM).forEach { (f, v) ->
+        val d = maxR * f * 0.7071f
+        drawContext.canvas.nativeCanvas.drawText(metres(v), cx + d + 4f, cy - d - 4f, label)
+    }
     val dash = androidx.compose.ui.graphics.PathEffect.dashPathEffect(floatArrayOf(12f, 10f))
     rangeRings.forEach { (meters, color) ->
         drawCircle(color.copy(alpha = 0.55f), (meters * scale).toFloat().coerceIn(10f, maxR), Offset(cx, cy), style = Stroke(2f, pathEffect = dash))
     }
-    // You.
-    drawCircle(RadarCyan, 7f, Offset(cx, cy))
-    drawCircle(RadarCyan, 13f, Offset(cx, cy), style = Stroke(2f))
+    // You, with your GPS accuracy as a faint halo when it fits the scale.
+    style?.userAccuracyM?.let { acc ->
+        val r = (acc * scale).toFloat()
+        if (r in 14f..maxR) { drawCircle(RadarCyan.copy(alpha = 0.07f), r, c); drawCircle(RadarCyan.copy(alpha = 0.25f), r, c, style = Stroke(1f)) }
+    }
+    drawCircle(RadarCyan.copy(alpha = 0.18f), 18f, c)
+    drawCircle(RadarCyan, 6.5f, c)
+    drawCircle(RadarCyan, 12f, c, style = Stroke(2f))
     val red = com.rfwatch.app.ui.theme.DangerRed
     drones.forEach { d ->
         val px = cx + (d.east * scale).toFloat(); val py = cy - (d.north * scale).toFloat()
@@ -343,11 +424,46 @@ private fun DrawScope.drawLocationScope(
             drawCircle(color.copy(alpha = 0.20f), r, o)
             drawCircle(color.copy(alpha = 0.8f), r, o, style = Stroke(2f))
         }
-        if (p.driveBy) drawCircle(OkGreen, 11f, o, style = Stroke(2.5f))
-        if (selected) drawCircle(Color.White, 14f, o, style = Stroke(2.5f))
-        // Off-scale devices sit on the rim in their true direction, drawn hollow.
-        if (pinned) drawCircle(color, if (selected) 8f else 6f, o, style = Stroke(3f))
-        else drawCircle(color, if (selected) 8f else 6f, o)
+        if (style == null) {
+            if (p.driveBy) drawCircle(OkGreen, 11f, o, style = Stroke(2.5f))
+            if (selected) drawCircle(Color.White, 14f, o, style = Stroke(2.5f))
+            if (pinned) drawCircle(color, if (selected) 8f else 6f, o, style = Stroke(3f)) else drawCircle(color, if (selected) 8f else 6f, o)
+            return@forEach
+        }
+        val threat = p.contact.id in style.threats
+        val tint = if (threat) com.rfwatch.app.ui.theme.DangerRed else color
+        val badge = if (selected) 19f else 16f
+        if (threat) {
+            // Expanding red ring, repeating.
+            drawCircle(tint.copy(alpha = 0.55f * (1f - style.pulse)), badge + 14f * style.pulse, o, style = Stroke(3f))
+        }
+        // Badge: filled disc (hollow when pinned to the rim), with the device-kind icon inside.
+        if (pinned) drawCircle(tint, badge, o, style = Stroke(2.5f))
+        else drawCircle(tint.copy(alpha = 0.22f), badge, o)
+        drawCircle(tint.copy(alpha = if (pinned) 0.4f else 0.9f), badge, o, style = Stroke(1.6f))
+        if (p.driveBy) drawCircle(OkGreen, badge + 4f, o, style = Stroke(2.5f))
+        if (selected) drawCircle(Color.White, badge + 5f, o, style = Stroke(2.5f))
+        val painter = if (p.contact.kind == DeviceKind.UNKNOWN && p.contact.band == com.rfwatch.core.model.Band.WIFI) style.wifiIcon
+        else style.icons[p.contact.kind] ?: style.wifiIcon
+        val iconPx = badge * 1.15f
+        translate(o.x - iconPx / 2f, o.y - iconPx / 2f) {
+            with(painter) { draw(androidx.compose.ui.geometry.Size(iconPx, iconPx), colorFilter = androidx.compose.ui.graphics.ColorFilter.tint(tint)) }
+        }
+        if ((selected || threat) && !pinned) {
+            val name = p.contact.shortName().let { if (it.length > 14) it.take(13) + "…" else it }
+            val tp = android.graphics.Paint().apply { isAntiAlias = true; textSize = 20f; this.color = android.graphics.Color.rgb(228, 237, 242) }
+            val w = tp.measureText(name)
+            val lx = (o.x - w / 2f).coerceIn(4f, size.width - w - 4f); val ly = o.y + badge + 20f
+            drawRoundRect(Color(0xE6081116), Offset(lx - 6f, ly - 17f), androidx.compose.ui.geometry.Size(w + 12f, 23f), androidx.compose.ui.geometry.CornerRadius(8f))
+            drawContext.canvas.nativeCanvas.drawText(name, lx, ly, tp)
+        }
+        style.trends[p.contact.id]?.arrow()?.let { a ->
+            val paint = android.graphics.Paint().apply {
+                isAntiAlias = true; textSize = 26f; isFakeBoldText = true
+                this.color = if (a == "↑") android.graphics.Color.rgb(255, 92, 168) else android.graphics.Color.rgb(140, 160, 170)
+            }
+            drawContext.canvas.nativeCanvas.drawText(a, o.x + badge * 0.75f, o.y - badge * 0.45f, paint)
+        }
     }
 }
 
