@@ -40,5 +40,6 @@ class LocationProvider(context: Context) {
         timestampMs = time,
         bearingDeg = if (hasBearing()) bearing.toDouble() else null,
         speedMps = if (hasSpeed()) speed.toDouble() else null,
+        provider = provider,
     )
 }

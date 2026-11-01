@@ -29,6 +29,8 @@ data class GpsFix(
     val speedMps: Double? = null,
     val hasBearing: Boolean = bearingDeg != null,
     val hasSpeed: Boolean = speedMps != null,
+    /** Android location provider ("gps", "network", "fused"), when known. */
+    val provider: String? = null,
 )
 
 /**

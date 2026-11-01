@@ -528,3 +528,12 @@ no merging, not fed into alerts; (2) on-demand ultrasonic beacon check (mic, Pro
 - Follow-up: real permission dialog verified ("Only this time" → check runs). Debug SAME-DEVICE count gated once per
   process and moved off the main thread (it froze Map open). NOTE: the 16:33–16:38 ULTRASONIC_CHECK test events
   (incl. one false "beacon-like" from before the spur filter) are in the event log and in full evidence exports.
+
+### 2026-11-01 (night) — Claude — DONE (Codex's turn): prefer GPS over network fixes
+
+- `LocationFixHolder.update`: a non-GPS fix is ignored while a GPS fix that *arrived* ≤5 s ago (monotonic
+  clock, injectable for tests) is at least as accurate; otherwise network/fused fixes are used as before
+  (indoors keeps working). `GpsFix.provider` added (default null). Affects every new sighting (Map, Locate,
+  follower, home) — ~2 % of today's sightings had ±100 m network fixes. Stored history unchanged.
+- Tests: core 131/131, app 20/20 (+5 LocationFixHolderTest), both APKs, offline no INTERNET. Installed on the
+  ZTE: monitor running, no crashes.
