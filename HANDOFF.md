@@ -503,7 +503,9 @@ no merging, not fed into alerts; (2) on-demand ultrasonic beacon check (mic, Pro
 - Device details card: "MAY BE THE SAME DEVICE" section with tappable links. Records are NOT merged and hints
   are NOT used by follower / home / alerts.
 - Measured on the ZTE (debug `RFWatchDup` line "SAME-DEVICE hints"): first cut gave 839 pairs (730 vague);
-  tightened → 286 (BLE 25 — matches the ~25 rotation rows measured before; Wi-Fi 261 multi-radio routers).
+  tightened → 286 (BLE 25, Wi-Fi 261 multi-radio routers). Today's DuplicateReport shows 257 loosely
+  chained BLE rows over 10 signatures, so the hints are deliberately conservative (under-link) — low false links.
+  The count runs once per process off the main thread (whole-inventory pass is heavy).
 - Tests: core 130/130 (+12), app 15/15, both APKs, offline no INTERNET. Next: ultrasonic check (still Claude).
 
 ### 2026-11-01 (evening) — Claude — DONE (Codex's turn): ultrasonic beacon check
@@ -523,3 +525,6 @@ no merging, not fed into alerts; (2) on-demand ultrasonic beacon check (mic, Pro
   BEACON_LIKE +62 dB, 31 bursts. Steady 19 kHz → STEADY only (before the spur filter it also produced false
   "beacon-like" spurs at +19–23 dB). Test runs are in Jorden's event log at ~16:33–16:38.
 - Tests: core 131/131 (+8), app 15/15, both APKs, offline has no INTERNET.
+- Follow-up: real permission dialog verified ("Only this time" → check runs). Debug SAME-DEVICE count gated once per
+  process and moved off the main thread (it froze Map open). NOTE: the 16:33–16:38 ULTRASONIC_CHECK test events
+  (incl. one false "beacon-like" from before the spur filter) are in the event log and in full evidence exports.

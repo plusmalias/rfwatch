@@ -614,6 +614,8 @@ class RfWatchRepository(
             .mapNotNull { h -> byId[h.otherId]?.let { h to it } }
     }
 
+    @Volatile private var sameDeviceCountLogged = false
+
     /** Debug: how many same-device hint pairs the whole inventory produces (sanity check vs rotations measured). */
     private suspend fun sameDeviceHintCounts(devices: List<DeviceEntity>): String {
         val all = devices.map { it.summary() }
@@ -634,8 +636,14 @@ class RfWatchRepository(
         val devices = withContext(ingestDispatcher) { flushPending(); ensureDeviceCache(); deviceCache.values.toList() }
         val sample = devices.sortedByDescending { it.seenCount }.take(5)
         val locate = sample.associateWith { database.observationDao().recentGeoForDevice(it.id, LOCATE_SAMPLE_LIMIT) }
-        DuplicateReport.analyze(devices, locate).lines().forEach { android.util.Log.i("RFWatchDup", it) }
-        android.util.Log.i("RFWatchDup", sameDeviceHintCounts(devices))
+        withContext(kotlinx.coroutines.Dispatchers.Default) {
+            DuplicateReport.analyze(devices, locate).lines().forEach { android.util.Log.i("RFWatchDup", it) }
+            // Whole-inventory pass (thousands × thousands): once per process, off the main thread.
+            if (!sameDeviceCountLogged) {
+                sameDeviceCountLogged = true
+                android.util.Log.i("RFWatchDup", sameDeviceHintCounts(devices))
+            }
+        }
     }
 
     /** Debug diagnostic (logcat tag RFWatchRadar): which gate keeps each Radar device off the plot. */
