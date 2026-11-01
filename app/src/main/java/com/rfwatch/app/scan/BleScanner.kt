@@ -45,7 +45,12 @@ enum class BleScanState { SCANNING, BLUETOOTH_OFF, FAILED, STOPPED }
  *    is dead — previously that silently ended BLE scanning until the app restarted);
  *  - takes a fresh [BluetoothLeScanner] on every start and retries after [onScanFailed];
  *  - restarts every [REFRESH_MS], because Android downgrades unfiltered scans running longer
- *    than 30 minutes to opportunistic (almost no results).
+ *    than 30 minutes to opportunistic (almost no results);
+ *  - watchdog: restarts a scan that has delivered nothing for [STALL_MS] while Bluetooth is on.
+ *    Measured on the ZTE P660 (Android 14): a LOW_LATENCY scan listed as ongoing stopped
+ *    receiving results ~5 min after starting (system result count frozen) until restarted —
+ *    that was the Hunt "takes forever / drops out" problem. Restarts are spaced ≥[MIN_RESTART_MS]
+ *    apart to stay under Android's 5-starts-per-30-s limit.
  * Each result's raw bytes are parsed by the Android-free [AdvParser].
  */
 class BleScanner(private val context: Context) {
@@ -53,10 +58,15 @@ class BleScanner(private val context: Context) {
     private val manager = context.getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
     private val _state = MutableStateFlow(BleScanState.STOPPED)
     val state: StateFlow<BleScanState> = _state.asStateFlow()
+    private val _stallRestarts = MutableStateFlow(0)
+    /** How many times the watchdog had to revive a stalled scan (diagnostics). */
+    val stallRestarts: StateFlow<Int> = _stallRestarts.asStateFlow()
 
     @SuppressLint("MissingPermission") // caller gates on BLUETOOTH_SCAN
     fun scan(): Flow<BleSighting> = callbackFlow {
         var active: BluetoothLeScanner? = null
+        val lastResultMs = java.util.concurrent.atomic.AtomicLong(System.currentTimeMillis())
+        val lastStartMs = java.util.concurrent.atomic.AtomicLong(0L)
         val settings = ScanSettings.Builder().setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY).build()
         lateinit var callback: ScanCallback
 
@@ -70,6 +80,8 @@ class BleScanner(private val context: Context) {
             val adapter = manager.adapter
             if (adapter == null || !adapter.isEnabled) { _state.value = BleScanState.BLUETOOTH_OFF; return }
             val scanner = adapter.bluetoothLeScanner ?: run { _state.value = BleScanState.BLUETOOTH_OFF; return }
+            lastStartMs.set(System.currentTimeMillis())
+            lastResultMs.set(lastStartMs.get())
             runCatching { scanner.startScan(null, settings, callback) }
                 .onSuccess { active = scanner; _state.value = BleScanState.SCANNING }
                 .onFailure { _state.value = BleScanState.FAILED }
@@ -77,6 +89,7 @@ class BleScanner(private val context: Context) {
 
         callback = object : ScanCallback() {
             override fun onScanResult(callbackType: Int, result: ScanResult) {
+                lastResultMs.set(System.currentTimeMillis())
                 val raw = result.scanRecord?.bytes ?: return
                 val adv = AdvParser.fromRawAdvBytes(
                     raw,
@@ -125,7 +138,20 @@ class BleScanner(private val context: Context) {
                 if (_state.value == BleScanState.SCANNING || _state.value == BleScanState.FAILED) start()
             }
         }
+        val watchdog = launch {
+            while (isActive) {
+                delay(WATCHDOG_TICK_MS)
+                val now = System.currentTimeMillis()
+                val enabled = manager.adapter?.isEnabled == true
+                if (enabled && _state.value == BleScanState.SCANNING && now - lastResultMs.get() > STALL_MS && now - lastStartMs.get() > MIN_RESTART_MS) {
+                    android.util.Log.w("RFWatchBle", "scan stalled ${(now - lastResultMs.get()) / 1000}s with Bluetooth on — restarting")
+                    _stallRestarts.value = _stallRestarts.value + 1
+                    start()
+                }
+            }
+        }
         awaitClose {
+            watchdog.cancel()
             refresher.cancel()
             runCatching { context.unregisterReceiver(btReceiver) }
             stop()
@@ -135,6 +161,9 @@ class BleScanner(private val context: Context) {
 
     private companion object {
         const val REFRESH_MS = 25 * 60_000L
+        const val STALL_MS = 20_000L
+        const val MIN_RESTART_MS = 30_000L
+        const val WATCHDOG_TICK_MS = 5_000L
         const val RETRY_MS = 5_000L
         const val ON_SETTLE_MS = 1_500L
     }

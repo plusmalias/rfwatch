@@ -545,3 +545,15 @@ no merging, not fed into alerts; (2) on-demand ultrasonic beacon check (mic, Pro
 - Hunt panel: "last heard 1793517239 s ago" (lastHeardMs = 0 before first sample) → "Not heard yet…";
   waiting text no longer 44 sp (overlapped itself).
 - Verified on ZTE: Room sweep → Hunt opens Find with the target. Next: Hunt drop-outs (measuring).
+
+### 2026-11-01 (evening) — Claude — BLE scan stall watchdog (Hunt drop-outs)
+
+- **Measured on the ZTE:** the always-on LOW_LATENCY scan stays "ongoing" in `dumpsys bluetooth_manager` but
+  stops receiving results ~5 min after each start (system result counter frozen; app got 0 callbacks for
+  minutes, screen on, app foreground). That was the Hunt "takes forever / drops out" problem (and likely the
+  old "only Wi-Fi detected" symptom).
+- `BleScanner` watchdog: Bluetooth on + SCANNING + no result for 20 s → restart, ≥30 s apart. 12-min test:
+  2 stalls (17:51, 17:56 — each ~5 min after a start), both revived within ~20 s (0 → 112–115 results/10 s).
+- Tried and removed: an address-filtered hunt-only scan — no more target hits than the main scan, and while it
+  ran the main scan only reported the target (controller filter applied globally).
+- Debug logcat `RFWatchHunt` (10 s BLE callback/address counts, hunt gaps) and `RFWatchBle` (watchdog).

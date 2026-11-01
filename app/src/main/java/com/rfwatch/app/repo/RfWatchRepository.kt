@@ -223,6 +223,11 @@ class RfWatchRepository(
     val sweepLive: StateFlow<SweepLive?> = _sweepLive.asStateFlow()
 
     @Volatile private var huntTargetId: String? = null
+    // Debug-only hunt diagnostics (logcat RFWatchHunt).
+    @Volatile private var lastHuntSampleMs = 0L
+    @Volatile private var huntHits = 0
+    @Volatile private var bleCallbacks = 0
+    private val bleAddrsWindow = java.util.Collections.newSetFromMap(java.util.concurrent.ConcurrentHashMap<String, Boolean>())
     private val _hunt = MutableStateFlow<HuntSample?>(null)
     val hunt: StateFlow<HuntSample?> = _hunt.asStateFlow()
 
@@ -232,8 +237,10 @@ class RfWatchRepository(
     /** Hunt (hot/cold) mode: stream every RSSI reading from [deviceId]; null stops. */
     fun setHuntTarget(deviceId: String?) {
         huntTargetId = deviceId
+        lastHuntSampleMs = 0L
         _hunt.value = null
     }
+
 
     /** Whether this phone can give a compass heading (needed for the continuous sweep). */
     val hasCompass: Boolean get() = headingProvider.hasCompass
@@ -751,8 +758,17 @@ class RfWatchRepository(
             headingProvider.headings().collect { _heading.value = it }
         }
         scope.launch {
+            if (com.rfwatch.app.BuildConfig.DEBUG) scope.launch {
+                while (true) {
+                    kotlinx.coroutines.delay(10_000)
+                    val t = huntTargetId
+                    android.util.Log.i("RFWatchHunt", "10s: ble callbacks=$bleCallbacks addrs=${bleAddrsWindow.size} targetHits=$huntHits target=$t state=${bleScanner.state.value} stallRestarts=${bleScanner.stallRestarts.value}")
+                    bleCallbacks = 0; huntHits = 0; bleAddrsWindow.clear()
+                }
+            }
             bleScanner.scan().collect { sighting ->
                 val adv = sighting.advertisement
+                if (com.rfwatch.app.BuildConfig.DEBUG) { bleCallbacks++; bleAddrsWindow.add(adv.address) }
                 // Most adverts repeat byte-for-byte; reuse the parse/fingerprint/details from the
                 // last identical advert of this address and only rebuild when the payload changes.
                 val parseKey = "${sighting.rawAdvertisingHex}|${sighting.deviceName}|${sighting.connectable}|${sighting.legacyAdvertisement}"
@@ -934,7 +950,15 @@ class RfWatchRepository(
         }
         if (findings.isNotEmpty()) roomDirty = true
 
-        if (huntTargetId == id) _hunt.value = HuntSample(rssi, ts)
+        if (huntTargetId == id) {
+            if (com.rfwatch.app.BuildConfig.DEBUG) {
+                huntHits++
+                val gap = ts - lastHuntSampleMs
+                if (lastHuntSampleMs > 0 && gap > 3_000) android.util.Log.i("RFWatchHunt", "GAP ${gap / 1000.0}s target=$id band=$band rssi=$rssi")
+                lastHuntSampleMs = ts
+            }
+            _hunt.value = HuntSample(rssi, ts)
+        }
 
         // Live sweep capture (every advert, not throttled like stored observations).
         if (sweepTargetId == id) {
