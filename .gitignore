@@ -7,3 +7,6 @@ local.properties
 captures/
 .externalNativeBuild/
 .cxx/
+
+# Internal agent work log (kept local, not published)
+HANDOFF.md

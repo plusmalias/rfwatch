@@ -1,166 +1,208 @@
-# RFWatch
+<div align="center">
 
-An Android RF situational-awareness and counter-surveillance tool: it listens (passively)
-to the BLE and Wi-Fi around you, estimates **where** signals are coming from, flags item
-trackers and surveillance gear, and warns you if something appears to be **following** you.
+# 📡 RFWatch
 
-Built for **your own devices, premises and network** — authorised security/privacy work.
-**Designed for Australia** (metric units, local magnetic declination, AU agency/fleet
-vendor rules, AU English TTS voice).
+### See the radio world around you. Know if something is watching you.
+
+**An Android counter-surveillance and RF situational-awareness app.**
+RFWatch passively listens to the Bluetooth, Wi-Fi and cellular signals around you,
+works out roughly **where** they're coming from, flags **item trackers, hidden cameras,
+stalkerware and surveillance gear**, and warns you when something seems to be
+**following you**.
+
+![Platform](https://img.shields.io/badge/platform-Android%208.0%2B-3DDC84?logo=android&logoColor=white)
+![Kotlin](https://img.shields.io/badge/Kotlin-Jetpack%20Compose-7F52FF?logo=kotlin&logoColor=white)
+![Version](https://img.shields.io/badge/version-0.2.0-blue)
+![Offline](https://img.shields.io/badge/default%20build-no%20internet%20permission-success)
+![Encrypted](https://img.shields.io/badge/data-SQLCipher%20encrypted-informational)
+
+[**⬇️ Download the APK**](../../releases/latest) · [Features](#-features) · [Install](#-install) · [Privacy](#-privacy--security) · [How it works](#-how-it-works-honestly) · [Build](#-build-from-source)
+
+</div>
 
 ---
 
-## Honest physics — read this first
+## Why RFWatch?
 
-A phone has **omnidirectional antennas and no angle-of-arrival array**, so it **cannot
-measure a true bearing in a single instant**. Every direction in RFWatch is an *estimate*
-from one of three methods, and **every estimate carries a confidence value**. The UI never
-shows a bearing without one, and never dresses up a hash-angle dot as a real bearing.
+Cheap trackers, hidden cameras and phone spyware have made covert surveillance easy.
+For people in abusive relationships, being stalked, or simply wanting to know what's
+around them, *"is someone tracking me?"* can be a serious safety question.
+
+RFWatch answers it with the radios already in your phone. There's no extra hardware,
+no account and no cloud. It's built to be **honest about what a phone can and can't
+detect**: every result carries a confidence level, and when the evidence is weak it
+says so rather than guessing.
+
+> **Designed in Australia.** Metric units, local magnetic declination, Australian
+> emergency-service and fleet vendor rules, and Australian support services built in.
+
+---
+
+## ✨ Features
+
+### 🎯 Trackers & followers
+- **Item-tracker detection** by payload, not MAC address, so it keeps working as trackers rotate their addresses:
+  - Apple **AirTag / Find My**
+  - Samsung **SmartTag**
+  - **Tile**
+  - **Chipolo**
+  - **Google Find My Device** (FMDN)
+- **Follower detection**: flags a device that keeps turning up with you across different places and times.
+- **Approach / recede trends**: arrows show whether a signal is getting closer or moving away.
+- **"May be the same device" hints**: links Bluetooth address rotations and multi-radio routers so one device doesn't look like many.
+- **Home watch**: notices new devices that appear and persist around home.
+- **GPS-tracker** and **drone (Remote ID)** recognition.
+
+### 🛡️ Protect hub: on-demand checks
+| Check | What it does |
+|---|---|
+| **Room sweep** | Guided sweep of a room for cameras, IoT gear and unknown transmitters |
+| **Car sweep** | Checks a vehicle for hidden trackers |
+| **Camera finder** | Two modes: an **IR finder** (front camera sees night-vision LEDs) and a **lens finder** (torch + back camera catch the glint of a hidden lens) |
+| **Stalkerware check** | Scans installed apps against public stalkerware/spyware indicators (package names, signing certificates, APK hashes) and flags apps holding risky permissions |
+| **Skimmer check** | Looks for Bluetooth signatures common to card skimmers |
+| **Ultrasonic beacon check** | Listens briefly (17–22 kHz) for inaudible tracking beacons |
+| **Cell / IMSI-catcher check** | Heuristic "stingray" detection from cell identity and behaviour |
+| **Location scope** | North-up plot of where nearby devices most likely are. Only devices with a real position estimate are drawn, never invented angles |
+
+### 🚓 Awareness alerts
+- **Police, ambulance and fire** recognition, including Axon body-cam / TASER signatures and fleet Wi-Fi. These are the alerts that come through loud and clear.
+- **Evil-twin Wi-Fi** (a fake copy of a network you trust) and common **wireless attack-tool** signatures.
+- **Hidden cameras and IoT** devices by vendor and broadcast fingerprint.
+
+### 🧭 Find it
+- **Radar**: live, heading-up radar with scan-health readout, distance rings, device icons, trend arrows and a "nearby now" list.
+- **Hunt mode**: a hotter/colder tone guides you to a device.
+- **Heading sweep**: turn slowly on the spot and RFWatch estimates the direction.
+- **Drive-by locate**: GPS-tagged readings estimate a fixed transmitter's position, with an error ellipse.
+- **Map and history**: where each signal was heard over time (MapLibre + OpenStreetMap in the maps build).
+
+### 🗂️ Organised and easy to use
+- **Devices list** with filters (time window, threats, new, named, hide mine), multi-kind selection, sorting and nicknames.
+- One-tap cross-links from any device to **Details → Locate → Hunt → Map**.
+- **Quick Settings tile** and **home-screen widget**.
+
+### 🤫 Discreet mode: built for personal safety
+- **Disguise**: the app can appear as a working **Calculator**. Type your PIN into the calculator to open RFWatch.
+- **Neutral notifications** that don't say what the app is.
+- **Shake to hide**.
+- **App lock** with a PIN or biometrics.
+- **Evidence export**: an HTML report plus CSV/JSON, with sightings, alerts, a timeline and map links, ready to hand to police, a lawyer or a support worker.
+
+---
+
+## 📲 Install
+
+1. Go to [**Releases**](../../releases/latest) and download an APK:
+   - **`RFWatch-0.2.0-maps.apk`**: recommended. Live street maps; uses the internet **only** for map tiles.
+   - **`RFWatch-0.2.0-offline.apk`**: maximum privacy. The app has **no internet permission at all**.
+2. Open the downloaded file on your phone. If Android says it can't install unknown apps, tap **Settings**, allow **"Install from this source"**, then go back and tap **Install**.
+3. Open RFWatch and grant **Location**, **Nearby devices / Bluetooth** and **Notifications**. It can't hear anything without them.
+4. Keep **Bluetooth and Location switched on** while scanning.
+
+**Requirements:** Android 8.0 (API 26) or newer. Tested on Android 14.
+
+> These are early **test builds** (debug-signed), not Play Store releases. Expect rough edges, and please report what you find.
+
+---
+
+## 🔒 Privacy & security
+
+- **Your data never leaves your phone.** RFWatch has no accounts, no analytics and no cloud.
+- **The offline build has no `INTERNET` permission**, so it physically cannot send data anywhere.
+- The maps build only requests the OpenStreetMap tiles for the area on screen. Scan records stay on the device.
+- **Encrypted at rest** with SQLCipher. The key is wrapped by the Android Keystore (hardware-backed where available).
+- **Automatic retention purge** (default 30 days) and a **wipe-all-data** button.
+- Excluded from cloud backup and device transfer.
+
+---
+
+## 🔬 How it works, honestly
+
+A phone has **omnidirectional antennas and no direction-finding array**, so it **can't measure a true bearing in an instant**. Every direction in RFWatch is an *estimate*, and every estimate carries a confidence value.
 
 | Method | How | What you get |
 |---|---|---|
-| **Heading sweep** (stationary) | You turn 360° with the phone to your chest; your body shadows the signal | A bearing from a cosine-lobe fit, with R²/depth confidence |
-| **Drive-by** (moving) | GPS-tagged RSSI samples fit a path-loss model | A position + 2σ error ellipse, or "MOBILE → trend" |
-| **Wi-Fi RTT** (supported APs only) | 802.11mc round-trip time | A true **distance** (not a bearing), used as a hard constraint |
+| **Heading sweep** (standing still) | Turn 360° with the phone against your chest; your body shadows the signal | A bearing from a cosine-lobe fit, with a confidence score |
+| **Drive-by** (moving) | GPS-tagged signal readings fit a path-loss model | A position with an error ellipse, or "mobile, trending" |
+| **Wi-Fi RTT** (supported access points) | 802.11mc round-trip timing | A real **distance** used as a hard constraint |
 
-If a fit is too weak, RFWatch says **"no clear direction"** rather than guessing.
+If a fit is too weak, RFWatch says **"no clear direction"** instead of drawing a fake dot.
+Poor GPS fixes are ignored for direction, and gaps in scanning aren't mistaken for a device leaving.
 
----
+**Cell / IMSI-catcher detection is heuristic.** A normal (non-rooted) phone can't read baseband signalling, so RFWatch reasons from cell identity, radio type, neighbour cells and signal strength:
+- a 2G downgrade
+- a lone cell
+- an unknown cell
+- a LAC/TAC mismatch
+- rapid reselection
+- implausibly strong signal
 
-## Architecture
+A **HIGH** result means *worth checking*, not proof.
 
-Two Gradle modules:
+### Tracker identifiers
+Classified by advertisement payload and checked against the Bluetooth SIG UUID registry, the IEEE OUI registry and published research:
+- Apple Find My: `0x004C` type `0x12`; accessory `0xFD44`
+- Samsung SmartTag: `0xFD5A` / `0xFD59`
+- Tile: `0xFEED` / `0xFEEC` / `0xFD84`
+- Chipolo: `0xFE33` / `0xFE65`
+- Google FMDN: `0xFEAA` frames `0x40`/`0x41`
 
-- **`:core`** — pure Kotlin/JVM, **no Android dependencies**. All the RF maths, parsers,
-  scoring and rules live here so they can be unit-tested on a bare JDK (no device, no
-  emulator). This is where the correctness-critical code is, and it is covered by tests.
-- **`:app`** — the Android app (Kotlin + Jetpack Compose). Sensors, BLE/Wi-Fi/RTT scanning,
-  the encrypted database, alerts and the UI. It wraps `:core`; it does not re-implement the
-  maths.
+Undocumented fields are treated as best effort, and the code says so.
 
-### Build-step → where it lives
+### Architecture
+- **`:core`**: pure Kotlin/JVM with no Android dependencies. All the RF maths, parsers, scoring and detection rules live here and are covered by **130+ unit tests** that run on a bare JDK.
+- **`:app`**: Android (Kotlin + Jetpack Compose). Scanning, sensors, the encrypted database, alerts and UI. It wraps `:core` and never re-implements the maths.
 
-| Spec step | `:core` (tested) | `:app` (Android) |
-|---|---|---|
-| 1 HeadingProvider | `df/HeadingFusion` | `sensors/HeadingProvider` (TYPE_ROTATION_VECTOR + `GeomagneticField`) |
-| 2 Sweep / Hunt | `df/SweepFit`, `df/HuntTone` | `ui/screens/SweepScreen` (polar plot) |
-| 3 Drive-by | `df/PathLossLocalizer` (LM), `df/DriveByEstimator`, `df/Mobility` | wired via `repo/RfWatchRepository` |
-| 4 Wi-Fi RTT | distance constraints in `PathLossLocalizer` | `scan/RttRanger` (gated on `FEATURE_WIFI_RTT`) |
-| 5 Radar v2 | — | `ui/screens/RadarScreen` (heading-up, wedges, grey ring) |
-| 6 Trackers | `cs/TrackerParser`, `cs/AdvParser`, `cs/TrackerIdentityLinker` | BLE pipeline in repository |
-| 7 Follower | `cs/FollowerScorer`, `cs/OwnDeviceLearner` | — |
-| 8 Room sweep | `cs/RoomSweep` + `rules/*` | `ui/screens/RoomSweepScreen` |
-| 9 Baselines | `cs/Baseline` | geofence plumbing in DB |
-| 10 Map / timeline | `geo/*` projections | `ui/screens/MapScreen`, `EventLogScreen` |
-| 11 Encryption / retention / alerts | `data/RetentionPolicy`, `alerts/AlertPhrasing` | SQLCipher + Keystore, `alerts/AlertManager` |
+Detection rules ship as JSON rule packs (`trackers`, `law_enforcement`, `emergency_services`, `fleet`, `cameras_iot`, `attack_tools`), alongside vendor and stalkerware indicator databases.
 
----
-
-## Tracker identifiers (verified 2026-10-31)
-
-Classified by **payload, not MAC** (these all rotate their MAC). Identifiers checked
-against the **Bluetooth SIG 16-bit UUID member registry**, IEEE OUI registry and vendor /
-reverse-engineering references; sources are cited inline in `core/.../cs/TrackerParser.kt`
-and the JSON rule packs.
-
-- Apple Find My — company `0x004C`, offline-finding type `0x12`; accessory service `0xFD44`
-- Samsung SmartTag — `0xFD5A` (registered) / `0xFD59` (unregistered)
-- Tile — `0xFEED`, `0xFEEC`, `0xFD84`
-- Chipolo — `0xFE33`, `0xFE65`
-- Google Find My Device (FMDN) — service data `0xFEAA`, FMDN frame `0x40`/`0x41`
-  (disambiguated from legacy Eddystone by the frame byte)
-- IETF **DULT** is the umbrella spec these conform to (no single UUID)
-
-Where a format is not publicly documented (e.g. Apple's status/battery bits) the code says
-so and treats it as best-effort.
+### Standing on the shoulders of
+**AirGuard** (TU Darmstadt) for tracker and follower detection; **SnoopSnitch, AIMSICD, CellGuard and Crocodile Hunter** for IMSI-catcher research; **WiGLE** for wardrive mapping; and the **Echap** / **MVT** stalkerware indicator projects.
 
 ---
 
-## Cellular / IMSI-catcher ("stingray") detection
+## 🛠️ Build from source
 
-Watches the serving + neighbour cells via `TelephonyManager`/`CellInfo` and flags
-behaviour consistent with a cell-site simulator. **Heuristic, non-rooted** — stated plainly
-in the UI:
-
-- A non-rooted phone **cannot read the baseband or layer-3 signalling**, so (unlike
-  SnoopSnitch, which needs root + a Qualcomm chipset) RFWatch cannot see silent SMS,
-  cipher/auth downgrades or paging. It reasons only from cell identity, radio type,
-  neighbour set and signal.
-- Heuristics: **2G downgrade** after seeing LTE/NR, a **lone cell** with no neighbours,
-  an **unknown cell** (after a learning window), **LAC/TAC inconsistency** for a known
-  cell id, **rapid reselection**, and an **implausibly strong signal**. Weights combine
-  into LOW/MEDIUM/HIGH.
-- False positives happen (roaming, a new tower, a genuine 2G hole, a femtocell) and a
-  careful catcher can evade. **HIGH means "worth checking", not proof.** The logic is in
-  `core/.../cs/cell/StingrayDetector.kt` and is unit-tested.
-
-## Prior art this draws on
-
-- **AirGuard** (TU Darmstadt) — BLE AirTag/SmartTag/Find My + "seen in ≥3 locations"
-  follower detection → covered by the tracker + follower modules.
-- **SnoopSnitch / AIMSICD / CellGuard / Crocodile Hunter** — IMSI-catcher detection →
-  the cellular module above (heuristic, since we're non-rooted).
-- **WiGLE** — wardrive logging/mapping → GPS-tagged observations + the session map.
-
-## Privacy & data protection
-
-- **No INTERNET permission in the default (`offline`) flavor.** The `mapsOnline` flavor
-  uses MapLibre with interactive OpenStreetMap tiles; tile requests reveal the visible map
-  area to the tile service. Device scan records remain local and are not sent to OSM.
-- Database **encrypted at rest with SQLCipher**; the key is a random passphrase wrapped by
-  an **Android Keystore** AES-GCM key (hardware-backed where available).
-- **Retention** (default 30 days) with automatic purge; **Wipe-all-data** button.
-- Backups/device-transfer excluded (`data_extraction_rules.xml`).
-- Records bystanders' devices — handle accordingly. In Australia, surveillance-device and
-  privacy laws vary by state; this tool is for your own property/devices/network.
-
----
-
-## Build & verify
-
-Requires a JDK 17 and the Android SDK (`local.properties` with `sdk.dir`, or `ANDROID_HOME`).
+You'll need **JDK 17** and the **Android SDK** (platform 34). See [BUILD.md](BUILD.md) for the full guide.
 
 ```bash
-# Run the maths/logic unit tests (JDK only, no Android SDK needed):
-./gradlew :core:test
-
-# Full build + all unit tests (needs Android SDK):
-./gradlew assembleOfflineDebug test
-
-# Install the default offline build:
-./gradlew :app:installOfflineDebug
+./gradlew :core:test                 # detection logic tests (JDK only)
+./gradlew assembleOfflineDebug       # no-internet build
+./gradlew assembleMapsOnlineDebug    # build with live maps
 ```
 
-### Definition of done (your spec) — on-device checks
-- a sweep on your own BLE device gives a bearing that points the right way
-- a drive past your own router produces an ellipse that contains it
-- carrying a second phone/tag in the car 15+ min across 3 locations triggers "Possible
-  follower"
+---
+
+## 🆘 If you're in danger
+
+RFWatch can help you **gather evidence**, but it is not a substitute for help from people.
+If you think someone is tracking or monitoring you:
+- **Export your evidence first.**
+- Think carefully before removing a tracker or app, because the person may notice.
+- Talk to a specialist service.
+
+| Australia | |
+|---|---|
+| Emergency | **000** |
+| 1800RESPECT (domestic, family & sexual violence) | **1800 737 732** |
+| MensLine Australia | **1300 78 99 78** |
+| DVConnect (QLD) | **1800 811 811** |
 
 ---
 
-## Verification status (be aware)
+## ⚖️ Responsible use
 
-- **`:core`** — complete and **verified: `./gradlew :core:test` → BUILD SUCCESSFUL, 39/39
-  passing** (cosine sweep fit, LM localiser <50 m + error ellipse + RTT, mobility/trend,
-  tracker hex-fixture parsers + identity linking, follower scoring incl. exclusions,
-  own-device learning, baselines, room sweep, ENU/geo, heading fusion, rule packs,
-  retention purge, alert phrasing, and the IMSI-catcher/stingray heuristics).
-- **`:app`** — offline and mapsOnline debug variants compile and unit tests pass. The
-  mapsOnline MapLibre view uses an OpenStreetMap raster basemap with attribution, clustered
-  category-colored radio markers, a separate current-phone marker, and tap-to-inspect details.
-  Map tiles are requested only for the area currently viewed; no offline tile prefetch occurs.
+RFWatch is for protecting **yourself, your own devices, your property and your network**.
+It records the presence of nearby devices, so treat that data with care. Surveillance and
+privacy laws vary by state and country, and you are responsible for using it lawfully.
+Detection is probabilistic: no result is proof on its own, and the absence of an alert is not a guarantee
+that you aren't being tracked.
 
 ---
 
-## Map modes
+<div align="center">
 
-The `offline` flavor has no network permission and shows GPS-tagged signal-hearing points
-without a street basemap. The `mapsOnline` flavor adds Internet access only to load the
-currently viewed OpenStreetMap tiles. It keeps radio/device data on the phone. The map
-distinguishes estimated fixed-source locations from the phone GPS location where a signal
-was heard; mobile candidates are only flagged when the drive-by estimator has enough
-GPS-tagged observations. See the [OpenStreetMap tile policy](https://operations.osmfoundation.org/policies/tiles/).
-Map label glyphs ("YOU", cluster counts; Noto Sans Bold, ASCII range, OFL-1.1) are bundled in
-`app/src/mapsOnline/assets/glyphs`, so no font server is contacted. Labels use their own GeoJSON
-sources, so a glyph problem can never hide the device or user markers.
+Built by **Jorden Armstrong**.
+Feedback, bug reports and field results are very welcome: open an [issue](../../issues).
+
+</div>

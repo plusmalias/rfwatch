@@ -1,7 +1,8 @@
 # Building RFWatch & getting it on your phone
 
 RFWatch is an Android app, so it must be compiled into an APK on a machine with the
-Android toolchain, then installed on the phone. There is no prebuilt APK in this repo.
+Android toolchain, then installed on the phone. Ready-made APKs are attached to each
+[GitHub Release](../../releases) if you just want to install it.
 
 ## Prerequisites
 
@@ -40,7 +41,7 @@ manager / browser).
 
 ## Flavors
 
-- **offline** (default) — **no INTERNET permission**. Maps use imported offline MBTiles.
+- **offline** (default) — **no INTERNET permission**. The map shows signal points without a street basemap.
 - **mapsOnline** — adds INTERNET purely for live OSM tiles. Build with
   `assembleMapsOnlineDebug`. Not the default.
 
@@ -52,11 +53,8 @@ Bluetooth scan/connect, Phone (for cell/IMSI monitoring), Notifications. On Andr
 
 ## Known gotchas
 
-- **First compile:** `:app` was authored without a local toolchain, so the first
-  `assembleOfflineDebug` may surface a few compile errors to fix — expected for a codebase
-  this size written without a compiler. `:core` is reviewed and unit-tested.
-- **Wi-Fi RTT:** feature-gated. Most budget phones (incl. the Optus X Tap 3) lack the
-  hardware; the feature simply shows as unavailable.
+- **Wi-Fi RTT:** feature-gated. Most budget phones lack the hardware; the feature simply
+  shows as unavailable.
 - **IMSI-catcher detection is heuristic** (non-rooted). See README for the honest limits.
 - **SQLCipher** pulls a native lib; make sure `assembleOfflineDebug` completes the NDK/so
   packaging step (no action needed — it's a normal AAR).
