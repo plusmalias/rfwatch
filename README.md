@@ -15,6 +15,7 @@ stalkerware and surveillance gear**, and warns you when something seems to be
 ![Version](https://img.shields.io/badge/version-0.2.0-blue)
 ![Offline](https://img.shields.io/badge/default%20build-no%20internet%20permission-success)
 ![Encrypted](https://img.shields.io/badge/data-SQLCipher%20encrypted-informational)
+[![License: GPL v3](https://img.shields.io/badge/license-GPL--3.0-blue)](LICENSE)
 
 [**⬇️ Download the APK**](../../releases/latest) · [Features](#-features) · [Install](#-install) · [Privacy](#-privacy--security) · [How it works](#-how-it-works-honestly) · [Build](#-build-from-source)
 
@@ -197,6 +198,18 @@ It records the presence of nearby devices, so treat that data with care. Surveil
 privacy laws vary by state and country, and you are responsible for using it lawfully.
 Detection is probabilistic: no result is proof on its own, and the absence of an alert is not a guarantee
 that you aren't being tracked.
+
+---
+
+## 📜 License
+
+**Copyright © 2026 Jorden Armstrong.**
+
+RFWatch is free software, licensed under the [GNU General Public License v3.0](LICENSE).
+You can use it, study it, change it and share it. If you distribute a modified version,
+you must release your source code under the same licence and keep this credit.
+
+For commercial licensing or partnerships, please get in touch via [GitHub](https://github.com/plusmalias).
 
 ---
 
