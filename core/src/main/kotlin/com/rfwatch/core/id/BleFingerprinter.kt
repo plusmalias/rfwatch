@@ -25,9 +25,21 @@ object BleFingerprinter {
     private const val SAMSUNG = 0x0075
 
     fun fingerprint(adv: BleAdvertisement, name: String?): Fingerprint {
-        val fp = classify(adv, name)
-        return if (fp.brand != null) fp else fp.copy(brand = brandOf(adv))
+        var fp = classify(adv, name ?: adv.localName)
+        if (fp.brand == null) fp = fp.copy(brand = brandOf(adv))
+        // Readable text hidden in the binary payload ("acme.BeaconID", a firmware tag) is evidence.
+        val text = (adv.manufacturerData.values + adv.serviceData16.values).flatMap { PayloadText.find(it) }
+            .filter { t -> fp.name?.contains(t) != true }.distinct().take(3)
+        if (text.isNotEmpty()) fp = fp.copy(evidence = fp.evidence + " · text in payload: " + text.joinToString { "\"$it\"" })
+        if (fp.name == null && name == null) adv.localName?.let { fp = fp.copy(name = it) }
+        if (fp.model == null && fp.kind == DeviceKind.UNKNOWN && fp.brand == null && adv.manufacturerData.isEmpty() &&
+            adv.serviceData16.isEmpty() && adv.serviceUuids16.isEmpty() && adv.appearance == null && name == null && adv.localName == null
+        ) fp = fp.copy(model = "BLE device (no payload)", evidence = "advert carries only flags/TX power — nothing identifying")
+        return fp
     }
+
+    /** Flags with BR/EDR support (bit 2 clear) and LE discoverable: a dual-mode phone/tablet/computer radio. */
+    private fun dualMode(adv: BleAdvertisement): Boolean = adv.flags?.let { (it and 0x04) == 0 && (it and 0x03) != 0 } ?: false
 
     private fun classify(adv: BleAdvertisement, name: String?): Fingerprint {
         adv.serviceData16[RemoteIdParser.BLE_SERVICE_UUID]?.let { data ->
@@ -37,20 +49,22 @@ object BleFingerprinter {
                 "ASTM F3411 Remote ID broadcast (service 0xFFFA)",
             )
         }
-        adv.manufacturerData[APPLE]?.let { apple(it) }?.let { return it.copy(brand = "Apple") }
+        adv.manufacturerData[APPLE]?.let { apple(it, adv) }?.let { return it.copy(brand = "Apple") }
         adv.manufacturerData[MICROSOFT]?.let { microsoft(it) }?.let { return it.copy(brand = "Microsoft") }
-        adv.manufacturerData[SAMSUNG]?.let { samsung(it) }?.let { return it }
+        samsung(adv)?.let { return it }
         beacon(adv)?.let { return it }
         fastPair(adv)?.let { return it }
         adv.appearance?.let { appearance(it) }?.let { return it }
         services(adv.serviceUuids16)?.let { return it }
         name?.let { NameHints.ble(it) }?.let { return it }
+        companyModel(adv)?.let { return it }
         adv.manufacturerData.keys.firstNotNullOfOrNull { id ->
             VendorDb.company(id)?.let { NameHints.company(it) }
         }?.let { return it }
         memberServiceCompany(adv.serviceUuids16)?.let { company ->
             NameHints.company(company)?.let { return it.copy(brand = VendorDb.shortName(company)) }
         }
+        google(adv)?.let { return it }
         return Fingerprint(DeviceKind.UNKNOWN, evidence = "no identifying payload")
     }
 
@@ -67,7 +81,46 @@ object BleFingerprinter {
     private val BUDS_PREFIX = byteArrayOf(0x42, 0x09, 0x81.toByte(), 0x02, 0x14, 0x15, 0x03, 0x21, 0x01, 0x09)
     private val WATCH_PREFIX = byteArrayOf(0x00, 0x01, 0x00, 0x02, 0x00, 0x01, 0x01, 0xFF.toByte(), 0x00, 0x00, 0x43)
 
-    private fun samsung(d: ByteArray): Fingerprint? {
+    private fun samsung(adv: BleAdvertisement): Fingerprint? {
+        val records = adv.manufacturerRecords.filter { it.first == SAMSUNG }.map { it.second }
+            .ifEmpty { listOfNotNull(adv.manufacturerData[SAMSUNG]) }
+        if (records.isEmpty()) return null
+        samsungFrame(records.first())?.let { return it }
+        // 0x01 0x12 frames carry the owner's device name, continued in a second 0x01 0x12 record
+        // ("Jo's Ga" + "laxy A52s"). Community-observed layout: 17 header bytes, then name bytes.
+        val first = records.first()
+        if (first.size > 17 && (first[0].toInt() and 0xFF) == 0x01 && (first[1].toInt() and 0xFF) == 0x12) {
+            val tail = records.drop(1).filter { it.size > 2 && (it[0].toInt() and 0xFF) == 0x01 && (it[1].toInt() and 0xFF) == 0x12 }
+                .joinToString("") { printable(it.copyOfRange(2, it.size)) ?: "" }
+            val head = printable(first.copyOfRange(17, first.size))
+            val deviceName = ((head ?: "") + tail).trim().takeIf { it.length >= 3 }
+            if (deviceName != null) {
+                val hint = NameHints.ble(deviceName)
+                return Fingerprint(
+                    hint?.kind?.takeIf { it != DeviceKind.UNKNOWN } ?: DeviceKind.PHONE, "Samsung Galaxy device",
+                    "Samsung 0x0075 name frame (01 12) carries the device name \"$deviceName\"", "Samsung", name = deviceName,
+                )
+            }
+        }
+        val type = if (first.size >= 2) "%02X %02X".format(first[0].toInt() and 0xFF, first[1].toInt() and 0xFF) else "?"
+        return Fingerprint(
+            if (dualMode(adv)) DeviceKind.PHONE else DeviceKind.UNKNOWN, "Samsung Galaxy device",
+            "Samsung 0x0075 frame type $type (Galaxy / SmartThings; exact product not encoded)" +
+                if (dualMode(adv)) " · dual-mode radio flags" else "",
+            "Samsung",
+        )
+    }
+
+    /** Whole byte range as text if every byte is printable ASCII/UTF-8 (trailing zero padding ignored). */
+    private fun printable(b: ByteArray): String? {
+        val end = b.indexOfLast { it.toInt() != 0 } + 1
+        if (end == 0) return ""
+        val body = b.copyOfRange(0, end)
+        if (body.any { (it.toInt() and 0xFF) < 0x20 || (it.toInt() and 0xFF) == 0x7F }) return null
+        return body.decodeToString()
+    }
+
+    private fun samsungFrame(d: ByteArray): Fingerprint? {
         if (d.size >= 14 && d.copyOfRange(0, BUDS_PREFIX.size).contentEquals(BUDS_PREFIX)) {
             val model = ((d[10].toInt() and 0xFF) shl 16) or ((d[11].toInt() and 0xFF) shl 8) or (d[13].toInt() and 0xFF)
             val m = DeviceDb.samsungBudsModel(model)
@@ -83,8 +136,35 @@ object BleFingerprinter {
 
     // ---- Apple Continuity: a sequence of [type][length][payload] messages ----
 
-    private fun apple(data: ByteArray): Fingerprint? {
-        val messages = HashMap<Int, ByteArray>()
+    private fun ipv4(p: ByteArray, at: Int): String? {
+        if (p.size < at + 4) return null
+        val o = (0 until 4).map { p[at + it].toInt() and 0xFF }
+        return if (o.all { it == 0 }) null else o.joinToString(".")
+    }
+
+    /** Proximity-pairing battery nibbles (0–10 = ×10 %, 15 = unknown); layout per OpenPods / furiousMAC. */
+    private fun podBattery(p: ByteArray): String? {
+        if (p.size < 6) return null
+        fun pct(n: Int) = if (n in 0..10) "${n * 10}%" else null
+        val pods = listOfNotNull(pct((p[4].toInt() ushr 4) and 0x0F), pct(p[4].toInt() and 0x0F))
+        val case = pct(p[5].toInt() and 0x0F)
+        if (pods.isEmpty() && case == null) return null
+        return "battery " + listOfNotNull(pods.takeIf { it.isNotEmpty() }?.joinToString("/", prefix = "pods "), case?.let { "case $it" }).joinToString(", ")
+    }
+
+    private val APPLE_TYPE_NAMES = mapOf(
+        0x01 to "overflow area", 0x02 to "iBeacon", 0x03 to "AirPrint", 0x05 to "AirDrop", 0x06 to "HomeKit",
+        0x07 to "Proximity Pairing", 0x08 to "Hey Siri", 0x09 to "AirPlay Target", 0x0A to "AirPlay Source",
+        0x0B to "Magic Switch", 0x0C to "Handoff", 0x0D to "Tethering Target", 0x0E to "Tethering Source",
+        0x0F to "Nearby Action", 0x10 to "Nearby Info", 0x12 to "Find My",
+    )
+
+    /** Apple Continuity message names (furiousMAC/continuity), shared with [AdvDecoder]. */
+    fun appleTypeName(type: Int): String = APPLE_TYPE_NAMES[type] ?: "type 0x%02X".format(type)
+
+    /** TLV messages of an Apple Continuity payload, first occurrence of each type. */
+    fun appleMessages(data: ByteArray): LinkedHashMap<Int, ByteArray> {
+        val messages = LinkedHashMap<Int, ByteArray>()
         var i = 0
         while (i + 1 < data.size) {
             val type = data[i].toInt() and 0xFF
@@ -93,16 +173,37 @@ object BleFingerprinter {
             messages.putIfAbsent(type, data.copyOfRange(i + 2, end))
             i += 2 + len
         }
+        return messages
+    }
+
+    private fun apple(data: ByteArray, adv: BleAdvertisement): Fingerprint? {
+        val messages = appleMessages(data)
         messages[0x07]?.let { p ->
             val model = if (p.size >= 3) ((p[1].toInt() and 0xFF) shl 8) or (p[2].toInt() and 0xFF) else null
             val name = model?.let { DeviceDb.appleAudioModel(it)?.name ?: APPLE_AUDIO_MODELS[it] }
+            // Battery bytes only follow the full 25-byte form; the short form is encrypted.
+            val battery = if (p.size >= 25 && name != null) podBattery(p) else null
             return Fingerprint(
                 DeviceKind.AUDIO, name ?: "Apple/Beats audio",
-                "Apple Continuity proximity pairing" + (model?.let { " model 0x%04X".format(it) } ?: ""),
+                "Apple Continuity proximity pairing" + (model?.let { " model 0x%04X".format(it) } ?: "") +
+                    (battery?.let { " · $it" } ?: ""),
             )
         }
         if (0x0B in messages) return Fingerprint(DeviceKind.WEARABLE, "Apple Watch", "Apple Continuity watch (magic switch)")
-        if (0x09 in messages) return Fingerprint(DeviceKind.TV_MEDIA, "AirPlay receiver", "Apple Continuity AirPlay target")
+        messages[0x09]?.let { p ->
+            // AirPlay target: flags, seed, then the receiver's IPv4 address.
+            val ip = ipv4(p, 2)
+            return Fingerprint(DeviceKind.TV_MEDIA, "AirPlay receiver", "Apple Continuity AirPlay target" + (ip?.let { " · local IP $it" } ?: ""))
+        }
+        messages[0x03]?.let { p ->
+            // AirPrint: address type, resource path, security, TCP port (2), IPv4.
+            val port = if (p.size >= 5) ((p[3].toInt() and 0xFF) shl 8) or (p[4].toInt() and 0xFF) else null
+            val ip = ipv4(p, 5)
+            return Fingerprint(
+                DeviceKind.SMART_HOME, "AirPrint printer",
+                "Apple Continuity AirPrint" + (ip?.let { " · printer at $it" + (port?.let { pt -> ":$pt" } ?: "") } ?: ""),
+            )
+        }
         if (0x02 in messages) return ibeacon(messages.getValue(0x02))
         if (0x0E in messages) return Fingerprint(DeviceKind.PHONE, "iPhone / iPad (hotspot)", "Apple Continuity tethering source")
         messages[0x0F]?.takeIf { it.size >= 2 }?.let { p ->
@@ -121,7 +222,14 @@ object BleFingerprinter {
             val state = if (p.size >= 25) "separated from its owner" else "owner nearby"
             return Fingerprint(DeviceKind.TRACKER, "Apple Find My broadcast ($state)", "Apple Continuity Find My message 0x12, ${p.size}-byte payload")
         }
-        return null
+        if (messages.isEmpty()) return null
+        val types = messages.keys.joinToString { t -> APPLE_TYPE_NAMES[t]?.let { "0x%02X (%s)".format(t, it) } ?: "type 0x%02X".format(t) }
+        // Undocumented types (0x16, 0x1C, Hey Siri …): Apple for sure; the radio flags tell a
+        // dual-mode iPhone/iPad/Mac apart from LE-only accessories.
+        return if (dualMode(adv)) Fingerprint(
+            DeviceKind.PHONE, "iPhone / iPad / Mac",
+            "Apple Continuity $types · dual-mode radio flags 0x%02X (phone/tablet/computer class)".format(adv.flags),
+        ) else Fingerprint(DeviceKind.UNKNOWN, "Apple device", "Apple Continuity $types")
     }
 
     private fun ibeacon(p: ByteArray): Fingerprint {
@@ -176,6 +284,22 @@ object BleFingerprinter {
     private fun beacon(adv: BleAdvertisement): Fingerprint? {
         adv.manufacturerData.values.firstOrNull { it.size >= 2 && (it[0].toInt() and 0xFF) == 0xBE && (it[1].toInt() and 0xFF) == 0xAC }
             ?.let { return Fingerprint(DeviceKind.BEACON, "AltBeacon", "AltBeacon frame") }
+        // iBeacon layout (02 15 + UUID/major/minor/TX) under a non-Apple company: generic beacon
+        // modules, and cheap clones that write Apple's ID byte-swapped (0x4C00).
+        adv.manufacturerData.entries.firstOrNull { (_, d) -> d.size >= 23 && (d[0].toInt() and 0xFF) == 0x02 && (d[1].toInt() and 0xFF) == 0x15 }
+            ?.let { (company, d) ->
+                val major = ((d[18].toInt() and 0xFF) shl 8) or (d[19].toInt() and 0xFF)
+                val minor = ((d[20].toInt() and 0xFF) shl 8) or (d[21].toInt() and 0xFF)
+                val maker = if (company == 0x4C00) null else VendorDb.company(company)
+                return Fingerprint(
+                    DeviceKind.BEACON,
+                    if (company == 0x4C00) "iBeacon clone" else "iBeacon-format beacon",
+                    (if (company == 0x4C00) "iBeacon frame with Apple's company ID byte-swapped (0x4C00) — non-Apple clone"
+                    else "iBeacon frame under company 0x%04X".format(company) + (maker?.let { " ($it)" } ?: "")) +
+                        " · major $major minor $minor",
+                    maker,
+                )
+            }
         adv.serviceData16[0xFEAA]?.let { frame ->
             val f = frame.firstOrNull()?.toInt()?.and(0xFF) ?: return null
             val label = when (f) {
@@ -203,6 +327,49 @@ object BleFingerprinter {
             "Google Fast Pair service data" + (if (modelId != null) " — discoverable" else ""),
         )
     }
+
+    /**
+     * Google member-service frames (0xFEF3, 0xFCF1, 0xFE9F) are sent by Android phones and Google
+     * hardware alike; Google does not publish their layout, so only the owner is claimed.
+     */
+    private fun google(adv: BleAdvertisement): Fingerprint? {
+        val uuid = GOOGLE_SERVICES.firstOrNull { it in adv.serviceUuids16 || it in adv.serviceData16 } ?: return null
+        return Fingerprint(
+            if (dualMode(adv)) DeviceKind.PHONE else DeviceKind.UNKNOWN, "Google / Android device",
+            "Google service 0x%04X (Android / Google hardware; layout unpublished)".format(uuid) +
+                if (dualMode(adv)) " · dual-mode radio flags" else "",
+            "Google",
+        )
+    }
+
+    private val GOOGLE_SERVICES = listOf(0xFEF3, 0xFCF1, 0xFE9F)
+
+    /** Companies whose adverts identify a product line even without a decoded model. */
+    private fun companyModel(adv: BleAdvertisement): Fingerprint? {
+        val hpService = HP_SERVICES.firstOrNull { it in adv.serviceUuids16 || it in adv.serviceData16 }
+        if (0x0065 in adv.manufacturerData || hpService != null) return Fingerprint(
+            DeviceKind.SMART_HOME, "HP printer / PC",
+            "HP company 0x0065" + (hpService?.let { " · HP service 0x%04X".format(it) } ?: "") + " (HP Smart setup beacon)", "HP",
+        )
+        adv.manufacturerData.keys.firstNotNullOfOrNull { COMPANY_MODELS[it] }?.let { (kind, model) ->
+            val id = adv.manufacturerData.keys.first { it in COMPANY_MODELS }
+            return Fingerprint(kind, model, "company 0x%04X".format(id) + (VendorDb.company(id)?.let { " ($it)" } ?: ""))
+        }
+        return null
+    }
+
+    private val HP_SERVICES = listOf(0xFDF7, 0xFE78, 0xFCA4)
+
+    private val COMPANY_MODELS = mapOf(
+        0x02E1 to (DeviceKind.SMART_HOME to "Victron solar / battery device"),
+        0x0087 to (DeviceKind.WEARABLE to "Garmin wearable"),
+        0x0157 to (DeviceKind.WEARABLE to "Huami / Amazfit wearable"),
+        0x012D to (DeviceKind.UNKNOWN to "Sony device"),
+        0x0499 to (DeviceKind.SMART_HOME to "Ruuvi sensor tag"),
+        0x038F to (DeviceKind.SMART_HOME to "Xiaomi device"),
+        0x0969 to (DeviceKind.SMART_HOME to "Woan / SwitchBot device"),
+        0x0822 to (DeviceKind.UNKNOWN to "Adafruit maker board"),
+    )
 
     private fun services(uuids: Set<Int>): Fingerprint? {
         for ((uuid, hit) in SERVICE_HINTS) if (uuid in uuids) return Fingerprint(hit.first, hit.second, "service 0x%04X".format(uuid))

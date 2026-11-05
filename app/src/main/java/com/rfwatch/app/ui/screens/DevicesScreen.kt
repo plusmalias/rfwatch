@@ -2,6 +2,8 @@ package com.rfwatch.app.ui.screens
 
 import com.rfwatch.app.ui.toRowInfo
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -81,6 +83,20 @@ fun DevicesScreen(vm: RfWatchViewModel, modifier: Modifier = Modifier, onRoom: (
         finally { vm.consumeNav(n) }
     }
     val selected = selectedId?.let { id -> devices.firstOrNull { it.id == id } }
+    // Details open as a sheet over the list: the list keeps its scroll position and the card is
+    // always on screen (it used to be pinned at the top of the list, often scrolled out of view).
+    if (selected != null) {
+        @OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+        androidx.compose.material3.ModalBottomSheet(
+            onDismissRequest = { selectedId = null },
+            sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true),
+            containerColor = com.rfwatch.app.ui.theme.ConsoleBackground,
+        ) {
+            Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = 10.dp).padding(bottom = 24.dp)) {
+                DeviceCard(selected, selected = true, vm = vm) { selectedId = null }
+            }
+        }
+    }
     Column(modifier.fillMaxSize().padding(12.dp)) {
         Row(Modifier.fillMaxWidth().padding(bottom = 6.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
@@ -157,13 +173,8 @@ fun DevicesScreen(vm: RfWatchViewModel, modifier: Modifier = Modifier, onRoom: (
             }
         }
         LazyColumn(Modifier.fillMaxWidth().weight(1f).padding(top = 2.dp), state = listState, verticalArrangement = Arrangement.spacedBy(5.dp)) {
-            if (selected != null) {
-                item(key = "selected-${selected.id}") {
-                    DeviceCard(selected, selected = true, vm = vm) { selectedId = null }
-                }
-            }
             val now = System.currentTimeMillis()
-            items(view.visible.filterNot { it.id == selectedId }, key = { it.id }) { d ->
+            items(view.visible, key = { it.id }) { d ->
                 com.rfwatch.app.ui.DeviceRowCompact(d.toRowInfo(now)) { selectedId = d.id }
             }
             if (view.visible.isEmpty()) {
@@ -230,7 +241,7 @@ private fun DeviceCard(d: com.rfwatch.app.data.DeviceEntity, selected: Boolean, 
                     Column(Modifier.padding(8.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(
-                                com.rfwatch.app.ui.friendlyName(d.nickname, d.displayName, d.brand, d.effectiveKind(), d.id),
+                                com.rfwatch.app.ui.friendlyName(d.nickname, d.displayName, d.brand, d.effectiveKind(), d.id, d.model),
                                 fontSize = 16.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold, modifier = Modifier.weight(1f),
                             )
                             if (selected) {
@@ -267,12 +278,14 @@ private fun DeviceCard(d: com.rfwatch.app.data.DeviceEntity, selected: Boolean, 
                             val rawHex = d.radioDetails?.substringAfter("Raw advertisement hex: ")
                                 ?.takeIf { it != d.radioDetails && it.isNotBlank() }
                             val detailText = d.radioDetails?.substringBefore(" · Raw advertisement hex:")
+                            if (rawHex != null && d.band == "BLE") AdvertIdentity(rawHex, d)
                             Text(detailText ?: "Detailed radio identifiers not available yet", fontSize = 10.sp, color = Color(0xFF9CA3AF))
                             if (rawHex != null) {
                                 TextButton(onClick = { showRawAdvertisement = !showRawAdvertisement }) {
                                     Text(if (showRawAdvertisement) "Hide raw advertisement" else "Inspect raw advertisement")
                                 }
                                 if (showRawAdvertisement) {
+                                    DecodedAdvert(rawHex)
                                     Text(
                                         "${rawHex.chunked(2).chunked(16).joinToString("\n") { it.joinToString(" ") }}\nRaw BLE advertising bytes · hex",
                                         fontFamily = FontFamily.Monospace,
@@ -405,7 +418,7 @@ private fun SameDeviceSection(
             Column(Modifier.fillMaxWidth().clickable { open(other.id) }) {
                 Text(
                     (if (h.strength == com.rfwatch.core.cs.HintStrength.PROBABLY) "Probably: " else "Possibly: ") +
-                        com.rfwatch.app.ui.friendlyName(other.nickname, other.displayName, other.brand, other.effectiveKind(), other.id) + "  ›",
+                        com.rfwatch.app.ui.friendlyName(other.nickname, other.displayName, other.brand, other.effectiveKind(), other.id, other.model) + "  ›",
                     fontSize = 13.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
                     color = if (h.strength == com.rfwatch.core.cs.HintStrength.PROBABLY) Color.White else Color(0xFFCBD5E1),
                 )
@@ -413,5 +426,49 @@ private fun SameDeviceSection(
             }
         }
         Text("A hint, not proof — records are kept separate. Tap one to open it.", fontSize = 9.sp, color = ConsoleMuted)
+    }
+}
+
+
+/** "Identified as …" from the stored advert, re-read with today's decoders, with its evidence. */
+@Composable
+private fun AdvertIdentity(rawHex: String, d: com.rfwatch.app.data.DeviceEntity) {
+    val fp = remember(rawHex, d.displayName) {
+        runCatching {
+            com.rfwatch.core.id.BleFingerprinter.fingerprint(
+                com.rfwatch.core.cs.AdvParser.fromRawAdvBytes(com.rfwatch.core.cs.AdvParser.hex(rawHex), d.id, d.lastRssi, d.lastSeenMs),
+                d.displayName,
+            )
+        }.getOrNull()
+    } ?: return
+    Column(
+        Modifier.fillMaxWidth().padding(vertical = 4.dp)
+            .background(Color(0xFF0E1E22), androidx.compose.foundation.shape.RoundedCornerShape(8.dp)).padding(8.dp),
+    ) {
+        Text("IDENTIFIED FROM PAYLOAD", fontSize = 9.sp, letterSpacing = 1.sp, color = com.rfwatch.app.ui.theme.RadarCyan)
+        Text(
+            listOfNotNull(fp.brand, fp.model ?: fp.kind.label).distinct().joinToString(" · ") +
+                (fp.name?.let { " — \"$it\"" } ?: ""),
+            fontSize = 13.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
+        )
+        Text(fp.evidence, fontSize = 10.sp, color = Color(0xFFB6C2CF))
+    }
+}
+
+/** One labelled line per advertising structure, under the bytes it came from. */
+@Composable
+private fun DecodedAdvert(rawHex: String) {
+    val lines = remember(rawHex) {
+        runCatching { com.rfwatch.core.id.AdvDecoder.describe(com.rfwatch.core.cs.AdvParser.hex(rawHex)) }.getOrDefault(emptyList())
+    }
+    if (lines.isEmpty()) return
+    Column(Modifier.fillMaxWidth().padding(bottom = 6.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Text("DECODED ADVERT · ${lines.size} structures", fontSize = 9.sp, letterSpacing = 1.sp, color = com.rfwatch.app.ui.theme.RadarCyan)
+        lines.forEach { l ->
+            Column {
+                Text(l.text, fontSize = 11.sp, color = Color(0xFFE2E8F0))
+                Text(l.hex.chunked(2).joinToString(" "), fontSize = 9.sp, fontFamily = FontFamily.Monospace, color = ConsoleMuted)
+            }
+        }
     }
 }

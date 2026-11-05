@@ -90,6 +90,8 @@ data class LiveContact(
     val brand: String? = null,
     val category: String? = null,
     val kind: com.rfwatch.core.id.DeviceKind = com.rfwatch.core.id.DeviceKind.UNKNOWN,
+    /** Model decoded from the payload ("AirPods Pro (2nd gen)"), when known. */
+    val model: String? = null,
 )
 
 /** A drone heard via Remote ID / DJI DroneID, with everything it has broadcast so far. */
@@ -491,7 +493,12 @@ class RfWatchRepository(
     val drones: StateFlow<Map<String, DroneTrack>> = _drones.asStateFlow()
     private val lastDroneAlertMs = HashMap<String, Long>()
 
-    private suspend fun onDrone(id: String, info: com.rfwatch.core.id.RemoteIdInfo, rssi: Int, ts: Long, source: String) {
+    /**
+     * [loud] = Remote ID / DroneID broadcasts (a drone in the air): heads-up alert as before.
+     * Signature-only hits (maker OUI, default SSID, ground station) are listed and logged
+     * quietly — the same OUIs/company IDs also cover cameras, gimbals, car kits and chargers.
+     */
+    private suspend fun onDrone(id: String, info: com.rfwatch.core.id.RemoteIdInfo, rssi: Int, ts: Long, source: String, loud: Boolean = true) {
         val key = info.serial ?: id
         val merged = (_drones.value[key]?.info?.merge(info)) ?: info
         _drones.value = (_drones.value + (key to DroneTrack(key, merged, rssi, ts, source)))
@@ -516,7 +523,7 @@ class RfWatchRepository(
             pilotDist?.let { "pilot ~${it.toInt()} m ${pilotDir ?: ""}".trim() },
             "$rssi dBm",
         ).joinToString(" · ")
-        alertManager.raise(AlertType.DRONE_NEARBY, "Drone nearby", detail, null, 0.0)
+        if (loud) alertManager.raise(AlertType.DRONE_NEARBY, "Drone nearby", detail, null, 0.0)
         database.alertDao().insert(
             com.rfwatch.app.data.AlertEntity(type = AlertType.DRONE_NEARBY.name, timestampMs = ts, deviceId = id, message = detail),
         )
@@ -656,6 +663,54 @@ class RfWatchRepository(
             if (!sameDeviceCountLogged) {
                 sameDeviceCountLogged = true
                 android.util.Log.i("RFWatchDup", sameDeviceHintCounts(devices))
+            }
+        }
+    }
+
+    /**
+     * Debug diagnostic (logcat tag RFWatchId): BLE devices that still have no specific identity,
+     * grouped by payload signature (company IDs + 16-bit services + first payload bytes), each with
+     * a sample of the stored raw advert re-run through today's fingerprinter. Drives decoder work.
+     */
+    @Volatile private var idReportLogged = false
+
+    suspend fun logIdReport() {
+        if (idReportLogged) return
+        idReportLogged = true
+        val devices = withContext(ingestDispatcher) { flushPending(); ensureDeviceCache(); deviceCache.values.toList() }
+        withContext(kotlinx.coroutines.Dispatchers.Default) {
+            val ble = devices.filter { it.band == Band.BLE.name }
+            val weak = ble.filter { it.displayName.isNullOrBlank() && it.nickname.isNullOrBlank() }
+            data class Row(val sig: String, val d: DeviceEntity, val hex: String?, val fp: com.rfwatch.core.id.Fingerprint?)
+            val rows = weak.map { d ->
+                val hex = d.radioDetails?.substringAfter("Raw advertisement hex: ", "")?.substringBefore(" ")?.takeIf { it.isNotEmpty() }
+                val adv = hex?.let { runCatching { com.rfwatch.core.cs.AdvParser.fromRawAdvBytes(com.rfwatch.core.cs.AdvParser.hex(it), d.id, d.lastRssi, d.lastSeenMs) }.getOrNull() }
+                val fp = adv?.let { com.rfwatch.core.id.BleFingerprinter.fingerprint(it, null) }
+                val sig = if (adv == null) "nohex" else buildString {
+                    append(adv.manufacturerData.keys.sorted().joinToString(",") { c -> "%04X:%s".format(c, com.rfwatch.core.math.Hex.upper(adv.manufacturerData.getValue(c).take(2).toByteArray())) })
+                    append("|").append(adv.serviceUuids16.sorted().joinToString(",") { "%04X".format(it) })
+                    adv.appearance?.let { append("|app=%04X".format(it)) }
+                }
+                Row(sig, d, hex, fp)
+            }
+            android.util.Log.i("RFWatchId", "BLE total=${ble.size} nameless=${weak.size} model=${ble.count { it.model != null }} " +
+                "kinds=${ble.groupingBy { it.kind }.eachCount().entries.sortedByDescending { it.value }.joinToString { "${it.key}=${it.value}" }}")
+            val dayAgo = System.currentTimeMillis() - 86_400_000L
+            devices.filter { it.lastSeenMs >= dayAgo }.mapNotNull { d ->
+                val k = d.kind?.let { runCatching { com.rfwatch.core.id.DeviceKind.valueOf(it) }.getOrNull() } ?: com.rfwatch.core.id.DeviceKind.UNKNOWN
+                if (com.rfwatch.app.ui.isThreat(d, k) || k == com.rfwatch.core.id.DeviceKind.DRONE) "${d.classification}|$k|${d.trackerType}|${d.model ?: d.category}" else null
+            }.groupingBy { it }.eachCount().entries.sortedByDescending { it.value }.take(20)
+                .forEach { android.util.Log.i("RFWatchId", "24h threat/drone n=${it.value} ${it.key}") }
+            // Drone-named / drone-kind devices: every stored hearing (debug investigation aid).
+            devices.filter { d -> d.displayName?.contains("drone", true) == true || d.kind == com.rfwatch.core.id.DeviceKind.DRONE.name }.forEach { d ->
+                val obs = database.observationDao().forDevice(d.id)
+                android.util.Log.i("RFWatchDrone", "DEV ${d.id} name=${d.displayName} band=${d.band} first=${d.firstSeenMs} last=${d.lastSeenMs} obs=${obs.size} wifi=${d.wifiBand}/${d.wifiSecurity}")
+                obs.forEach { o -> android.util.Log.i("RFWatchDrone", "OBS ${d.id} t=${o.timestampMs} rssi=${o.rssi} lat=${o.lat} lon=${o.lon} acc=${o.gpsAccuracyM}") }
+            }
+            android.util.Log.i("RFWatchId", "nameless now: unknownKind=${rows.count { it.fp?.kind == com.rfwatch.core.id.DeviceKind.UNKNOWN }} withModel=${rows.count { it.fp?.model != null }}")
+            rows.groupBy { it.sig }.entries.sortedByDescending { it.value.size }.take(80).forEach { (sig, group) ->
+                val r = group.first()
+                android.util.Log.i("RFWatchId", "n=${group.size} sig=$sig kind=${r.fp?.kind} model=${r.fp?.model} brand=${r.fp?.brand} ev=${r.fp?.evidence} hex=${r.hex?.take(124)}")
             }
         }
     }
@@ -807,7 +862,7 @@ class RfWatchRepository(
                     ?.let { onDrone(adv.address, it, adv.rssi, adv.timestampMs, "Bluetooth Remote ID") }
                 if (cachedParse != null) {
                     // Unchanged payload: previous radioDetails stay on the row (null = keep).
-                    onDevice(adv.address, Band.BLE, sighting.deviceName, adv.rssi, adv.timestampMs, facts, match, null, cachedParse.fingerprint)
+                    onDevice(adv.address, Band.BLE, sighting.deviceName ?: cachedParse.fingerprint.name, adv.rssi, adv.timestampMs, facts, match, null, cachedParse.fingerprint)
                     return@collect
                 }
                 val addressType = runCatching {
@@ -831,7 +886,7 @@ class RfWatchRepository(
                     add("${if (sighting.connectable) "Connectable" else "Not connectable"} · ${if (sighting.legacyAdvertisement) "legacy" else "extended"} advertisement · ${sighting.payloadLength} bytes")
                     add("Raw advertisement hex: ${sighting.rawAdvertisingHex}")
                 }.joinToString(" · ")
-                onDevice(adv.address, Band.BLE, sighting.deviceName, adv.rssi, adv.timestampMs, facts, match, radioDetails, fingerprint)
+                onDevice(adv.address, Band.BLE, sighting.deviceName ?: fingerprint.name, adv.rssi, adv.timestampMs, facts, match, radioDetails, fingerprint)
             }
         }
         scope.launch {
@@ -847,9 +902,10 @@ class RfWatchRepository(
                     }
                     val fingerprint = if (s.remoteId != null || s.djiDroneId)
                         com.rfwatch.core.id.Fingerprint(com.rfwatch.core.id.DeviceKind.DRONE, "Drone" + (s.remoteId?.serial?.let { " · $it" } ?: ""), "drone beacon vendor element (Remote ID / DJI DroneID)")
-                    else com.rfwatch.core.id.WifiFingerprinter.fingerprint(s.facts.ssid, s.bssid)
+                    else com.rfwatch.core.id.WifiFingerprinter.fingerprint(s.facts.ssid, s.bssid, s.ies)
                     onDevice(
-                        s.bssid, Band.WIFI, s.facts.ssid, s.facts.rssi, s.timestampMs, s.facts, null,
+                        // Hidden SSID: a WPS device name ("Porch Cam") is the best name the beacon offers.
+                        s.bssid, Band.WIFI, s.facts.ssid ?: fingerprint.name, s.facts.rssi, s.timestampMs, s.facts, null,
                         radioDetails = "${s.radioDetails} · Identification evidence: ${fingerprint.evidence}",
                         fingerprint = fingerprint,
                         wifiSecurity = com.rfwatch.core.id.WifiFingerprinter.security(s.capabilities).label,
@@ -920,7 +976,11 @@ class RfWatchRepository(
         // follower history dense enough (≈30 m apart at 60 km/h) without a row per advert.
         val recordObservation = ts - (lastObservationMs[id] ?: Long.MIN_VALUE / 2) >= OBSERVATION_MIN_INTERVAL_MS
         val updated = DeviceEntity(
-                id = id, band = band.name, displayName = name, lastMac = id,
+                // BLE names usually arrive only in the scan response; adverts without one must not
+                // blank the name already learned (Wi-Fi keeps the live SSID: hidden means hidden).
+                id = id, band = band.name,
+                displayName = if (band == Band.BLE) name?.takeIf { it.isNotBlank() } ?: previous?.displayName else name,
+                lastMac = id,
                 firstSeenMs = previous?.firstSeenMs ?: ts, lastSeenMs = ts, lastRssi = rssi,
                 classification = classification, trackerType = match?.type?.name,
                 isAllowlisted = previous?.isAllowlisted ?: false,
@@ -991,17 +1051,29 @@ class RfWatchRepository(
 
         // Radar contact (published by the throttled publisher).
         val prevContact = liveContacts[id]
-        liveContacts[id] = (prevContact ?: LiveContact(id, band, name ?: id, classification)).copy(
-            label = name ?: id, classification = classification,
+        // Same rule as the stored row: a nameless BLE advert keeps the name already heard.
+        val liveLabel = name?.takeIf { it.isNotBlank() } ?: prevContact?.label?.takeIf { band == Band.BLE } ?: id
+        liveContacts[id] = (prevContact ?: LiveContact(id, band, liveLabel, classification)).copy(
+            label = liveLabel, classification = classification,
             trackerType = match?.type, lastRssi = rssi, lastSeenMs = ts,
             brand = identity.brand ?: prevContact?.brand,
             category = identity.category,
             kind = identity.kind,
+            model = identity.model ?: prevContact?.model,
         )
         contactsDirty = true
 
         hits.firstOrNull { it.category == com.rfwatch.core.rules.RuleCategory.ATTACK_TOOLS }
             ?.let { hit -> onAttackTool(id, hit.label, "${hit.matchedOn} (rule ${hit.ruleId})", rssi, ts) }
+
+        // Drone / controller signature (maker OUI, default SSID, DJI SIG company): joins the
+        // Remote ID drones in the Drones list and event log. Own / trusted gear is skipped.
+        hits.firstOrNull { it.category == com.rfwatch.core.rules.RuleCategory.DRONE }
+            ?.takeIf { !updated.isOwnDevice && !updated.isAllowlisted }
+            ?.let { hit ->
+                onDrone(id, com.rfwatch.core.id.RemoteIdInfo(description = listOfNotNull(hit.label, name).joinToString(" · ")),
+                    rssi, ts, "${if (band == Band.WIFI) "Wi-Fi" else "Bluetooth"} signature: ${hit.matchedOn}", loud = false)
+            }
 
         // Possible ambulance / fire equipment: gentle alert, once per device per cooldown.
         hits.filter { it.category == com.rfwatch.core.rules.RuleCategory.EMERGENCY_SERVICES }
@@ -1200,8 +1272,42 @@ class RfWatchRepository(
             if (deviceCacheLoaded) return
             // putIfAbsent: never let the stored row replace a fresher in-memory one.
             database.deviceDao().all().forEach { deviceCache.putIfAbsent(it.id, it) }
+            // Stored adverts are re-read with today's decoders, so devices captured before a
+            // decoder existed get their names/models too (written back by the next flush).
+            var improved = 0
+            deviceCache.values.toList().forEach { d ->
+                reidentified(d)?.let { deviceCache[d.id] = it; dirtyDevices[d.id] = it; improved++ }
+            }
+            if (improved > 0) android.util.Log.i("RFWatchId", "re-identified $improved stored devices")
             deviceCacheLoaded = true
         }
+    }
+
+    /** [d] re-identified from its stored raw advert, or null when nothing improves. */
+    private fun reidentified(d: DeviceEntity): DeviceEntity? {
+        if (d.band != Band.BLE.name) return null
+        val hex = d.radioDetails?.substringAfter("Raw advertisement hex: ", "")?.substringBefore(" ")?.takeIf { it.length >= 4 } ?: return null
+        val adv = runCatching {
+            com.rfwatch.core.cs.AdvParser.fromRawAdvBytes(com.rfwatch.core.cs.AdvParser.hex(hex), d.id, d.lastRssi, d.lastSeenMs)
+        }.getOrNull() ?: return null
+        val fp = runCatching { com.rfwatch.core.id.BleFingerprinter.fingerprint(adv, d.displayName) }.getOrNull() ?: return null
+        val unknown = com.rfwatch.core.id.DeviceKind.UNKNOWN
+        val current = d.kind?.let { k -> runCatching { com.rfwatch.core.id.DeviceKind.valueOf(k) }.getOrNull() } ?: unknown
+        var out = d
+        if (out.displayName.isNullOrBlank() && fp.name != null) out = out.copy(displayName = fp.name)
+        if (current == unknown && fp.kind != unknown) out = out.copy(
+            kind = fp.kind.name,
+            // Rule/tracker categories stay; only the generic placeholder is replaced.
+            category = if (d.classification == "UNKNOWN" && (d.category == null || d.category == "Bluetooth device")) fp.kind.label else d.category,
+        )
+        val kindNow = if (current == unknown) fp.kind else current
+        if (fp.model != null && fp.model != d.model && fp.kind == kindNow) out = out.copy(model = fp.model)
+        if (out.brand == null && fp.brand != null) out = out.copy(brand = fp.brand)
+        // Find My "owner nearby" rows stored before the label existed (AirPods cases etc.).
+        if (d.category == "Bluetooth item tracker" &&
+            com.rfwatch.core.cs.TrackerParser.parse(adv)?.state == com.rfwatch.core.cs.TrackerState.NEARBY
+        ) out = out.copy(category = "Bluetooth item tracker (owner nearby)")
+        return out.takeIf { it != d }
     }
 
     private suspend fun loadActiveSession() {

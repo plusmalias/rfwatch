@@ -19,6 +19,9 @@ object AdvParser {
     private const val AD_MANUFACTURER = 0xFF
     private const val AD_TX_POWER = 0x0A
     private const val AD_APPEARANCE = 0x19
+    private const val AD_FLAGS = 0x01
+    private const val AD_SHORT_NAME = 0x08
+    private const val AD_COMPLETE_NAME = 0x09
 
     fun fromRawAdvBytes(bytes: ByteArray, address: String, rssi: Int, timestampMs: Long): BleAdvertisement {
         val manufacturer = HashMap<Int, ByteArray>()
@@ -26,6 +29,9 @@ object AdvParser {
         val serviceUuids = HashSet<Int>()
         var appearance: Int? = null
         var txPower: Int? = null
+        var flags: Int? = null
+        var localName: String? = null
+        val records = ArrayList<Pair<Int, ByteArray>>(2)
 
         var i = 0
         while (i < bytes.size) {
@@ -40,8 +46,15 @@ object AdvParser {
             when (type) {
                 AD_MANUFACTURER -> if (data.size >= 2) {
                     val company = (data[0].toInt() and 0xFF) or ((data[1].toInt() and 0xFF) shl 8)
-                    manufacturer[company] = data.copyOfRange(2, data.size)
+                    val body = data.copyOfRange(2, data.size)
+                    records += company to body
+                    // A second record of the same company (often in the scan response) is appended,
+                    // not allowed to overwrite the first: TLV payloads (Apple) keep both messages.
+                    manufacturer[company] = manufacturer[company]?.plus(body) ?: body
                 }
+                AD_FLAGS -> if (data.isNotEmpty()) flags = data[0].toInt() and 0xFF
+                AD_COMPLETE_NAME -> localName = data.decodeToString().trimEnd('\u0000').ifBlank { null } ?: localName
+                AD_SHORT_NAME -> if (localName == null) localName = data.decodeToString().trimEnd('\u0000').ifBlank { null }
                 AD_SERVICE_DATA_16 -> if (data.size >= 2) {
                     val uuid = (data[0].toInt() and 0xFF) or ((data[1].toInt() and 0xFF) shl 8)
                     serviceData[uuid] = data.copyOfRange(2, data.size)
@@ -61,7 +74,7 @@ object AdvParser {
             }
             i += len + 1
         }
-        return BleAdvertisement(manufacturer, serviceData, serviceUuids, address, rssi, timestampMs, appearance, txPower)
+        return BleAdvertisement(manufacturer, serviceData, serviceUuids, address, rssi, timestampMs, appearance, txPower, flags, localName, records)
     }
 
     /** Parse a hex string ("1cff4c00…", whitespace allowed) into bytes. */

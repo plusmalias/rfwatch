@@ -82,8 +82,11 @@ internal fun LiveContact.isLiveNow(nowMs: Long): Boolean =
 private val MAC_LIKE = Regex("^[0-9A-Fa-f]{2}(:[0-9A-Fa-f]{2}){5}$")
 
 /** A readable name: the advertised name, or "Brand kind ·tail" instead of a raw address. */
-internal fun LiveContact.shortName(): String =
-    if (MAC_LIKE.matches(label)) "${brand ?: kind.label} ·${id.takeLast(5)}" else label
+internal fun LiveContact.shortName(): String = when {
+    !MAC_LIKE.matches(label) -> label
+    model != null -> (if (brand == null || model.contains(brand, ignoreCase = true)) model else "$brand $model") + " ·${id.takeLast(5)}"
+    else -> "${brand ?: kind.label} ·${id.takeLast(5)}"
+}
 
 internal fun LiveContact.isThreatNow(stored: DeviceEntity?): Boolean =
     stored?.let { com.rfwatch.app.ui.isThreat(it, it.effectiveKind()) }

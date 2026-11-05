@@ -71,4 +71,24 @@ class RssiCentroidLocatorTest {
         }
         assertFalse(RssiCentroidLocator.estimate(poor)!!.directional)
     }
+
+    private fun loop(target: Pair<Double, Double>, noise: (Int) -> Int = { 0 }) =
+        (0..30).flatMap { i -> listOf(i.toDouble() to 0.0, 30.0 to i.toDouble(), (30 - i).toDouble() to 30.0, 0.0 to (30 - i).toDouble()) }
+            .mapIndexed { i, (e, n) ->
+                val d = hypot(e - target.first, n - target.second).coerceAtLeast(1.0)
+                obs(e, n, (-59 - 24 * log10(d)).toInt() + noise(i))
+            }
+
+    @Test fun emitterOutsideTheWalkedAreaIsNotPlacedInsideIt() {
+        // Seen on the phone 2026-11-05: walking ~40 m round the house "located" neighbours' routers a
+        // few metres from the user (the centroid of the user's own positions). The signal only rose
+        // toward one edge, so the device is beyond it: direction unknown, not a position.
+        assertFalse(RssiCentroidLocator.estimate(loop(70.0 to 15.0))!!.directional)
+    }
+
+    @Test fun flatSignalWhileWalkingIsNotAPosition() {
+        // A strong distant AP: ±3 dB of noise everywhere on the loop, no peak to walk around.
+        val flat = loop(15.0 to 15.0).mapIndexed { i, o -> o.copy(rssi = -78 + (i * 7 % 7) - 3) }
+        assertFalse(RssiCentroidLocator.estimate(flat)!!.directional)
+    }
 }

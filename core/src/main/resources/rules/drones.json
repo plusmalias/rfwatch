@@ -1,0 +1,167 @@
+{
+  "id": "drones",
+  "name": "Drones & drone controllers",
+  "category": "DRONE",
+  "source": "OUIs checked 2026-11-05 against the IEEE MA-L registry bundled with RFWatch (only blocks registered to the drone makers themselves); Bluetooth SIG company 0x08AA = SZ DJI Technology. SSID patterns are the makers' documented default Wi-Fi names and community-reported cheap-drone defaults. Most current DJI drones link over OcuSync/O4, not Wi-Fi: those are only heard through Remote ID, their phone/controller, or goggles. A match means a drone, its controller or the maker's accessory is near \u2014 not that it is filming you.",
+  "version": 2,
+  "rules": [
+    {
+      "id": "drone_ground_station",
+      "label": "Drone trailer / dock / ground station",
+      "threat": "NOTABLE",
+      "ssidPatterns": [
+        "drone[-_ ]?trailer",
+        "drone[-_ ]?(dock|hangar|nest|base|box|hub|station)",
+        "uav[-_ ]?(trailer|base|station|gcs)",
+        "\\bgcs[-_ ]",
+        "ground[-_ ]?control",
+        "^rpas"
+      ],
+      "nameSubstrings": [
+        "drone trailer",
+        "drone dock",
+        "ground station"
+      ],
+      "note": "Wi-Fi of drone operations infrastructure: drone trailers, docks / drone-in-a-box, ground-control stations (GCS) and RPAS crews. Usually an open or simple network the crew's tablets join; the drone itself may link over OcuSync/LTE and stay silent."
+    },
+    {
+      "id": "dji",
+      "label": "DJI drone / controller",
+      "threat": "NOTABLE",
+      "ouiPrefixes": [
+        "04a85a",
+        "0c9ae6",
+        "34d262",
+        "481cb9",
+        "4c43f6",
+        "58b858",
+        "60601f",
+        "882985",
+        "8c5823",
+        "e47a2c"
+      ],
+      "companyIds": [
+        2218
+      ],
+      "ssidPatterns": [
+        "^dji[-_ ]",
+        "^spark-",
+        "^mavic",
+        "^phantom",
+        "^tello-",
+        "^mini[-_ ]?se",
+        "^rmtt-",
+        "^dji_?fpv"
+      ],
+      "nameSubstrings": [
+        "dji ",
+        "dji-",
+        "mavic",
+        "tello",
+        "dji rc",
+        "dji goggles"
+      ],
+      "note": "IEEE OUIs registered to SZ DJI Technology (Osmo 20:1F:55 and Ronin F8:40:68 camera/gimbal blocks deliberately excluded). Wi-Fi-linked DJI models (Spark, Mavic Air, Mini SE, Tello, Phantom 3 SE/Standard) advertise these SSIDs; newer models are heard via Remote ID or the controller/goggles."
+    },
+    {
+      "id": "parrot",
+      "label": "Parrot drone / SkyController",
+      "threat": "NOTABLE",
+      "ouiPrefixes": [
+        "00121c",
+        "00267e",
+        "9003b7",
+        "903ae6",
+        "a0143d"
+      ],
+      "ssidPatterns": [
+        "^anafi",
+        "^bebop",
+        "^disco-",
+        "^skycontroller",
+        "^ardrone",
+        "^mambo",
+        "^parrot"
+      ],
+      "nameSubstrings": [
+        "anafi",
+        "bebop",
+        "skycontroller",
+        "mambo"
+      ],
+      "note": "Parrot SA OUIs. ANAFI USA / ANAFI UKR are sold to police and militaries; older Parrot OUIs also appear in Parrot car kits and Zik headphones, so an OUI-only match is weaker than an SSID match."
+    },
+    {
+      "id": "autel_skydio_consumer",
+      "label": "Autel / Skydio / Yuneec drone",
+      "threat": "NOTABLE",
+      "ssidPatterns": [
+        "^autel",
+        "^evo[ _-]?(ii|2|lite|nano|max)",
+        "^yuneec",
+        "^breeze",
+        "^typhoon",
+        "^mantis"
+      ],
+      "nameSubstrings": [
+        "autel",
+        "evo lite",
+        "evo nano",
+        "yuneec"
+      ],
+      "note": "Default Wi-Fi names of Autel EVO and Yuneec drones/controllers. Skydio is matched by the law-enforcement pack (police_drone)."
+    },
+    {
+      "id": "drone_makers_other",
+      "label": "Drone maker radio (Teal / Zero Zero / PowerVision / Holy Stone / AeroVironment)",
+      "threat": "NOTABLE",
+      "ouiPrefixes": [
+        "b030c8",
+        "848319",
+        "547d40",
+        "000cbf",
+        "001af9"
+      ],
+      "ssidPatterns": [
+        "^holy ?stone",
+        "^hs[0-9]{3}",
+        "^potensic",
+        "^hubsan",
+        "^zino",
+        "^fimi",
+        "^x8 ?se",
+        "^snaptain",
+        "^hover ?air",
+        "^ryze",
+        "^eachine",
+        "^dragon ?touch"
+      ],
+      "nameSubstrings": [
+        "holystone",
+        "potensic",
+        "hubsan",
+        "hoverair",
+        "fimi"
+      ],
+      "note": "Teal Drones (B0:30:C8 \u2014 Teal 2 / Black Widow, sold to US military and police), Zero Zero Robotics (84:83:19 \u2014 HoverAir), PowerVision (54:7D:40), Holy Stone (00:0C:BF), AeroVironment (00:1A:F9 \u2014 Puma/Raven; old AeroVironment EV chargers share it). Plus default SSIDs of common consumer drones."
+    },
+    {
+      "id": "generic_wifi_fpv",
+      "label": "Cheap Wi-Fi FPV drone",
+      "threat": "NOTABLE",
+      "ssidPatterns": [
+        "^wifi[-_ ]?uav",
+        "^wifi[-_ ]?fpv",
+        "^fpv[-_]",
+        "^rc[-_ ]?drone",
+        "^drone[-_]?[0-9a-f]{4,}$",
+        "^hd[-_ ]?fpv",
+        "^ufo[-_]",
+        "^wifi[-_ ]?(720|1080)p",
+        "^4k[-_ ]?drone",
+        "^wifi_camera_drone"
+      ],
+      "note": "Default access-point names of unbranded toy/FPV drones that stream video to a phone app over Wi-Fi (WIFI-UAV, FPV_xxxx, RC_DRONE \u2026). These only exist while the drone is powered on."
+    }
+  ]
+}

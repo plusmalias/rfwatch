@@ -68,13 +68,42 @@ object RssiCentroidLocator {
         val allEnu = geo.map { frame.toEnu(it.fix!!.lat, it.fix.lon) }
         val spread = hypot(allEnu.maxOf { it.east } - allEnu.minOf { it.east }, allEnu.maxOf { it.north } - allEnu.minOf { it.north })
         val typicalAccuracy = geo.map { it.fix!!.accuracyM }.sorted()[geo.size / 2]
-        val directional = enoughGood && spread >= MIN_SPREAD_M && spread >= SPREAD_OVER_ACCURACY * typicalAccuracy
+        val directional = enoughGood && spread >= MIN_SPREAD_M && spread >= SPREAD_OVER_ACCURACY * typicalAccuracy &&
+            bracketed(geo, frame, east, north)
         // Without spread the device could be anywhere around the spot at roughly the RSSI range.
         val rangeFloor = rssiRangeM(maxRssi)
         val radius = if (directional) max(scatter + gpsAcc, rangeFloor * 0.5) else max(rangeFloor, gpsAcc)
 
         val (lat, lon) = frame.toLatLon(east, north)
         return CentroidEstimate(lat, lon, radius, spread, near.size, maxRssi, directional)
+    }
+
+    /** Spatial cell for the bracketing test, metres. */
+    const val CELL_M = 6.0
+    /** A cell counts as "weaker" when its median is this far below the strongest cell's. */
+    const val BRACKET_DB = 6.0
+
+    /**
+     * True when the signal peak was walked *around*: cells clearly weaker than the strongest one
+     * lie in at least 3 of the 4 quadrants around the estimate. A weighted centroid can only land
+     * inside the area the phone covered, so an emitter beyond its edge (signal rising toward one
+     * side) or a flat, distant signal would otherwise be "located" among the user's own positions.
+     */
+    private fun bracketed(geo: List<RadioObservation>, frame: com.rfwatch.core.geo.LocalFrame, east: Double, north: Double): Boolean {
+        val cells = HashMap<Pair<Int, Int>, MutableList<Int>>()
+        for (o in geo) {
+            val e = frame.toEnu(o.fix!!.lat, o.fix.lon)
+            cells.getOrPut(Math.floorDiv(e.east.toInt(), CELL_M.toInt()) to Math.floorDiv(e.north.toInt(), CELL_M.toInt())) { ArrayList() }.add(o.rssi)
+        }
+        if (cells.size < 4) return false
+        val medians = cells.mapValues { (_, v) -> v.sorted()[v.size / 2] }
+        val peak = medians.values.max()
+        val quadrants = medians.filter { it.value <= peak - BRACKET_DB }.keys.map { (cx, cy) ->
+            val dx = (cx + 0.5) * CELL_M - east
+            val dy = (cy + 0.5) * CELL_M - north
+            (if (dx >= 0) 1 else 0) + (if (dy >= 0) 2 else 0)
+        }.toSet()
+        return quadrants.size >= 3
     }
 
     /** Uncalibrated log-distance proxy (n = 2.4, −59 dBm at 1 m); relative use only. */

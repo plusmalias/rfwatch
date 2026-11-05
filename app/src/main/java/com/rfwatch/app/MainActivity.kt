@@ -69,9 +69,42 @@ import com.rfwatch.app.ui.theme.ConsolePanel
 import com.rfwatch.app.ui.theme.ConsoleText
 import com.rfwatch.app.ui.theme.OkGreen
 
-private enum class Tab(val label: String) {
-    RADAR("Radar"), DEVICES("Devices"), SWEEP("Find"), MAP("Map"), MORE("Protect"),
-    CELL("Cell"), ROOM("Room"), LOG("Log"), SETTINGS("Settings"), SKIMMER("Skimmer"), STALKERWARE("Stalkerware"), CAR("Car check"), CAMERA_FINDER("Camera finder"), ULTRASONIC("Ultrasonic")
+private enum class Tab(val label: String, val primary: Boolean = false) {
+    RADAR("Radar", true), DEVICES("Devices", true), SWEEP("Find", true), MAP("Map", true), MORE("Protect", true),
+    CELL("Cell tower check"), ROOM("Room sweep"), LOG("Event log"), SETTINGS("Settings"), SKIMMER("Skimmer check"),
+    STALKERWARE("Stalkerware check"), CAR("Car check"), CAMERA_FINDER("Hidden camera finder"), ULTRASONIC("Ultrasonic beacon check")
+}
+
+/**
+ * Screen history so the system Back button behaves: a tool returns to whatever opened it,
+ * a cross-link (Details → Map) returns to where you were, any other tab returns to Radar,
+ * and Back on Radar leaves the app. Bottom-bar taps start fresh from that tab.
+ */
+private class TabNav {
+    var current by mutableStateOf(Tab.RADAR)
+        private set
+    private val stack = androidx.compose.runtime.mutableStateListOf<Tab>()
+
+    /** In-app navigation (tools, cross-links): remember where we came from. */
+    operator fun getValue(thisRef: Any?, property: kotlin.reflect.KProperty<*>): Tab = current
+    operator fun setValue(thisRef: Any?, property: kotlin.reflect.KProperty<*>, value: Tab) {
+        if (value == current) return
+        stack.remove(value) // no loops: revisiting a screen trims it from history
+        stack.add(current)
+        if (stack.size > 12) stack.removeAt(0)
+        current = value
+    }
+
+    /** Bottom-bar tap: that tab becomes the root. */
+    fun select(tab: Tab) { stack.clear(); current = tab }
+
+    val canGoBack: Boolean get() = stack.isNotEmpty() || current != Tab.RADAR
+    fun back() { current = if (stack.isNotEmpty()) stack.removeAt(stack.lastIndex) else Tab.RADAR }
+
+    /** The bottom-bar item to highlight: this tab, or the tab a tool was opened from. */
+    val highlighted: Tab get() = if (current.primary) current else stack.lastOrNull { it.primary } ?: Tab.MORE
+    /** Where Back goes, for the tool header ("← Protect"). */
+    val backLabel: String get() = (stack.lastOrNull() ?: Tab.RADAR).label
 }
 
 class MainActivity : androidx.fragment.app.FragmentActivity() {
@@ -114,7 +147,9 @@ class MainActivity : androidx.fragment.app.FragmentActivity() {
                     permLauncher.launch(requiredPermissions())
                 }
 
-                var tab by remember { mutableStateOf(Tab.RADAR) }
+                val tabNav = remember { TabNav() }
+                var tab by tabNav
+                androidx.activity.compose.BackHandler(enabled = tabNav.canGoBack) { tabNav.back() }
                 // Cross-screen device links (Details / Locate / Hunt / Map) switch tabs here;
                 // the target screen selects the device and consumes the request.
                 val deviceNav by vm.deviceNav.collectAsState()
@@ -161,8 +196,8 @@ class MainActivity : androidx.fragment.app.FragmentActivity() {
                             )
                             items.forEach { (t, icon) ->
                                 NavigationBarItem(
-                                    selected = tab == t,
-                                    onClick = { tab = t },
+                                    selected = tabNav.highlighted == t,
+                                    onClick = { tabNav.select(t) },
                                     icon = { Icon(icon, contentDescription = t.label) },
                                     label = { Text(t.label, maxLines = 1) },
                                     colors = NavigationBarItemDefaults.colors(
@@ -210,6 +245,7 @@ class MainActivity : androidx.fragment.app.FragmentActivity() {
                                 startActivity(Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS))
                             }
                         }
+                        if (!tab.primary) ToolHeader(tab.label, tabNav.backLabel) { tabNav.back() }
                         Box(Modifier.fillMaxWidth().weight(1f)) {
                             val contentModifier = Modifier.fillMaxSize()
                             when (tab) {
@@ -370,6 +406,18 @@ private fun LocationOffNotice(onEnable: () -> Unit) {
                 )
             }
             Button(onClick = onEnable) { Text("Enable") }
+        }
+    }
+}
+
+/** Title bar for tool screens opened from Protect / Devices / Car check: where Back goes, and what this is. */
+@androidx.compose.runtime.Composable
+private fun ToolHeader(title: String, backTo: String, onBack: () -> Unit) {
+    Surface(color = ConsolePanel) {
+        Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 2.dp), verticalAlignment = Alignment.CenterVertically) {
+            androidx.compose.material3.TextButton(onClick = onBack) { Text("‹ $backTo", color = OkGreen) }
+            Text(title, style = MaterialTheme.typography.titleMedium, color = ConsoleText, maxLines = 1,
+                modifier = Modifier.padding(start = 4.dp))
         }
     }
 }

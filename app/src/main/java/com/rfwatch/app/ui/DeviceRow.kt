@@ -64,12 +64,19 @@ internal fun DeviceKind.shortName(): String = when (this) {
  * The name shown for a device everywhere: your nickname, else what it advertises, else a
  * readable "Brand kind ·last two address bytes". Display only — the id stays the MAC.
  */
-fun friendlyName(nickname: String?, advertised: String?, brand: String?, kind: DeviceKind, id: String): String {
+fun friendlyName(
+    nickname: String?, advertised: String?, brand: String?, kind: DeviceKind, id: String, model: String? = null,
+): String {
     nickname?.trim()?.takeIf { it.isNotEmpty() }?.let { return it }
     advertised?.trim()?.takeIf { it.isNotEmpty() && it != id }?.let { return it }
     val tail = id.takeLast(5).uppercase()
-    val who = brand?.takeIf { it.isNotBlank() } ?: "Unknown"
-    return "$who ${kind.shortName()} ·$tail"
+    val who = brand?.takeIf { it.isNotBlank() }
+    // A model decoded from the payload ("AirPods Pro (2nd gen)", "Galaxy Watch5") beats "Apple audio".
+    model?.trim()?.takeIf { it.isNotEmpty() }?.let { m ->
+        val named = if (who == null || m.contains(who, ignoreCase = true)) m else "$who $m"
+        return "$named ·$tail"
+    }
+    return "${who ?: "Unknown"} ${kind.shortName()} ·$tail"
 }
 
 /** "now", "4 min ago", "2 h ago", "3 d ago". */
@@ -107,9 +114,8 @@ fun DeviceEntity.toRowInfo(nowMs: Long): DeviceRowInfo {
     val badge = badgeFor(isOwnDevice, isAllowlisted, isThreat(this, kind))
     return DeviceRowInfo(
         id = id,
-        title = friendlyName(nickname, displayName, brand, kind, id),
-        subtitle = listOfNotNull(brand ?: "Brand unknown", model ?: kind.label, if (band == "WIFI") "Wi-Fi" else "BLE")
-            .distinct().joinToString(" · "),
+        title = friendlyName(nickname, displayName, brand, kind, id, model),
+        subtitle = rowSubtitle(friendlyName(nickname, displayName, brand, kind, id, model), brand, model, kind, band, seenCount),
         color = deviceCategoryColor(category, classification),
         rssi = lastRssi,
         meta = agoText(nowMs, lastSeenMs),
@@ -117,15 +123,27 @@ fun DeviceEntity.toRowInfo(nowMs: Long): DeviceRowInfo {
     )
 }
 
+/** Second row line: only what the title does not already say, then band and how often heard. */
+internal fun rowSubtitle(title: String, brand: String?, model: String?, kind: DeviceKind, band: String, seen: Int): String =
+    listOfNotNull(
+        brand?.takeIf { !title.contains(it, ignoreCase = true) },
+        model?.takeIf { !title.contains(it, ignoreCase = true) },
+        kind.label.takeIf { !title.contains(it, ignoreCase = true) && (model == null || !model.contains(it, ignoreCase = true)) },
+        if (band == "WIFI") "Wi-Fi" else "BLE",
+        seen.takeIf { it > 1 }?.let { "heard ${it}×" },
+    ).distinct().joinToString(" · ")
+
 /** Live radar contact, enriched with the stored row (nickname, model, flags) when there is one. */
 fun LiveContact.toRowInfo(stored: DeviceEntity?): DeviceRowInfo {
     val kindNow = if (kind != DeviceKind.UNKNOWN) kind else stored?.effectiveKind() ?: DeviceKind.UNKNOWN
     val badge = stored?.let { badgeFor(it.isOwnDevice, it.isAllowlisted, isThreat(it, kindNow)) }
     return DeviceRowInfo(
         id = id,
-        title = friendlyName(stored?.nickname, label.takeIf { it != id }, brand ?: stored?.brand, kindNow, id),
-        subtitle = listOfNotNull(brand ?: stored?.brand ?: "Brand unknown", stored?.model ?: kindNow.label, if (band.name == "WIFI") "Wi-Fi" else "BLE")
-            .distinct().joinToString(" · "),
+        title = friendlyName(stored?.nickname, label.takeIf { it != id }, brand ?: stored?.brand, kindNow, id, stored?.model),
+        subtitle = rowSubtitle(
+            friendlyName(stored?.nickname, label.takeIf { it != id }, brand ?: stored?.brand, kindNow, id, stored?.model),
+            brand ?: stored?.brand, stored?.model, kindNow, band.name, stored?.seenCount ?: 0,
+        ),
         color = deviceCategoryColor(category, classification),
         rssi = lastRssi,
         meta = "~${formatRssiDistance(rssiDistanceEstimateMeters(lastRssi))} m",

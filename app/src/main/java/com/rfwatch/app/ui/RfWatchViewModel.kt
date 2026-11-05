@@ -72,7 +72,7 @@ class RfWatchViewModel(private val repo: RfWatchRepository) : ViewModel() {
             band = runCatching { com.rfwatch.core.model.Band.valueOf(d.band) }.getOrDefault(com.rfwatch.core.model.Band.BLE),
             label = d.displayName ?: d.id, classification = d.classification,
             lastRssi = d.lastRssi, lastSeenMs = d.lastSeenMs, brand = d.brand, category = d.category,
-            kind = d.effectiveKind(),
+            kind = d.effectiveKind(), model = d.model,
         )
     }
 
@@ -129,6 +129,7 @@ class RfWatchViewModel(private val repo: RfWatchRepository) : ViewModel() {
     fun logRadarReport(ids: List<String>) { viewModelScope.launch { runCatching { repo.logRadarReport(ids) }.onFailure { android.util.Log.e("RFWatchRadar", "report failed", it) } } }
     suspend fun sameDeviceHints(id: String) = runCatching { repo.sameDeviceHints(id) }.getOrDefault(emptyList())
     fun logDuplicateReport() { viewModelScope.launch { runCatching { repo.logDuplicateReport() } } }
+    fun logIdReport() { viewModelScope.launch { runCatching { repo.logIdReport() }.onFailure { android.util.Log.e("RFWatchId", "report failed", it) } } }
 
     fun startScanSession() {
         viewModelScope.launch { repo.startScanSession() }

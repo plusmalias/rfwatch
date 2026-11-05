@@ -32,12 +32,14 @@ internal object DeviceIdentityClassifier {
         val lawHit = hits.firstOrNull { it.category == RuleCategory.LAW_ENFORCEMENT }
         val emergencyHit = hits.firstOrNull { it.category == RuleCategory.EMERGENCY_SERVICES }
         val toolHit = hits.firstOrNull { it.category == RuleCategory.ATTACK_TOOLS }
+        val droneHit = hits.firstOrNull { it.category == RuleCategory.DRONE }
         val brand = if (axonHit) "Axon" else match?.type?.brand() ?: fingerprint?.brand ?: serviceBrand(facts) ?: advertiserBrand(facts)
         val fpKind = fingerprint?.kind?.takeIf { it != DeviceKind.UNKNOWN }
         val kind = when {
             axonHit || lawHit != null -> DeviceKind.LAW_ENFORCEMENT
             toolHit != null -> DeviceKind.ATTACK_TOOL
             match != null -> DeviceKind.TRACKER
+            droneHit != null -> DeviceKind.DRONE
             hits.any { it.category == RuleCategory.CAMERA_IOT } -> DeviceKind.CAMERA_IOT
             hits.any { it.category == RuleCategory.FLEET } -> DeviceKind.FLEET
             emergencyHit != null -> DeviceKind.EMERGENCY
@@ -48,7 +50,11 @@ internal object DeviceIdentityClassifier {
         val category = when {
             taserHit -> "Possible TASER signature"
             axonHit -> "Possible Axon device signature"
+            // Find My "owner nearby" (an AirPods case / iPhone travelling with its owner) is kept
+            // distinguishable even when the payload names a model, so it is not a threat.
+            match != null && match.state == com.rfwatch.core.cs.TrackerState.NEARBY -> "Bluetooth item tracker (owner nearby)"
             match != null -> "Bluetooth item tracker"
+            droneHit != null -> "Drone signature · ${droneHit.label}"
             hits.any { it.category == RuleCategory.CAMERA_IOT } -> "Camera / IoT candidate"
             hits.any { it.category == RuleCategory.FLEET } -> "Fleet / vehicle signature"
             lawHit != null -> "Law-enforcement signature · ${lawHit.label}"

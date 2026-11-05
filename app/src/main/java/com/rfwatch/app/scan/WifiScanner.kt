@@ -31,6 +31,8 @@ data class WifiSighting(
     val djiDroneId: Boolean = false,
     /** Pwnagotchi peer-advertisement element (IE 222, JSON) — its name if present. */
     val pwnagotchi: String? = null,
+    /** Decoded WPS attributes and vendor-element hints (API 30+). */
+    val ies: com.rfwatch.core.id.WifiIeInfo? = null,
 )
 
 /**
@@ -111,8 +113,20 @@ class WifiScanner(private val context: Context) {
         }.getOrNull()
     }
 
+    /** WPS model/device-name attributes and chipset vendor elements, decoded in :core. */
+    private fun ScanResult.decodedIes(): com.rfwatch.core.id.WifiIeInfo? {
+        if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.R) return null
+        return runCatching {
+            com.rfwatch.core.id.WifiIes.parse(informationElements.filter { it.id == 221 }.map { ie ->
+                val buf = ie.bytes.duplicate()
+                ie.id to ByteArray(buf.remaining()).also { buf.get(it) }
+            })
+        }.getOrNull()
+    }
+
     private fun ScanResult.toSighting(now: Long): WifiSighting {
         val droneElements = droneVendorElements()
+        val ies = decodedIes()
         val ssidStr = wifiSsid()
         val hidden = ssidStr.isNullOrBlank()
         val rttResponder = android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P && is80211mcResponder
@@ -137,6 +151,13 @@ class WifiScanner(private val context: Context) {
             add("Security/capabilities: ${capabilities.take(120)}")
             add(if (hidden) "SSID hidden" else "SSID $ssidStr")
             if (rttResponder) add("802.11mc RTT responder advertised")
+            ies?.wps?.let { w ->
+                listOfNotNull(
+                    w.manufacturer?.let { "maker $it" }, w.modelName?.let { "model $it" }, w.modelNumber?.let { "number $it" },
+                    w.deviceName?.let { "device name $it" }, w.category?.let { "type $it" },
+                ).takeIf { it.isNotEmpty() }?.let { add("WPS: " + it.joinToString(", ")) }
+            }
+            ies?.vendors?.takeIf { it.isNotEmpty() }?.let { add("Vendor elements: " + it.joinToString()) }
         }.joinToString(" · ")
         return WifiSighting(
             facts = DeviceFacts(
@@ -155,6 +176,7 @@ class WifiScanner(private val context: Context) {
             remoteId = droneElements.first,
             djiDroneId = droneElements.second,
             pwnagotchi = pwnagotchiName(),
+            ies = ies,
         )
     }
 

@@ -3,7 +3,7 @@
   "name": "Cameras & IoT (room sweep)",
   "category": "CAMERA_IOT",
   "source": "Identifiers checked 2026-10-31 against the bundled IEEE OUI registry and Bluetooth SIG assigned numbers; SSID/name patterns community-reported. Vendor signatures, not proof of recording.",
-  "version": 2,
+  "version": 3,
   "rules": [
     {
       "id": "hikvision",
@@ -206,7 +206,7 @@
         "^SQ\\d",
         "^CAM-?\\d"
       ],
-      "note": "Patterns matching default SSIDs of common disguised/hidden Wi-Fi cameras. Indicative only — tune per findings."
+      "note": "Patterns matching default SSIDs of common disguised/hidden Wi-Fi cameras. Indicative only \u2014 tune per findings."
     },
     {
       "id": "camera_ble_name",
@@ -361,7 +361,7 @@
         "d03110",
         "d07cb2"
       ],
-      "note": "Wi-Fi MACs registered to camera/IoT SoC vendors Ingenic, SigmaStar, Goke, Novatek and Beken. Mini and 'spy' cameras often ship with the chip vendor's MAC rather than a brand's. Also used in other IoT gadgets — treat as a lead, not proof."
+      "note": "Wi-Fi MACs registered to camera/IoT SoC vendors Ingenic, SigmaStar, Goke, Novatek and Beken. Mini and 'spy' cameras often ship with the chip vendor's MAC rather than a brand's. Also used in other IoT gadgets \u2014 treat as a lead, not proof."
     },
     {
       "id": "spycam_app_ssid",
@@ -394,7 +394,7 @@
         "^ACCQ",
         "^CloudEdge"
       ],
-      "note": "Access-point SSIDs that cheap mini/hidden cameras broadcast for phone-app setup (V380 'MV…', YCC365, LookCam, iCSee, CamHi, HDWifiCam, Yoosee, A9, CloudEdge) — community-reported patterns. A camera in setup mode near you that you don't own deserves a look."
+      "note": "Access-point SSIDs that cheap mini/hidden cameras broadcast for phone-app setup (V380 'MV\u2026', YCC365, LookCam, iCSee, CamHi, HDWifiCam, Yoosee, A9, CloudEdge) \u2014 community-reported patterns. A camera in setup mode near you that you don't own deserves a look."
     },
     {
       "id": "dashcam_actioncam",
@@ -433,6 +433,26 @@
         "^Insta360"
       ],
       "note": "Pittasoft/BlackVue OUI, GoPro (SIG company 0x02F2, UUIDs 0xFEA5/0xFEA6) and common dashcam / action-cam names and SSIDs. Usually someone's car or sports camera; low priority unless persistently near you."
+    },
+    {
+      "id": "surveillance_trailer",
+      "label": "Mobile surveillance trailer / tower",
+      "threat": "NOTABLE",
+      "ssidPatterns": [
+        "^lvt",
+        "liveview",
+        "skywatch",
+        "^dji[-_ ]?dock",
+        "^skydio[-_ ]?dock",
+        "surveillance[-_ ]?trailer",
+        "^mobile[-_ ]?surveillance"
+      ],
+      "nameSubstrings": [
+        "liveview",
+        "lvt unit",
+        "skywatch"
+      ],
+      "note": "Solar camera trailers and towers (LiveView Technologies, FLIR SkyWatch) and drone docks (DJI Dock, Skydio Dock) used by police, councils and security firms at car parks, events and building sites. Most uplink over 4G, so they are often heard only through a maintenance Wi-Fi network; the vehicle-router OUIs (Cradlepoint, Sierra, Peplink \u2026) are matched by the law-enforcement pack's vehicle_modem rule."
     }
   ]
 }

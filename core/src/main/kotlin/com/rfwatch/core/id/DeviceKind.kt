@@ -38,4 +38,6 @@ data class Fingerprint(
     val evidence: String,
     /** Vendor implied by the payload itself (e.g. Apple Continuity → Apple), when known. */
     val brand: String? = null,
+    /** A device name carried inside the payload bytes (e.g. Samsung's name frame), when found. */
+    val name: String? = null,
 )

@@ -18,7 +18,24 @@ class DeviceIdentityClassifierTest {
         val match = TrackerMatch(TrackerType.APPLE_FIND_MY, TrackerState.NEARBY, BatteryHint.UNKNOWN, null, .9, "fixture")
         val identity = DeviceIdentityClassifier.classify(Band.BLE, DeviceFacts(null, null, null), match, emptyList())
         assertEquals("Apple", identity.brand)
-        assertEquals("Bluetooth item tracker", identity.category)
+        assertEquals("Bluetooth item tracker (owner nearby)", identity.category)
+    }
+
+    @Test fun ownerNearbyFindMyWithModelIsNotAThreatButSeparatedIs() {
+        val fp = com.rfwatch.core.id.Fingerprint(com.rfwatch.core.id.DeviceKind.AUDIO, "AirPods Pro", "fixture", "Apple")
+        fun row(state: TrackerState): com.rfwatch.app.data.DeviceEntity {
+            val match = TrackerMatch(TrackerType.APPLE_FIND_MY, state, BatteryHint.UNKNOWN, null, .9, "fixture")
+            val id = DeviceIdentityClassifier.classify(Band.BLE, DeviceFacts(null, null, null), match, emptyList(), fp)
+            return com.rfwatch.app.data.DeviceEntity(
+                id = "a", band = "BLE", displayName = null, lastMac = "a", firstSeenMs = 0, lastSeenMs = 0, lastRssi = -60,
+                classification = "TRACKER", trackerType = match.type.name, brand = id.brand, category = id.category,
+                kind = id.kind.name, model = id.model,
+            )
+        }
+        val nearby = row(TrackerState.NEARBY)
+        assertEquals("AirPods Pro", nearby.model)
+        org.junit.Assert.assertFalse(com.rfwatch.app.ui.isThreat(nearby, com.rfwatch.core.id.DeviceKind.TRACKER))
+        org.junit.Assert.assertTrue(com.rfwatch.app.ui.isThreat(row(TrackerState.SEPARATED), com.rfwatch.core.id.DeviceKind.TRACKER))
     }
 
     @Test fun matchingRuleMakesTheCategoryExplicitlyTentative() {

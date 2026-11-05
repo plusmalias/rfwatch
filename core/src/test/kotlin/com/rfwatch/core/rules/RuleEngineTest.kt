@@ -11,8 +11,8 @@ class RuleEngineTest {
     @Test
     fun loadsAllFourBuiltinPacks() {
         val packs = RulePacks.loadBuiltin()
-        assertEquals(6, packs.size)
-        assertEquals(setOf("law_enforcement", "trackers", "cameras_iot", "fleet", "emergency_services", "attack_tools"),
+        assertEquals(7, packs.size)
+        assertEquals(setOf("law_enforcement", "trackers", "cameras_iot", "fleet", "emergency_services", "attack_tools", "drones"),
             packs.map { it.id }.toSet())
     }
 
@@ -76,5 +76,27 @@ class RuleEngineTest {
     fun ordinaryDeviceHasNoHits() {
         val hits = engine.evaluate(DeviceFacts(mac = "AA:BB:CC:00:00:00", ssid = "MyHomeWiFi", name = "Pixel"))
         assertTrue(hits.isEmpty())
+    }
+
+    @Test
+    fun droneSignaturesMatchOuiSsidAndCompany() {
+        val oui = engine.evaluate(DeviceFacts(mac = "60:60:1F:12:34:56", ssid = "home", name = null))
+        assertTrue("DJI OUI, got $oui", oui.any { it.category == RuleCategory.DRONE && it.ruleId == "dji" })
+        val ssid = engine.evaluate(DeviceFacts(mac = "02:11:22:33:44:55", ssid = "WIFI-UAV-1A2B3C", name = null))
+        assertTrue("cheap FPV SSID, got $ssid", ssid.any { it.ruleId == "generic_wifi_fpv" })
+        val ble = engine.evaluate(DeviceFacts(mac = "C2:11:22:33:44:55", ssid = null, name = null, companyIds = setOf(0x08AA)))
+        assertTrue("DJI SIG company, got $ble", ble.any { it.ruleId == "dji" })
+        // DJI Osmo (camera) block is deliberately not a drone signature.
+        assertTrue(engine.evaluate(DeviceFacts(mac = "20:1F:55:12:34:56", ssid = null, name = null)).none { it.category == RuleCategory.DRONE })
+        val trailer = engine.evaluate(DeviceFacts(mac = "02:11:22:33:44:55", ssid = "LVT-Unit-0042", name = null))
+        assertTrue("surveillance trailer, got $trailer", trailer.any { it.ruleId == "surveillance_trailer" })
+    }
+
+    @Test
+    fun droneTrailerIsGroundStationNotToyDrone() {
+        val hits = engine.evaluate(DeviceFacts(mac = "86:11:22:33:44:55", ssid = "Drone Trailer 7", name = null))
+        assertTrue("ground station, got $hits", hits.any { it.ruleId == "drone_ground_station" })
+        assertTrue("not a toy FPV drone, got $hits", hits.none { it.ruleId == "generic_wifi_fpv" })
+        assertTrue(engine.evaluate(DeviceFacts(mac = "02:11:22:33:44:55", ssid = "DRONE-1A2B3C", name = null)).any { it.ruleId == "generic_wifi_fpv" })
     }
 }

@@ -13,8 +13,30 @@ enum class WifiSecurity(val label: String) {
  */
 object WifiFingerprinter {
 
-    fun fingerprint(ssid: String?, bssid: String): Fingerprint {
-        val fp = classify(ssid, bssid)
+    fun fingerprint(ssid: String?, bssid: String, ies: WifiIeInfo? = null): Fingerprint {
+        var fp = classify(ssid, bssid)
+        val wps = ies?.wps
+        if (wps != null) {
+            val model = WifiIes.modelLabel(wps)
+            val wpsKind = WifiIes.kindFor(wps)
+            // A declared WPS device type beats an SSID guess, except hotspot / drone SSIDs.
+            val kind = if (wpsKind != null && fp.kind != DeviceKind.HOTSPOT && fp.kind != DeviceKind.DRONE) wpsKind else fp.kind
+            val said = listOfNotNull(
+                wps.manufacturer?.let { "maker \"$it\"" }, wps.modelName?.let { "model \"$it\"" },
+                wps.modelNumber?.let { "number \"$it\"" }, wps.deviceName?.let { "device name \"$it\"" },
+                wps.category?.let { "type $it" },
+            )
+            fp = fp.copy(
+                kind = kind, model = model ?: fp.model,
+                brand = wps.manufacturer?.let(VendorDb::shortName) ?: fp.brand,
+                name = wps.deviceName,
+                evidence = if (said.isEmpty()) fp.evidence else "WPS: " + said.joinToString(", ") + " · " + fp.evidence,
+            )
+        }
+        ies?.vendors?.takeIf { it.isNotEmpty() }?.let { v ->
+            fp = fp.copy(evidence = fp.evidence + " · vendor elements: " + v.joinToString())
+            if (fp.brand == null && "Apple" in v) fp = fp.copy(brand = "Apple")
+        }
         return if (fp.brand != null) fp else fp.copy(brand = VendorDb.ouiVendor(bssid))
     }
 

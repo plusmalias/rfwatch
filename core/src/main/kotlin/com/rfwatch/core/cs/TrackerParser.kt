@@ -19,6 +19,12 @@ data class BleAdvertisement(
     val appearance: Int? = null,
     /** Advertised TX power level in dBm (AD type 0x0A), if advertised. */
     val txPowerDbm: Int? = null,
+    /** AD flags (type 0x01): bit 2 clear = BR/EDR (classic) capable — phones, tablets, computers. */
+    val flags: Int? = null,
+    /** Local name carried in the payload itself (AD 0x08/0x09), if any. */
+    val localName: String? = null,
+    /** Every manufacturer-specific record in order (company, bytes) — a payload may hold several. */
+    val manufacturerRecords: List<Pair<Int, ByteArray>> = emptyList(),
 )
 
 enum class TrackerType {
