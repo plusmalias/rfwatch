@@ -12,7 +12,7 @@ stalkerware and surveillance gear**, and warns you when something seems to be
 
 ![Platform](https://img.shields.io/badge/platform-Android%208.0%2B-3DDC84?logo=android&logoColor=white)
 ![Kotlin](https://img.shields.io/badge/Kotlin-Jetpack%20Compose-7F52FF?logo=kotlin&logoColor=white)
-![Version](https://img.shields.io/badge/version-0.2.0-blue)
+![Version](https://img.shields.io/badge/version-0.3.0-blue)
 ![Offline](https://img.shields.io/badge/default%20build-no%20internet%20permission-success)
 ![Encrypted](https://img.shields.io/badge/data-SQLCipher%20encrypted-informational)
 [![License: GPL v3](https://img.shields.io/badge/license-GPL--3.0-blue)](LICENSE)
@@ -95,8 +95,8 @@ says so rather than guessing.
 ## 📲 Install
 
 1. Go to [**Releases**](../../releases/latest) and download an APK:
-   - **`RFWatch-0.2.0-maps.apk`**: recommended. Live street maps; uses the internet **only** for map tiles.
-   - **`RFWatch-0.2.0-offline.apk`**: maximum privacy. The app has **no internet permission at all**.
+   - **`RFWatch-0.3.0-maps.apk`**: recommended. Live street maps; uses the internet **only** for map tiles.
+   - **`RFWatch-0.3.0-offline.apk`**: maximum privacy. The app has **no internet permission at all**.
 2. Open the downloaded file on your phone. If Android says it can't install unknown apps, tap **Settings**, allow **"Install from this source"**, then go back and tap **Install**.
 3. Open RFWatch and grant **Location**, **Nearby devices / Bluetooth** and **Notifications**. It can't hear anything without them.
 4. Keep **Bluetooth and Location switched on** while scanning.
